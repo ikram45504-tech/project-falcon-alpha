@@ -10,8 +10,6 @@ import {
   createRememberedSession,
   getCompanyById,
   getParties,
-  getPartyAccommodationTotals,
-  getPartyServiceTotals,
   getPartyPaymentTotals,
   initDatabase,
   loginUser,
@@ -19,8 +17,7 @@ import {
   revokeRememberedSession,
   updateParty,
 } from "./db";
-import { AccommodationModule, formatMoney } from "./Accommodation";
-import { ServicesModule } from "./Services";
+import { getPartyBookingTotals } from "./BookingAccounting";
 import { PaymentsModule } from "./Payments";
 import PartyLedger from "./PartyLedger";
 import StatementsModule from "./Statements";
@@ -29,8 +26,9 @@ import SecurityCenter from "./SecurityCenter";
 import { Permission, ROLE_LABELS, hasPermission } from "./permissions";
 
 type Screen = "loading" | "setup" | "login" | "workspace";
-type WorkspaceView = "dashboard" | "parties" | "party-ledger" | "bookings" | "accommodation" | "services" | "payments" | "statements" | "security";
+type WorkspaceView = "dashboard" | "parties" | "party-ledger" | "bookings" | "payments" | "statements" | "security";
 type AccountView = "PARTY" | "VENDOR" | "UNASSIGNED";
+type AccountBookingTotals = { sale_total: number; purchase_total: number };
 
 const blankSetup = {
   companyName: "",
@@ -41,6 +39,10 @@ const blankSetup = {
   password: "",
   confirmPassword: "",
 };
+
+function formatMoney(value: number) {
+  return `Rs ${Math.round(Number(value) || 0).toLocaleString("en-PK")}`;
+}
 
 function getOrCreateDeviceId() {
   const key = "travelAccountingDeviceId";
@@ -111,8 +113,7 @@ function App() {
   const [editingParty, setEditingParty] = useState<Party | null>(null);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [statementPartyId, setStatementPartyId] = useState("");
-  const [partyAccommodationTotals, setPartyAccommodationTotals] = useState<Record<string, number>>({});
-  const [partyServiceTotals, setPartyServiceTotals] = useState<Record<string, number>>({});
+  const [partyBookingTotals, setPartyBookingTotals] = useState<Record<string, AccountBookingTotals>>({});
   const [partyPaymentTotals, setPartyPaymentTotals] = useState<Record<string, number>>({});
 
   const [error, setError] = useState("");
@@ -151,8 +152,8 @@ function App() {
 
   useEffect(() => {
     if (!company || screen !== "workspace") return;
-    loadParties();
-    loadFinancialTotals();
+    void loadParties();
+    void loadFinancialTotals();
   }, [company, screen]);
 
   const initials = useMemo(() => {
@@ -180,24 +181,17 @@ function App() {
     [parties, accountView]
   );
 
-  const companyAccommodationTotal = useMemo(
-    () => Object.values(partyAccommodationTotals).reduce<number>((sum, value) => sum + Number(value), 0),
-    [partyAccommodationTotals]
+  const companySaleTotal = useMemo(
+    () => Object.values(partyBookingTotals).reduce<number>((sum, value) => sum + Number(value.sale_total || 0), 0),
+    [partyBookingTotals]
   );
 
-  const companyServiceTotal = useMemo(
-    () => Object.values(partyServiceTotals).reduce<number>((sum, value) => sum + Number(value), 0),
-    [partyServiceTotals]
+  const companyPurchaseTotal = useMemo(
+    () => Object.values(partyBookingTotals).reduce<number>((sum, value) => sum + Number(value.purchase_total || 0), 0),
+    [partyBookingTotals]
   );
 
-  const companyPurchaseTotal = companyAccommodationTotal + companyServiceTotal;
-
-  const companyPaidTotal = useMemo(
-    () => Object.values(partyPaymentTotals).reduce<number>((sum, value) => sum + Number(value), 0),
-    [partyPaymentTotals]
-  );
-
-  const companyBalance = companyPurchaseTotal - companyPaidTotal;
+  const companyGrossMargin = companySaleTotal - companyPurchaseTotal;
 
   const updateSetup = (key: keyof typeof setup, value: string) => {
     setError("");
@@ -309,8 +303,7 @@ function App() {
     setCompany(null);
     setParties([]);
     setSelectedParty(null);
-    setPartyAccommodationTotals({});
-    setPartyServiceTotals({});
+    setPartyBookingTotals({});
     setPartyPaymentTotals({});
     setLoginPassword("");
     setAccountCreatedNotice(null);
@@ -332,20 +325,17 @@ function App() {
   async function loadFinancialTotals() {
     if (!company) return;
     try {
-      const [accommodationRows, serviceRows, paymentRows] = await Promise.all([
-        getPartyAccommodationTotals(company.id),
-        getPartyServiceTotals(company.id),
+      const [bookingRows, paymentRows] = await Promise.all([
+        getPartyBookingTotals(company.id),
         getPartyPaymentTotals(company.id),
       ]);
 
-      const accommodationNext: Record<string, number> = {};
-      for (const row of accommodationRows) {
-        accommodationNext[row.party_id] = Number(row.total_pkr || 0);
-      }
-
-      const serviceNext: Record<string, number> = {};
-      for (const row of serviceRows) {
-        serviceNext[row.party_id] = Number(row.total_pkr || 0);
+      const bookingNext: Record<string, AccountBookingTotals> = {};
+      for (const row of bookingRows) {
+        bookingNext[row.counterparty_id] = {
+          sale_total: Number(row.sale_total || 0),
+          purchase_total: Number(row.purchase_total || 0),
+        };
       }
 
       const paymentNext: Record<string, number> = {};
@@ -353,8 +343,7 @@ function App() {
         paymentNext[row.party_id] = Number(row.paid_amount || 0);
       }
 
-      setPartyAccommodationTotals(accommodationNext);
-      setPartyServiceTotals(serviceNext);
+      setPartyBookingTotals(bookingNext);
       setPartyPaymentTotals(paymentNext);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -428,6 +417,7 @@ function App() {
       setEditingParty(null);
       setPartyForm(blankParty);
       await loadParties(partySearch);
+      await loadFinancialTotals();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -469,12 +459,11 @@ function App() {
 
   function renderNav() {
     const dashboardActive = ["dashboard", "parties", "party-ledger"].includes(workspaceView);
-    const bookingsActive = ["bookings", "accommodation", "services"].includes(workspaceView);
 
     return (
       <nav className="workspace-nav main-workspace-nav">
         <button className={dashboardActive ? "active" : ""} onClick={() => setWorkspaceView("dashboard")}>Dashboard</button>
-        {can("view_bookings") && <button className={bookingsActive ? "active" : ""} onClick={() => setWorkspaceView("bookings")}>Bookings</button>}
+        {can("view_bookings") && <button className={workspaceView === "bookings" ? "active" : ""} onClick={() => setWorkspaceView("bookings")}>Bookings</button>}
         {can("view_payments") && <button className={workspaceView === "payments" ? "active" : ""} onClick={() => setWorkspaceView("payments")}>Payments</button>}
         {can("view_statements") && <button className={workspaceView === "statements" ? "active" : ""} onClick={() => setWorkspaceView("statements")}>Statements</button>}
         <button className={workspaceView === "security" ? "active security-nav-button" : "security-nav-button"} onClick={() => setWorkspaceView("security")}>Account & Security</button>
@@ -750,7 +739,7 @@ function App() {
             <div>
               <span className="ready">COMPANY WORKSPACE</span>
               <h2>Travel accounting workspace</h2>
-              <p>Company access, employee roles, permissions and audit controls are active for this workspace.</p>
+              <p>Dashboard totals now come from the unified Sale/Purchase booking engine.</p>
             </div>
 
             <div className="stats phase5-stats">
@@ -758,17 +747,17 @@ function App() {
                 <small>PARTIES</small>
                 <b>{partyAccounts.length}</b>
               </div>
+              <div className="paid-stat">
+                <small>TOTAL SALES</small>
+                <b className="stat-money">{formatMoney(companySaleTotal)}</b>
+              </div>
               <div className="purchase-stat">
-                <small>TOTAL PURCHASE</small>
+                <small>TOTAL PURCHASES</small>
                 <b className="stat-money">{formatMoney(companyPurchaseTotal)}</b>
               </div>
-              <div className="paid-stat">
-                <small>TOTAL PAID</small>
-                <b className="stat-money">{formatMoney(companyPaidTotal)}</b>
-              </div>
-              <div className={companyBalance > 0 ? "balance-stat due" : "balance-stat clear"}>
-                <small>BALANCE</small>
-                <b className="stat-money">{formatMoney(companyBalance)}</b>
+              <div className={companyGrossMargin >= 0 ? "balance-stat clear" : "balance-stat due"}>
+                <small>GROSS MARGIN</small>
+                <b className="stat-money">{formatMoney(companyGrossMargin)}</b>
               </div>
             </div>
           </section>
@@ -777,8 +766,8 @@ function App() {
             {can("view_parties") && <article className="module-card live"><span>01</span><h3>Parties</h3><p>Customers / agents that you sell services to.</p><button className="primary small" onClick={() => openAccountView("PARTY")}>Open Parties</button></article>}
             {can("view_parties") && <article className="module-card live vendor-live"><span>02</span><h3>Vendors</h3><p>Suppliers that you purchase travel services from.</p><button className="primary small" onClick={() => openAccountView("VENDOR")}>Open Vendors</button></article>}
             {can("view_bookings") && <article className="module-card live services-live"><span>03</span><h3>Bookings</h3><p>Sale / Purchase first, then Package, Ticket, Hotel, Visa, Transport or Misc.</p><button className="primary small green-primary" onClick={() => setWorkspaceView("bookings")}>Open Bookings</button></article>}
-            {can("view_payments") && <article className="module-card live payments-live"><span>04</span><h3>Payments</h3><p>Accounts roles can access the current payment workspace while it is redesigned later.</p><button className="primary small purple-primary" onClick={() => setWorkspaceView("payments")}>Open Payments</button></article>}
-            {can("view_statements") && <article className="module-card live statements-live"><span>05</span><h3>Statements</h3><p>The approved V6 jsPDF statement engine remains unchanged.</p><button className="primary small statement-primary" onClick={() => setWorkspaceView("statements")}>Open Statements</button></article>}
+            {can("view_payments") && <article className="module-card live payments-live"><span>04</span><h3>Payments</h3><p>Payments remain the settlement workspace while its allocation logic is polished separately.</p><button className="primary small purple-primary" onClick={() => setWorkspaceView("payments")}>Open Payments</button></article>}
+            {can("view_statements") && <article className="module-card live statements-live"><span>05</span><h3>Statements</h3><p>Statements now read all six booking modules plus existing Payments.</p><button className="primary small statement-primary" onClick={() => setWorkspaceView("statements")}>Open Statements</button></article>}
             <article className="module-card live security-live"><span>06</span><h3>Account & Security</h3><p>{session?.role === "OWNER" ? "Create employee users, control access and review audit activity." : "View your login profile and change your password."}</p><button className="primary small security-primary" onClick={() => setWorkspaceView("security")}>Open Security</button></article>
           </section>
         </>
@@ -805,7 +794,7 @@ function App() {
               <span>⌕</span>
               <input
                 value={partySearch}
-                onChange={e => searchParties(e.target.value)}
+                onChange={e => void searchParties(e.target.value)}
                 placeholder={`Search ${accountView === "PARTY" ? "parties" : accountView === "VENDOR" ? "vendors" : "accounts"} by name, phone, WhatsApp or address...`}
               />
             </div>
@@ -832,7 +821,7 @@ function App() {
                     <th>PHONE / WHATSAPP</th>
                     <th>ADDRESS</th>
                     <th>STATUS</th>
-                    <th>ACCOUNT BALANCE</th>
+                    <th>{accountView === "PARTY" ? "RECEIVABLE" : accountView === "VENDOR" ? "PAYABLE" : "ACCOUNT BALANCE"}</th>
                     <th>ACTIONS</th>
                   </tr>
                 </thead>
@@ -856,9 +845,13 @@ function App() {
                         </span>
                       </td>
                       <td className="amount">{formatMoney(
-                        (partyAccommodationTotals[party.id] || 0) +
-                        (partyServiceTotals[party.id] || 0) -
-                        (partyPaymentTotals[party.id] || 0)
+                        (
+                          party.account_type === "PARTY"
+                            ? partyBookingTotals[party.id]?.sale_total || 0
+                            : party.account_type === "VENDOR"
+                              ? partyBookingTotals[party.id]?.purchase_total || 0
+                              : 0
+                        ) - (partyPaymentTotals[party.id] || 0)
                       )}</td>
                       <td>
                         <div className="row-actions">
@@ -884,24 +877,6 @@ function App() {
           canEdit={can("edit_bookings")}
           canVoid={can("void_bookings")}
           onChanged={async () => { await loadParties(partySearch); await loadFinancialTotals(); }}
-        />
-      )}
-
-      {workspaceView === "accommodation" && company && (
-        <AccommodationModule
-          companyId={company.id}
-          parties={parties}
-          onOpenLedger={(party) => openLedger(party)}
-          onChanged={loadFinancialTotals}
-        />
-      )}
-
-      {workspaceView === "services" && company && (
-        <ServicesModule
-          companyId={company.id}
-          parties={parties}
-          onOpenLedger={(party) => openLedger(party)}
-          onChanged={loadFinancialTotals}
         />
       )}
 
