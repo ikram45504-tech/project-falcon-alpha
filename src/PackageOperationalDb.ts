@@ -5,6 +5,9 @@ const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
 let tablesReady: Promise<void> | null = null;
 
+export type PackageFlightType = "DIRECT" | "INDIRECT";
+export type PackageFlightJourney = "OUTBOUND" | "RETURN";
+
 export type PackageOperationalPassenger = {
   id: string;
   passengerType: PackagePassengerType;
@@ -27,7 +30,8 @@ export type PackageOperationalHotel = {
 
 export type PackageOperationalFlight = {
   id: string;
-  journey: "OUTBOUND" | "RETURN";
+  journey: PackageFlightJourney;
+  flightType: PackageFlightType;
   departureDate: string;
   pnr: string;
   flightNo: string;
@@ -35,6 +39,15 @@ export type PackageOperationalFlight = {
   toAirport: string;
   departureTime: string;
   arrivalTime: string;
+  sortOrder: number;
+};
+
+export type PackageOperationalStopover = {
+  id: string;
+  journey: PackageFlightJourney;
+  airport: string;
+  departureDate: string;
+  departureTime: string;
   sortOrder: number;
 };
 
@@ -53,6 +66,7 @@ export type PackageOperationalDetails = {
   passengers: PackageOperationalPassenger[];
   hotels: PackageOperationalHotel[];
   flights: PackageOperationalFlight[];
+  stopovers: PackageOperationalStopover[];
   movementEvents: PackageMovementEvent[];
   notes: string;
 };
@@ -61,12 +75,21 @@ export type SavePackageOperationalInput = {
   passengers: Array<Omit<PackageOperationalPassenger, "id" | "sortOrder">>;
   hotels: Array<Omit<PackageOperationalHotel, "id" | "sortOrder">>;
   flights: Array<Omit<PackageOperationalFlight, "id" | "sortOrder">>;
+  stopovers: Array<Omit<PackageOperationalStopover, "id" | "sortOrder">>;
   notes: string;
 };
 
 async function db() {
   if (!databasePromise) databasePromise = Database.load(DB_PATH);
   return databasePromise;
+}
+
+async function ensureColumn(table: string, column: string, definition: string) {
+  const database = await db();
+  const rows = await database.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
+  if (!rows.some((row) => row.name === column)) {
+    await database.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
 }
 
 async function ensureTables() {
@@ -112,6 +135,7 @@ async function ensureTables() {
         company_id TEXT NOT NULL,
         booking_id TEXT NOT NULL,
         journey TEXT NOT NULL,
+        flight_type TEXT NOT NULL DEFAULT 'DIRECT',
         departure_date TEXT NOT NULL DEFAULT '',
         pnr TEXT NOT NULL DEFAULT '',
         flight_no TEXT NOT NULL DEFAULT '',
@@ -119,6 +143,18 @@ async function ensureTables() {
         to_airport TEXT NOT NULL DEFAULT '',
         departure_time TEXT NOT NULL DEFAULT '',
         arrival_time TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0
+      )`);
+      await ensureColumn("package_operational_flights", "flight_type", "TEXT NOT NULL DEFAULT 'DIRECT'");
+
+      await database.execute(`CREATE TABLE IF NOT EXISTS package_operational_flight_stopovers (
+        id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL,
+        booking_id TEXT NOT NULL,
+        journey TEXT NOT NULL,
+        airport TEXT NOT NULL DEFAULT '',
+        departure_date TEXT NOT NULL DEFAULT '',
+        departure_time TEXT NOT NULL DEFAULT '',
         sort_order INTEGER NOT NULL DEFAULT 0
       )`);
 
@@ -138,6 +174,7 @@ async function ensureTables() {
       await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_operational_passengers_booking ON package_operational_passengers(company_id, booking_id, sort_order)`);
       await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_operational_hotels_booking ON package_operational_hotels(company_id, booking_id, sort_order)`);
       await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_operational_flights_booking ON package_operational_flights(company_id, booking_id, sort_order)`);
+      await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_operational_stopovers_booking ON package_operational_flight_stopovers(company_id, booking_id, journey, sort_order)`);
       await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_movement_booking ON package_movement_events(company_id, booking_id, event_date, event_time, sort_order)`);
     })().catch((error) => {
       tablesReady = null;
@@ -147,23 +184,25 @@ async function ensureTables() {
   return tablesReady;
 }
 
-function addDays(dateValue: string, days: number) {
-  if (!dateValue) return "";
-  const [year, month, day] = dateValue.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  date.setUTCDate(date.getUTCDate() + days);
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+function stopoversFor(
+  journey: PackageFlightJourney,
+  stopovers: Array<Omit<PackageOperationalStopover, "id" | "sortOrder">>
+) {
+  return stopovers.filter((item) => item.journey === journey && item.airport.trim());
 }
 
-function arrivalDate(departureDate: string, departureTime: string, arrivalTime: string) {
-  if (!departureDate) return "";
-  if (!departureTime || !arrivalTime) return departureDate;
-  return arrivalTime < departureTime ? addDays(departureDate, 1) : departureDate;
+function viaText(
+  journey: PackageFlightJourney,
+  stopovers: Array<Omit<PackageOperationalStopover, "id" | "sortOrder">>
+) {
+  const airports = stopoversFor(journey, stopovers).map((item) => item.airport.trim());
+  return airports.length ? ` via ${airports.join(" → ")}` : "";
 }
 
 export function buildPackageMovementEvents(
   flights: Array<Omit<PackageOperationalFlight, "id" | "sortOrder">>,
-  hotels: Array<Omit<PackageOperationalHotel, "id" | "sortOrder">>
+  hotels: Array<Omit<PackageOperationalHotel, "id" | "sortOrder">>,
+  stopovers: Array<Omit<PackageOperationalStopover, "id" | "sortOrder">> = []
 ): Array<Omit<PackageMovementEvent, "id" | "sortOrder">> {
   const events: Array<Omit<PackageMovementEvent, "id" | "sortOrder">> = [];
   const outbound = flights.find((item) => item.journey === "OUTBOUND");
@@ -180,84 +219,47 @@ export function buildPackageMovementEvents(
       eventTime: outbound.departureTime,
       fromLocation: outbound.fromAirport,
       toLocation: outbound.toAirport,
-      description: `Outbound flight ${outbound.fromAirport || "origin"} → ${outbound.toAirport || "destination"}`,
+      description: `Outbound departure ${outbound.fromAirport || "origin"} → ${outbound.toAirport || "destination"}${viaText("OUTBOUND", stopovers)}`,
     });
-
-    if (outbound.toAirport || orderedHotels[0]?.cityName) {
-      events.push({
-        eventType: "ARRIVAL_AND_TRANSFER",
-        eventDate: arrivalDate(outbound.departureDate, outbound.departureTime, outbound.arrivalTime),
-        eventTime: outbound.arrivalTime,
-        fromLocation: outbound.toAirport,
-        toLocation: orderedHotels[0]?.cityName || "",
-        description: orderedHotels[0]?.cityName
-          ? `Expected arrival and transfer to ${orderedHotels[0].cityName}`
-          : `Expected arrival at ${outbound.toAirport || "destination airport"}`,
-      });
-    }
   }
 
   orderedHotels.forEach((hotel, index) => {
-    const previous = orderedHotels[index - 1];
-    if (!previous) {
-      if (hotel.checkIn) {
-        events.push({
-          eventType: "HOTEL_STAY_START",
-          eventDate: hotel.checkIn,
-          eventTime: "",
-          fromLocation: outbound?.toAirport || "",
-          toLocation: hotel.cityName,
-          description: `Hotel stay starts in ${hotel.cityName || hotel.hotelName || "destination"}`,
-        });
-      }
+    if (!hotel.checkOut) return;
+    const nextHotel = orderedHotels[index + 1];
+
+    if (nextHotel) {
+      events.push({
+        eventType: "HOTEL_CHECKOUT_TRANSFER",
+        eventDate: hotel.checkOut,
+        eventTime: "",
+        fromLocation: hotel.cityName,
+        toLocation: nextHotel.cityName,
+        description: `Hotel checkout and expected passenger movement ${hotel.cityName || "current city"} → ${nextHotel.cityName || "next city"}`,
+      });
       return;
     }
 
-    const movementDate = previous.checkOut || hotel.checkIn;
-    if (movementDate && (previous.cityName || hotel.cityName)) {
-      events.push({
-        eventType: "INTERCITY_TRANSFER",
-        eventDate: movementDate,
-        eventTime: "",
-        fromLocation: previous.cityName,
-        toLocation: hotel.cityName,
-        description: `Expected passenger movement ${previous.cityName || "previous city"} → ${hotel.cityName || "next city"}`,
-      });
-    }
+    events.push({
+      eventType: "FINAL_HOTEL_CHECKOUT",
+      eventDate: hotel.checkOut,
+      eventTime: "",
+      fromLocation: hotel.cityName,
+      toLocation: returning?.fromAirport || "",
+      description: returning?.fromAirport
+        ? `Final hotel checkout and expected airport movement ${hotel.cityName || "last hotel"} → ${returning.fromAirport}`
+        : `Final hotel checkout from ${hotel.cityName || hotel.hotelName || "last hotel"}`,
+    });
   });
 
   if (returning?.departureDate) {
-    const lastHotel = orderedHotels[orderedHotels.length - 1];
-    if (lastHotel?.cityName && returning.fromAirport) {
-      events.push({
-        eventType: "RETURN_TRANSFER",
-        eventDate: returning.departureDate,
-        eventTime: returning.departureTime,
-        fromLocation: lastHotel.cityName,
-        toLocation: returning.fromAirport,
-        description: `Expected transfer from ${lastHotel.cityName} to ${returning.fromAirport} for return flight`,
-      });
-    }
-
     events.push({
       eventType: "RETURN_DEPARTURE",
       eventDate: returning.departureDate,
       eventTime: returning.departureTime,
       fromLocation: returning.fromAirport,
       toLocation: returning.toAirport,
-      description: `Return flight ${returning.fromAirport || "origin"} → ${returning.toAirport || "home"}`,
+      description: `Return departure ${returning.fromAirport || "origin"} → ${returning.toAirport || "home"}${viaText("RETURN", stopovers)}`,
     });
-
-    if (returning.toAirport) {
-      events.push({
-        eventType: "RETURN_ARRIVAL",
-        eventDate: arrivalDate(returning.departureDate, returning.departureTime, returning.arrivalTime),
-        eventTime: returning.arrivalTime,
-        fromLocation: returning.fromAirport,
-        toLocation: returning.toAirport,
-        description: `Expected return arrival at ${returning.toAirport}`,
-      });
-    }
   }
 
   return events
@@ -286,10 +288,18 @@ export async function getPackageOperationalDetails(companyId: string, bookingId:
   );
 
   const flights = await database.select<Array<{
-    id: string; journey: "OUTBOUND" | "RETURN"; departure_date: string; pnr: string; flight_no: string; from_airport: string; to_airport: string; departure_time: string; arrival_time: string; sort_order: number;
+    id: string; journey: PackageFlightJourney; flight_type: PackageFlightType; departure_date: string; pnr: string; flight_no: string; from_airport: string; to_airport: string; departure_time: string; arrival_time: string; sort_order: number;
   }>>(
-    `SELECT id,journey,departure_date,pnr,flight_no,from_airport,to_airport,departure_time,arrival_time,sort_order
+    `SELECT id,journey,flight_type,departure_date,pnr,flight_no,from_airport,to_airport,departure_time,arrival_time,sort_order
      FROM package_operational_flights WHERE company_id=$1 AND booking_id=$2 ORDER BY sort_order`,
+    [companyId, bookingId]
+  );
+
+  const stopovers = await database.select<Array<{
+    id: string; journey: PackageFlightJourney; airport: string; departure_date: string; departure_time: string; sort_order: number;
+  }>>(
+    `SELECT id,journey,airport,departure_date,departure_time,sort_order
+     FROM package_operational_flight_stopovers WHERE company_id=$1 AND booking_id=$2 ORDER BY journey,sort_order`,
     [companyId, bookingId]
   );
 
@@ -309,7 +319,8 @@ export async function getPackageOperationalDetails(companyId: string, bookingId:
   return {
     passengers: passengers.map((row) => ({ id: row.id, passengerType: row.passenger_type, givenName: row.given_name, surname: row.surname, passportNumber: row.passport_number, visaNumber: row.visa_number, sortOrder: row.sort_order })),
     hotels: hotels.map((row) => ({ id: row.id, cityName: row.city_name, hotelName: row.hotel_name, checkIn: row.check_in, checkOut: row.check_out, nights: Number(row.nights || 0), sortOrder: row.sort_order })),
-    flights: flights.map((row) => ({ id: row.id, journey: row.journey, departureDate: row.departure_date, pnr: row.pnr, flightNo: row.flight_no, fromAirport: row.from_airport, toAirport: row.to_airport, departureTime: row.departure_time, arrivalTime: row.arrival_time, sortOrder: row.sort_order })),
+    flights: flights.map((row) => ({ id: row.id, journey: row.journey, flightType: row.flight_type === "INDIRECT" ? "INDIRECT" : "DIRECT", departureDate: row.departure_date, pnr: row.pnr, flightNo: row.flight_no, fromAirport: row.from_airport, toAirport: row.to_airport, departureTime: row.departure_time, arrivalTime: row.arrival_time, sortOrder: row.sort_order })),
+    stopovers: stopovers.map((row) => ({ id: row.id, journey: row.journey, airport: row.airport, departureDate: row.departure_date, departureTime: row.departure_time, sortOrder: row.sort_order })),
     movementEvents: movementEvents.map((row) => ({ id: row.id, eventType: row.event_type, eventDate: row.event_date, eventTime: row.event_time, fromLocation: row.from_location, toLocation: row.to_location, description: row.description, sortOrder: row.sort_order })),
     notes: meta[0]?.notes || "",
   };
@@ -319,11 +330,12 @@ export async function savePackageOperationalDetails(companyId: string, bookingId
   await ensureTables();
   const database = await db();
   const now = new Date().toISOString();
-  const movement = buildPackageMovementEvents(input.flights, input.hotels);
+  const movement = buildPackageMovementEvents(input.flights, input.hotels, input.stopovers);
 
   await database.execute(`DELETE FROM package_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
   await database.execute(`DELETE FROM package_operational_hotels WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
   await database.execute(`DELETE FROM package_operational_flights WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
+  await database.execute(`DELETE FROM package_operational_flight_stopovers WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
   await database.execute(`DELETE FROM package_movement_events WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
 
   for (const [index, passenger] of input.passengers.entries()) {
@@ -347,10 +359,22 @@ export async function savePackageOperationalDetails(companyId: string, bookingId
   for (const [index, flight] of input.flights.entries()) {
     await database.execute(
       `INSERT INTO package_operational_flights
-       (id,company_id,booking_id,journey,departure_date,pnr,flight_no,from_airport,to_airport,departure_time,arrival_time,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-      [crypto.randomUUID(), companyId, bookingId, flight.journey, flight.departureDate, flight.pnr.trim(), flight.flightNo.trim(), flight.fromAirport.trim(), flight.toAirport.trim(), flight.departureTime, flight.arrivalTime, index]
+       (id,company_id,booking_id,journey,flight_type,departure_date,pnr,flight_no,from_airport,to_airport,departure_time,arrival_time,sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [crypto.randomUUID(), companyId, bookingId, flight.journey, flight.flightType, flight.departureDate, flight.pnr.trim(), flight.flightNo.trim(), flight.fromAirport.trim(), flight.toAirport.trim(), flight.departureTime, flight.arrivalTime, index]
     );
+  }
+
+  for (const journey of ["OUTBOUND", "RETURN"] as PackageFlightJourney[]) {
+    const journeyStops = input.stopovers.filter((item) => item.journey === journey);
+    for (const [index, stopover] of journeyStops.entries()) {
+      await database.execute(
+        `INSERT INTO package_operational_flight_stopovers
+         (id,company_id,booking_id,journey,airport,departure_date,departure_time,sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [crypto.randomUUID(), companyId, bookingId, journey, stopover.airport.trim(), stopover.departureDate, stopover.departureTime, index]
+      );
+    }
   }
 
   for (const [index, event] of movement.entries()) {
