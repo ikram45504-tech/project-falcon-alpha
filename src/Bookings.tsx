@@ -1,5 +1,5 @@
 import { useState } from "react";
-import PackageBookingFlow from "./PackageBookingFlow";
+import PackageBookingFlow from "./PackageBookingFlowV2";
 import TicketBookingModule from "./TicketBooking";
 import HotelBookingModule from "./HotelBooking";
 import VisaBookingModule from "./VisaBooking";
