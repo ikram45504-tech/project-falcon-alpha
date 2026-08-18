@@ -4,9 +4,12 @@ import {
   buildPackageMovementEvents,
   getPackageOperationalDetails,
   savePackageOperationalDetails,
+  type PackageFlightJourney,
+  type PackageFlightType,
   type PackageOperationalFlight,
   type PackageOperationalHotel,
   type PackageOperationalPassenger,
+  type PackageOperationalStopover,
 } from "./PackageOperationalDb";
 import "./PackageOperationalDetails.css";
 
@@ -25,6 +28,7 @@ type Props = {
 type PassengerRow = Omit<PackageOperationalPassenger, "sortOrder">;
 type HotelRow = Omit<PackageOperationalHotel, "sortOrder">;
 type FlightRow = Omit<PackageOperationalFlight, "sortOrder">;
+type StopoverRow = Omit<PackageOperationalStopover, "sortOrder">;
 
 function blankPassenger(type: PackagePassengerType): PassengerRow {
   return {
@@ -48,10 +52,11 @@ function blankHotel(): HotelRow {
   };
 }
 
-function blankFlight(journey: "OUTBOUND" | "RETURN"): FlightRow {
+function blankFlight(journey: PackageFlightJourney): FlightRow {
   return {
     id: crypto.randomUUID(),
     journey,
+    flightType: "DIRECT",
     departureDate: "",
     pnr: "",
     flightNo: "",
@@ -59,6 +64,16 @@ function blankFlight(journey: "OUTBOUND" | "RETURN"): FlightRow {
     toAirport: "",
     departureTime: "",
     arrivalTime: "",
+  };
+}
+
+function blankStopover(journey: PackageFlightJourney, departureDate = ""): StopoverRow {
+  return {
+    id: crypto.randomUUID(),
+    journey,
+    airport: "",
+    departureDate,
+    departureTime: "",
   };
 }
 
@@ -77,13 +92,10 @@ function passengerTypeLabel(type: PackagePassengerType) {
 
 function movementLabel(type: string) {
   switch (type) {
-    case "OUTBOUND_DEPARTURE": return "Depart Home Country";
-    case "ARRIVAL_AND_TRANSFER": return "Arrive / Transfer";
-    case "HOTEL_STAY_START": return "Hotel Stay";
-    case "INTERCITY_TRANSFER": return "City Movement";
-    case "RETURN_TRANSFER": return "Airport Transfer";
-    case "RETURN_DEPARTURE": return "Return Departure";
-    case "RETURN_ARRIVAL": return "Return Arrival";
+    case "OUTBOUND_DEPARTURE": return "Outbound Departure";
+    case "HOTEL_CHECKOUT_TRANSFER": return "Hotel Checkout / City Movement";
+    case "FINAL_HOTEL_CHECKOUT": return "Final Hotel Checkout / Airport Movement";
+    case "RETURN_DEPARTURE": return "Return Flight";
     default: return "Movement";
   }
 }
@@ -102,6 +114,7 @@ export default function PackageOperationalDetails({
   const [passengers, setPassengers] = useState<PassengerRow[]>([]);
   const [hotels, setHotels] = useState<HotelRow[]>([blankHotel()]);
   const [flights, setFlights] = useState<FlightRow[]>([blankFlight("OUTBOUND"), blankFlight("RETURN")]);
+  const [stopovers, setStopovers] = useState<StopoverRow[]>([]);
   const [notes, setNotes] = useState(fallbackNotes);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -147,6 +160,7 @@ export default function PackageOperationalDetails({
           outbound ? (({ sortOrder: _sort, ...item }) => item)(outbound) : blankFlight("OUTBOUND"),
           returning ? (({ sortOrder: _sort, ...item }) => item)(returning) : blankFlight("RETURN"),
         ]);
+        setStopovers(saved.stopovers.map(({ sortOrder: _sort, ...item }) => item));
         setNotes(saved.notes || fallbackNotes || "");
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -159,8 +173,9 @@ export default function PackageOperationalDetails({
 
   const movementPreview = useMemo(() => buildPackageMovementEvents(
     flights.map(({ id: _id, ...item }) => item),
-    hotels.map(({ id: _id, ...item }) => item)
-  ), [flights, hotels]);
+    hotels.map(({ id: _id, ...item }) => item),
+    stopovers.map(({ id: _id, ...item }) => item)
+  ), [flights, hotels, stopovers]);
 
   function updatePassenger(id: string, patch: Partial<PassengerRow>) {
     setPassengers((current) => current.map((row) => row.id === id ? { ...row, ...patch } : row));
@@ -175,8 +190,12 @@ export default function PackageOperationalDetails({
     }));
   }
 
-  function updateFlight(journey: "OUTBOUND" | "RETURN", patch: Partial<FlightRow>) {
+  function updateFlight(journey: PackageFlightJourney, patch: Partial<FlightRow>) {
     setFlights((current) => current.map((row) => row.journey === journey ? { ...row, ...patch } : row));
+  }
+
+  function updateStopover(id: string, patch: Partial<StopoverRow>) {
+    setStopovers((current) => current.map((row) => row.id === id ? { ...row, ...patch } : row));
   }
 
   function addHotel() {
@@ -188,6 +207,38 @@ export default function PackageOperationalDetails({
       const next = current.filter((row) => row.id !== id);
       return next.length ? next : [blankHotel()];
     });
+  }
+
+  function addStopover(journey: PackageFlightJourney) {
+    const flight = flights.find((item) => item.journey === journey);
+    const existing = stopovers.filter((item) => item.journey === journey);
+    const defaultDate = existing[existing.length - 1]?.departureDate || flight?.departureDate || "";
+    setStopovers((current) => [...current, blankStopover(journey, defaultDate)]);
+    updateFlight(journey, { flightType: "INDIRECT" });
+  }
+
+  function removeStopover(id: string, journey: PackageFlightJourney) {
+    setStopovers((current) => {
+      const next = current.filter((row) => row.id !== id);
+      if (!next.some((row) => row.journey === journey)) {
+        setFlights((flightRows) => flightRows.map((flight) => flight.journey === journey ? { ...flight, flightType: "DIRECT" } : flight));
+      }
+      return next;
+    });
+  }
+
+  function changeFlightType(journey: PackageFlightJourney, nextType: PackageFlightType) {
+    const journeyStops = stopovers.filter((item) => item.journey === journey);
+    if (nextType === "INDIRECT") {
+      updateFlight(journey, { flightType: "INDIRECT" });
+      if (!journeyStops.length) addStopover(journey);
+      return;
+    }
+
+    const hasStopoverData = journeyStops.some((item) => item.airport.trim() || item.departureDate || item.departureTime);
+    if (hasStopoverData && !window.confirm(`Change ${journey === "OUTBOUND" ? "Outbound" : "Return"} flight to Direct and remove its Stopover / Via details?`)) return;
+    setStopovers((current) => current.filter((item) => item.journey !== journey));
+    updateFlight(journey, { flightType: "DIRECT" });
   }
 
   async function save() {
@@ -202,6 +253,9 @@ export default function PackageOperationalDetails({
           .filter((row) => row.cityName.trim() || row.hotelName.trim() || row.checkIn || row.checkOut)
           .map(({ id: _id, ...item }) => item),
         flights: flights.map(({ id: _id, ...item }) => item),
+        stopovers: stopovers
+          .filter((row) => row.airport.trim() || row.departureDate || row.departureTime)
+          .map(({ id: _id, ...item }) => item),
         notes,
       });
       setMessage(`Package travel & passenger details for ${ubNumber} saved successfully.`);
@@ -245,7 +299,7 @@ export default function PackageOperationalDetails({
       </section>
 
       <section className="package15-panel">
-        <div className="package15-panel-head"><div><span>2</span><b>HOTEL DETAILS</b><small>Hotel order and dates are used to build the passenger movement schedule.</small></div><button type="button" disabled={!canEdit} onClick={addHotel}>+ Add Hotel Row</button></div>
+        <div className="package15-panel-head"><div><span>2</span><b>HOTEL DETAILS</b><small>Each hotel Check-Out becomes a passenger movement trigger. The next Hotel City determines the destination.</small></div><button type="button" disabled={!canEdit} onClick={addHotel}>+ Add Hotel Row</button></div>
         <div className="package15-table-wrap">
           <table className="package15-table package15-hotel-table">
             <thead><tr><th>SR</th><th>CITY NAME</th><th>HOTEL NAME</th><th>CHECK-IN</th><th>CHECK-OUT</th><th>NIGHTS</th><th>ACTION</th></tr></thead>
@@ -261,31 +315,54 @@ export default function PackageOperationalDetails({
         </div>
       </section>
 
-      <section className="package15-panel">
-        <div className="package15-panel-head"><div><span>3</span><b>FLIGHT DETAILS</b><small>Two fixed sectors: Outbound and Return. Overnight arrival is detected automatically from the times.</small></div></div>
-        <div className="package15-table-wrap">
-          <table className="package15-table package15-flight-table">
-            <thead><tr><th>SR</th><th>JOURNEY</th><th>DEPARTURE DATE</th><th>PNR</th><th>FLIGHT NO.</th><th>FROM (AIRPORT)</th><th>TO (AIRPORT)</th><th>DEPARTURE TIME</th><th>ARRIVAL TIME</th></tr></thead>
-            <tbody>{flights.map((row, index) => <tr key={row.journey}>
-              <td>{index + 1}</td><td><span className="package15-journey">{row.journey}</span></td>
-              <td><input type="date" value={row.departureDate} onChange={(e) => updateFlight(row.journey, { departureDate: e.target.value })} /></td>
-              <td><input value={row.pnr} onChange={(e) => updateFlight(row.journey, { pnr: e.target.value.toUpperCase() })} placeholder="PNR" /></td>
-              <td><input value={row.flightNo} onChange={(e) => updateFlight(row.journey, { flightNo: e.target.value.toUpperCase() })} placeholder="Flight No." /></td>
-              <td><input value={row.fromAirport} onChange={(e) => updateFlight(row.journey, { fromAirport: e.target.value.toUpperCase() })} placeholder="LHE / ISB / KHI" /></td>
-              <td><input value={row.toAirport} onChange={(e) => updateFlight(row.journey, { toAirport: e.target.value.toUpperCase() })} placeholder="JED / MED" /></td>
-              <td><input type="time" value={row.departureTime} onChange={(e) => updateFlight(row.journey, { departureTime: e.target.value })} /></td>
-              <td><input type="time" value={row.arrivalTime} onChange={(e) => updateFlight(row.journey, { arrivalTime: e.target.value })} /></td>
-            </tr>)}</tbody>
-          </table>
+      <section className="package15-panel package16-flight-panel">
+        <div className="package15-panel-head"><div><span>3</span><b>FLIGHT DETAILS</b><small>Outbound and Return are independent. Each can be Direct or Indirect / Via with its own Stopover segments.</small></div></div>
+        <div className="package16-flight-journeys">
+          {flights.map((row, index) => {
+            const journeyStops = stopovers.filter((item) => item.journey === row.journey);
+            return <section className={`package16-flight-card ${row.flightType.toLowerCase()}`} key={row.journey}>
+              <div className="package16-flight-card-head">
+                <div><span className="package16-flight-number">{index + 1}</span><span className="package15-journey">{row.journey}</span></div>
+                <label>FLIGHT TYPE<select value={row.flightType} onChange={(e) => changeFlightType(row.journey, e.target.value as PackageFlightType)} disabled={!canEdit}><option value="DIRECT">Direct</option><option value="INDIRECT">Indirect / Via</option></select></label>
+              </div>
+
+              <div className="package16-flight-grid">
+                <label>DEPARTURE DATE<input type="date" value={row.departureDate} onChange={(e) => updateFlight(row.journey, { departureDate: e.target.value })} /></label>
+                <label>PNR<input value={row.pnr} onChange={(e) => updateFlight(row.journey, { pnr: e.target.value.toUpperCase() })} placeholder="PNR" /></label>
+                <label>FLIGHT NO.<input value={row.flightNo} onChange={(e) => updateFlight(row.journey, { flightNo: e.target.value.toUpperCase() })} placeholder="Flight No." /></label>
+                <label>FROM ORIGIN (AIRPORT)<input value={row.fromAirport} onChange={(e) => updateFlight(row.journey, { fromAirport: e.target.value.toUpperCase() })} placeholder="KARACHI / KHI" /></label>
+                <label>TO DESTINATION (AIRPORT)<input value={row.toAirport} onChange={(e) => updateFlight(row.journey, { toAirport: e.target.value.toUpperCase() })} placeholder="JEDDAH / JED" /></label>
+                <label>ORIGIN DEPARTURE<input type="time" value={row.departureTime} onChange={(e) => updateFlight(row.journey, { departureTime: e.target.value })} /></label>
+                <label>DESTINATION ARRIVAL<input type="time" value={row.arrivalTime} onChange={(e) => updateFlight(row.journey, { arrivalTime: e.target.value })} /></label>
+              </div>
+
+              <div className="package16-stopover-zone">
+                <div className="package16-stopover-title"><div><b>TO STOPOVER / VIA (AIRPORT)</b><small>For an indirect journey, record each Stopover Airport and when the onward flight departs that stopover.</small></div><button type="button" disabled={!canEdit} onClick={() => addStopover(row.journey)}>+ Add Stopover</button></div>
+                {journeyStops.length === 0 ? (
+                  <div className="package16-no-stopover"><b>—</b><span>No Stopover / Direct Journey</span><button type="button" disabled={!canEdit} onClick={() => addStopover(row.journey)}>+</button></div>
+                ) : (
+                  <div className="package16-stopover-list">
+                    {journeyStops.map((stop, stopIndex) => <div className="package16-stopover-row" key={stop.id}>
+                      <span className="package16-via-badge">VIA {stopIndex + 1}</span>
+                      <label>STOPOVER AIRPORT<input value={stop.airport} onChange={(e) => updateStopover(stop.id, { airport: e.target.value.toUpperCase() })} placeholder="MUSCAT / MCT" /></label>
+                      <label>STOPOVER DEPARTURE DATE<input type="date" value={stop.departureDate} onChange={(e) => updateStopover(stop.id, { departureDate: e.target.value })} /></label>
+                      <label>STOPOVER DEPARTURE TIME<input type="time" value={stop.departureTime} onChange={(e) => updateStopover(stop.id, { departureTime: e.target.value })} /></label>
+                      <button type="button" className="package16-minus" disabled={!canEdit} onClick={() => removeStopover(stop.id, row.journey)} aria-label="Remove stopover">−</button>
+                    </div>)}
+                  </div>
+                )}
+              </div>
+            </section>;
+          })}
         </div>
       </section>
 
       <section className="package15-panel package15-movement-panel">
-        <div className="package15-panel-head"><div><span>4</span><b>AUTO PASSENGER MOVEMENT PREVIEW</b><small>Generated automatically from flight timing and hotel city/date sequence for the future Passenger Movement dashboard.</small></div></div>
+        <div className="package15-panel-head"><div><span>4</span><b>AUTO PASSENGER MOVEMENT PREVIEW</b><small>Movement-focused timeline: outbound departure, every hotel check-out movement, final hotel-to-airport movement and return departure.</small></div></div>
         {movementPreview.length ? <div className="package15-movement-line">{movementPreview.map((event, index) => <div className="package15-movement-event" key={`${event.eventType}-${index}`}>
           <span className="package15-dot">{index + 1}</span><small>{movementLabel(event.eventType)}</small><b>{event.eventDate || "Date pending"}{event.eventTime ? ` · ${event.eventTime}` : ""}</b><strong>{event.fromLocation || "—"}{event.toLocation ? ` → ${event.toLocation}` : ""}</strong><p>{event.description}</p>
-        </div>)}</div> : <div className="package15-empty movement">Enter flight dates/times and hotel city dates to generate the movement schedule.</div>}
-        <p className="package15-movement-note">Movement status is schedule-based operational tracking, not GPS location. The future dashboard can compare the current date/time with these saved events to show the passenger's expected location or next movement.</p>
+        </div>)}</div> : <div className="package15-empty movement">Enter outbound/return flight schedules and Hotel Check-Out dates to generate passenger movements.</div>}
+        <p className="package15-movement-note"><b>Movement rule:</b> Stopovers stay inside the detailed flight journey and do not create separate main movement cards. Hotel Check-In/Check-Out intervals remain saved for expected-location logic, while Check-Out is the trigger for city-to-city or final airport movement. Tracking is schedule-based, not GPS.</p>
       </section>
 
       <section className="package15-panel">
