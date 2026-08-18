@@ -4,11 +4,14 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 import { downloadDir, join } from "@tauri-apps/api/path";
 
 import { Company, Party, PaymentEntry, getPayments } from "./db";
+import { accountDirectionLabel } from "./BookingAccounting";
 import {
-  BookingAccountingEntry,
-  accountDirectionLabel,
-  getBookingAccountingEntries,
-} from "./BookingAccounting";
+  countStatementBookings,
+  filterStatementSections,
+  getStatementBookingSections,
+  statementBookingHeaders,
+  type StatementBookingSections,
+} from "./StatementBookingData";
 import { buildStatementPdf, StatementPdfData } from "./StatementJsPdf";
 
 type PeriodType = "FULL_LEDGER" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM";
@@ -19,6 +22,17 @@ type Props = {
   initialPartyId?: string;
   onOpenLedger: (party: Party) => void;
 };
+
+function emptySections(): StatementBookingSections {
+  return {
+    packageBookings: [],
+    ticketBookings: [],
+    hotelBookings: [],
+    visaBookings: [],
+    transportBookings: [],
+    miscBookings: [],
+  };
+}
 
 function todayIso() {
   const d = new Date();
@@ -81,12 +95,16 @@ function money(value: number) {
   return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
 
+function sar(value: number) {
+  return `SAR ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
+}
+
 export default function StatementsModule({ company, parties, initialPartyId = "", onOpenLedger }: Props) {
   const [partyId, setPartyId] = useState(initialPartyId || parties[0]?.id || "");
   const [periodType, setPeriodType] = useState<PeriodType>("FULL_LEDGER");
   const [fromDate, setFromDate] = useState(todayIso());
   const [toDate, setToDate] = useState(todayIso());
-  const [bookings, setBookings] = useState<BookingAccountingEntry[]>([]);
+  const [sections, setSections] = useState<StatementBookingSections>(() => emptySections());
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
   const [statementRef, setStatementRef] = useState(makeStatementRef());
   const [generatedOn, setGeneratedOn] = useState(generatedDate());
@@ -100,6 +118,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
 
   const selectedParty = useMemo(() => parties.find((party) => party.id === partyId) ?? null, [parties, partyId]);
   const accountDirection = selectedParty ? accountDirectionLabel(selectedParty.account_type) : "BOOKING";
+  const bookingHeaders = useMemo(() => statementBookingHeaders(sections), [sections]);
 
   useEffect(() => {
     if (initialPartyId && parties.some((party) => party.id === initialPartyId)) {
@@ -111,7 +130,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
 
   useEffect(() => {
     if (!partyId || !selectedParty) {
-      setBookings([]);
+      setSections(emptySections());
       setPayments([]);
       return;
     }
@@ -123,20 +142,16 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     setError("");
     setMessage("");
     try {
-      const [bookingRows, paymentRows] = await Promise.all([
-        getBookingAccountingEntries(company.id, selectedPartyId),
+      const [bookingSections, paymentRows] = await Promise.all([
+        getStatementBookingSections(company.id, selectedPartyId, accountType),
         getPayments(company.id, "", selectedPartyId),
       ]);
 
-      const relevantDirection = accountType === "PARTY" ? "SALE" : accountType === "VENDOR" ? "PURCHASE" : null;
-      const activeBookings = bookingRows.filter(
-        (row) => row.status === "ACTIVE" && (!relevantDirection || row.transaction_type === relevantDirection)
-      );
       const activePayments = paymentRows.filter((row) => row.status === "ACTIVE");
-
-      setBookings(activeBookings);
+      const headers = statementBookingHeaders(bookingSections);
+      setSections(bookingSections);
       setPayments(activePayments);
-      applyAutomaticPeriod(periodType, activeBookings, activePayments);
+      applyAutomaticPeriod(periodType, headers, activePayments);
       refreshStatementIdentity();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -145,7 +160,11 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     }
   }
 
-  function applyAutomaticPeriod(type: PeriodType, bookingRows = bookings, paymentRows = payments) {
+  function applyAutomaticPeriod(
+    type: PeriodType,
+    headers = bookingHeaders,
+    paymentRows = payments
+  ) {
     if (type === "CUSTOM") return;
     if (type === "THIS_MONTH") {
       const range = thisMonthRange();
@@ -161,7 +180,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     }
 
     const dates = [
-      ...bookingRows.map((row) => row.transaction_date),
+      ...headers.map((row) => row.transaction_date),
       ...paymentRows.map((row) => row.transaction_date),
     ].filter(Boolean).sort();
     if (dates.length) {
@@ -194,9 +213,13 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     return true;
   }
 
-  const periodBookings = useMemo(
-    () => bookings.filter((row) => inPeriod(row.transaction_date, fromDate, toDate)),
-    [bookings, fromDate, toDate]
+  const periodSections = useMemo(
+    () => filterStatementSections(sections, fromDate, toDate),
+    [sections, fromDate, toDate]
+  );
+  const periodBookingHeaders = useMemo(
+    () => statementBookingHeaders(periodSections),
+    [periodSections]
   );
   const periodPayments = useMemo(
     () => payments.filter((row) => inPeriod(row.transaction_date, fromDate, toDate)),
@@ -204,17 +227,21 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   );
 
   const openingBooked = useMemo(
-    () => sum(bookings.filter((row) => beforePeriod(row.transaction_date, fromDate)), (row) => row.total_pkr),
-    [bookings, fromDate]
+    () => sum(bookingHeaders.filter((row) => beforePeriod(row.transaction_date, fromDate)), (row) => row.total_pkr),
+    [bookingHeaders, fromDate]
   );
   const openingPayments = useMemo(
     () => sum(payments.filter((row) => beforePeriod(row.transaction_date, fromDate)), (row) => row.paid_amount),
     [payments, fromDate]
   );
   const openingBalance = openingBooked - openingPayments;
-  const bookingsDuringPeriod = sum(periodBookings, (row) => row.total_pkr);
+  const bookingsDuringPeriod = sum(periodBookingHeaders, (row) => row.total_pkr);
   const paymentsDuringPeriod = sum(periodPayments, (row) => row.paid_amount);
   const closingBalance = openingBalance + bookingsDuringPeriod - paymentsDuringPeriod;
+  const pendingSarBalance = sum(
+    bookingHeaders.filter((row) => row.transaction_date <= toDate),
+    (row) => row.unconverted_sar
+  );
 
   const pdfData = useMemo<StatementPdfData | null>(() => {
     if (!selectedParty || !fromDate || !toDate) return null;
@@ -230,10 +257,11 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       bookingsDuringPeriod,
       paymentsDuringPeriod,
       closingBalance,
-      bookings: periodBookings,
+      pendingSarBalance,
+      sections: periodSections,
       payments: periodPayments,
     };
-  }, [company, selectedParty, accountDirection, fromDate, toDate, generatedOn, statementRef, openingBalance, bookingsDuringPeriod, paymentsDuringPeriod, closingBalance, periodBookings, periodPayments]);
+  }, [company, selectedParty, accountDirection, fromDate, toDate, generatedOn, statementRef, openingBalance, bookingsDuringPeriod, paymentsDuringPeriod, closingBalance, pendingSarBalance, periodSections, periodPayments]);
 
   useEffect(() => {
     let cancelled = false;
@@ -290,14 +318,15 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const accountLabel = selectedParty?.account_type === "VENDOR" ? "Vendor / Supplier" : "Party / Customer";
   const bookedLabel = selectedParty?.account_type === "VENDOR" ? "PURCHASE BOOKINGS" : "SALE BOOKINGS";
   const balanceLabel = selectedParty?.account_type === "VENDOR" ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE";
+  const periodBookingCount = countStatementBookings(periodSections);
 
   return (
     <section className="content-card statements-page">
       <div className="page-title">
         <div>
-          <span className="eyebrow blue">BOOKING ACCOUNT STATEMENT</span>
+          <span className="eyebrow blue">SERVICE-WISE BOOKING STATEMENT</span>
           <h2>Statements</h2>
-          <p>Statements now use Package, Ticket, Hotel, Visa, Transport and Misc bookings as the commercial source of truth.</p>
+          <p>Package, Ticket, Hotel, Visa, Transport and Misc are shown as separate statement sections with service-specific fields.</p>
         </div>
         {selectedParty && <button className="secondary" onClick={() => onOpenLedger(selectedParty)}>Open Account Ledger</button>}
       </div>
@@ -328,16 +357,17 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
         <div><small>{bookedLabel}</small><b>{money(bookingsDuringPeriod)}</b></div>
         <div><small>PAYMENTS</small><b>{money(paymentsDuringPeriod)}</b></div>
         <div><small>{balanceLabel}</small><b>{money(closingBalance)}</b></div>
+        <div><small>PENDING SAR</small><b>{sar(pendingSarBalance)}</b></div>
       </div>
 
       <div className="statement-accounting-note">
         <b>{selectedParty ? `${selectedParty.name} · ${accountDirection}` : "Select an account"}</b>
-        <span>{selectedParty?.account_type === "VENDOR" ? "Purchase bookings increase payable; payments reduce payable." : "Sale bookings increase receivable; payments reduce receivable."}</span>
+        <span>{selectedParty?.account_type === "VENDOR" ? "Purchase bookings increase payable; payments reduce payable." : "Sale bookings increase receivable; payments reduce receivable."} Pending SAR is shown separately until ROE converts it to PKR.</span>
       </div>
 
       <div className="statement-preview-shell">
         <div className="statement-preview-head">
-          <div><b>PDF Preview</b><span>{loading ? "Loading booking data..." : buildingPdf ? "Building preview..." : `${periodBookings.length} booking(s) · ${periodPayments.length} payment(s)`}</span></div>
+          <div><b>PDF Preview</b><span>{loading ? "Loading service-wise booking data..." : buildingPdf ? "Building preview..." : `${periodBookingCount} booking(s) · ${periodPayments.length} payment(s)`}</span></div>
           <button className="primary statement-primary" disabled={!pdfBlob || savingPdf || buildingPdf} onClick={() => void savePdf()}>{savingPdf ? "Saving..." : "Save PDF"}</button>
         </div>
         {previewUrl ? <iframe className="statement-pdf-preview" src={previewUrl} title="Statement PDF Preview" /> : <div className="empty-state"><h3>No statement preview yet</h3><p>Select an account with booking or payment activity.</p></div>}
