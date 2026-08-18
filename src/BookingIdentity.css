@@ -1,0 +1,225 @@
+/* Phase 13A — unified Booking Identity / UB section */
+
+.booking-identity-card,
+.ticket9-screen > .ticket9-card:first-of-type,
+.hotel10-screen > .hotel10-card:first-of-type,
+.visa11-screen > .visa11-card:first-of-type,
+.transport12a-page > .transport12a-section:first-of-type,
+.package7d-form-card > .package7d-header-fields {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #bdd1e6 !important;
+  border-radius: 18px !important;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(255,255,255,.92) 0 7%, transparent 8%),
+    linear-gradient(135deg, #edf5fd 0%, #f7fbff 48%, #edf4fb 100%) !important;
+  box-shadow: 0 12px 30px rgba(20, 63, 107, .08);
+}
+
+.ticket9-screen > .ticket9-card:first-of-type,
+.hotel10-screen > .hotel10-card:first-of-type,
+.visa11-screen > .visa11-card:first-of-type,
+.transport12a-page > .transport12a-section:first-of-type {
+  border-left: 5px solid #174f89 !important;
+}
+
+.package7d-form-card > .package7d-header-fields {
+  margin: 0 0 24px;
+  padding: 62px 22px 22px !important;
+  border-left: 5px solid #174f89 !important;
+}
+
+.package7d-form-card > .package7d-header-fields::before {
+  content: "01  CREATE BOOKING / ASSIGN UB";
+  position: absolute;
+  left: 22px;
+  top: 18px;
+  color: #123f70;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .65px;
+}
+
+.package7d-form-card > .package7d-header-fields::after {
+  content: "Identify the account, booking date and UB number before entering service details.";
+  position: absolute;
+  left: 22px;
+  top: 39px;
+  color: #6d8198;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ticket9-screen > .ticket9-card:first-of-type .ticket9-section-head,
+.hotel10-screen > .hotel10-card:first-of-type .hotel10-section-head,
+.visa11-screen > .visa11-card:first-of-type .visa11-section-head,
+.transport12a-page > .transport12a-section:first-of-type .transport12a-section-title,
+.booking-identity-head {
+  margin: 0 !important;
+  padding: 18px 22px 13px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #123f70 !important;
+}
+
+.ticket9-screen > .ticket9-card:first-of-type .ticket9-section-head span,
+.hotel10-screen > .hotel10-card:first-of-type .hotel10-section-head span,
+.visa11-screen > .visa11-card:first-of-type .visa11-section-head span,
+.transport12a-page > .transport12a-section:first-of-type .transport12a-section-title span,
+.booking-identity-step {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  border-radius: 9px;
+  background: #174f89 !important;
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ticket9-screen > .ticket9-card:first-of-type .ticket9-section-head b,
+.hotel10-screen > .hotel10-card:first-of-type .hotel10-section-head b,
+.visa11-screen > .visa11-card:first-of-type .visa11-section-head b,
+.transport12a-page > .transport12a-section:first-of-type .transport12a-section-title b,
+.booking-identity-head b {
+  color: #123f70 !important;
+  font-size: 13px;
+  letter-spacing: .45px;
+}
+
+.ticket9-screen > .ticket9-card:first-of-type .ticket9-header-grid,
+.hotel10-screen > .hotel10-card:first-of-type .hotel10-header-grid,
+.visa11-screen > .visa11-card:first-of-type .visa11-header-grid,
+.transport12a-page > .transport12a-section:first-of-type .transport12a-header-grid,
+.booking-identity-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.35fr) minmax(190px, .8fr) minmax(220px, 1fr) !important;
+  gap: 15px !important;
+  padding: 6px 22px 22px !important;
+}
+
+.booking-identity-grid label,
+.ticket9-screen > .ticket9-card:first-of-type label,
+.hotel10-screen > .hotel10-card:first-of-type label,
+.visa11-screen > .visa11-card:first-of-type label,
+.transport12a-page > .transport12a-section:first-of-type label,
+.package7d-form-card > .package7d-header-fields label {
+  padding: 13px 13px 11px;
+  border: 1px solid #d2deeb;
+  border-radius: 13px;
+  background: rgba(255,255,255,.88);
+  color: #314a64;
+}
+
+.booking-identity-grid label::before,
+.package7d-form-card > .package7d-header-fields label::before {
+  display: inline-grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  margin-right: 7px;
+  border-radius: 7px;
+  background: #e5eef8;
+  color: #174f89;
+  font-size: 10px;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+.booking-identity-grid label:nth-child(1)::before,
+.package7d-form-card > .package7d-header-fields label:nth-child(1)::before { content: "1"; }
+.booking-identity-grid label:nth-child(2)::before,
+.package7d-form-card > .package7d-header-fields label:nth-child(2)::before { content: "2"; }
+.booking-identity-grid label:nth-child(3)::before,
+.package7d-form-card > .package7d-header-fields label:nth-child(3)::before { content: "3"; }
+
+.booking-identity-grid input,
+.booking-identity-grid select,
+.ticket9-screen > .ticket9-card:first-of-type input,
+.ticket9-screen > .ticket9-card:first-of-type select,
+.hotel10-screen > .hotel10-card:first-of-type input,
+.hotel10-screen > .hotel10-card:first-of-type select,
+.visa11-screen > .visa11-card:first-of-type input,
+.visa11-screen > .visa11-card:first-of-type select,
+.transport12a-page > .transport12a-section:first-of-type input,
+.transport12a-page > .transport12a-section:first-of-type select,
+.package7d-form-card > .package7d-header-fields input,
+.package7d-form-card > .package7d-header-fields select {
+  margin-top: 7px;
+  min-height: 44px;
+  border-color: #bdccdc !important;
+  background: #fff !important;
+  font-weight: 700;
+}
+
+.booking-identity-grid label:last-child input,
+.ticket9-screen > .ticket9-card:first-of-type .ticket9-header-grid label:last-child input,
+.hotel10-screen > .hotel10-card:first-of-type .hotel10-header-grid label:last-child input,
+.visa11-screen > .visa11-card:first-of-type .visa11-header-grid label:last-child input,
+.transport12a-page > .transport12a-section:first-of-type .transport12a-header-grid label:last-child input,
+.package7d-form-card > .package7d-header-fields label:last-child input {
+  border: 2px solid #8fb3d8 !important;
+  background: #fbfdff !important;
+  color: #123f70;
+  font-size: 15px;
+  letter-spacing: .3px;
+}
+
+.booking-identity-helper {
+  display: block;
+  margin-top: 6px;
+  color: #788ca1;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.misc13-page { display: grid; gap: 18px; }
+.misc13-title { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; }
+.misc13-title h2 { margin:5px 0 4px; color:#123f70; font-size:29px; }
+.misc13-title p { margin:0; color:#738498; }
+.misc13-card { border:1px solid #d7e2ee; border-radius:16px; background:#fff; overflow:hidden; }
+.misc13-section-head { display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid #e2e9f1; color:#153f70; }
+.misc13-section-head span { display:grid; place-items:center; width:28px; height:28px; border-radius:8px; background:#174f89; color:#fff; font-size:11px; font-weight:900; }
+.misc13-section-head b { font-size:13px; letter-spacing:.45px; }
+.misc13-row-head { justify-content:space-between; }
+.misc13-row-head > div { display:flex; align-items:center; gap:10px; }
+.misc13-table-wrap { overflow:auto; }
+.misc13-table { width:100%; border-collapse:collapse; min-width:990px; }
+.misc13-table th { padding:11px 10px; background:#edf3f9; color:#31516f; font-size:10px; text-align:left; white-space:nowrap; }
+.misc13-table td { padding:10px; border-top:1px solid #e4eaf1; vertical-align:top; }
+.misc13-table input { min-width:100px; }
+.misc13-service { min-width:220px !important; }
+.misc13-rate-wrap small { display:block; margin-top:5px; color:#74879a; font-size:10px; font-weight:700; }
+.misc13-currency-chip { display:inline-block; margin-bottom:5px; padding:4px 7px; border-radius:999px; font-size:9px; font-weight:900; background:#edf5fd; color:#174f89; }
+.misc13-currency-chip.sar { background:#eef8f2; color:#187048; }
+.misc13-total { min-width:135px; }
+.misc13-total b { display:block; color:#173f70; }
+.misc13-total small { display:block; margin-top:4px; color:#75879a; }
+.misc13-remove { width:32px; height:32px; border:0; border-radius:8px; background:#fff0f2; color:#a52d3a; font-size:19px; }
+.misc13-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.misc13-summary > div { padding:16px; border:1px solid #d8e2ec; border-radius:14px; background:#f7fafc; display:grid; gap:5px; }
+.misc13-summary small { color:#728397; font-size:9px; font-weight:900; }
+.misc13-summary b { color:#173f70; font-size:20px; }
+.misc13-summary .grand { background:#eef5fc; border-color:#bfd4e9; }
+.misc13-actions { display:flex; justify-content:flex-end; gap:10px; }
+.misc13-register-controls { display:flex; justify-content:space-between; gap:14px; align-items:center; }
+.misc13-register-controls > div { display:flex; gap:6px; }
+.misc13-register-controls button { border:1px solid #d1dce8; background:#fff; color:#48627c; border-radius:9px; padding:9px 12px; font-weight:750; }
+.misc13-register-controls button.active { background:#174f89; color:#fff; border-color:#174f89; }
+.misc13-register-lines { display:grid; gap:7px; }
+.misc13-register-lines div { display:grid; gap:2px; }
+.misc13-register-lines small { color:#7b8999; }
+
+@media(max-width:900px) {
+  .ticket9-screen > .ticket9-card:first-of-type .ticket9-header-grid,
+  .hotel10-screen > .hotel10-card:first-of-type .hotel10-header-grid,
+  .visa11-screen > .visa11-card:first-of-type .visa11-header-grid,
+  .transport12a-page > .transport12a-section:first-of-type .transport12a-header-grid,
+  .booking-identity-grid,
+  .package7d-form-card > .package7d-header-fields {
+    grid-template-columns:1fr !important;
+  }
+  .misc13-summary { grid-template-columns:1fr 1fr; }
+}
