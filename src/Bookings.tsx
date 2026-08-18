@@ -3,6 +3,7 @@ import TicketBookingModule from "./TicketBooking";
 import HotelBookingModule from "./HotelBooking";
 import VisaBookingModule from "./VisaBooking";
 import TransportBookingModule from "./TransportBooking";
+import MiscBookingModule from "./MiscBooking";
 import {
   BookingTransactionType,
   PackageBooking,
@@ -44,7 +45,7 @@ const serviceCards: Array<{ key: BookingService; title: string; subtitle: string
   { key: "HOTEL", title: "Hotel", subtitle: "Hotel accommodation" },
   { key: "VISA", title: "Visa", subtitle: "Visa services" },
   { key: "TRANSPORT", title: "Transport", subtitle: "Transport services" },
-  { key: "MISC", title: "Misc", subtitle: "Other booking charges" },
+  { key: "MISC", title: "Misc", subtitle: "General-purpose per-person services" },
 ];
 
 const packageTypeDefaults = [
@@ -158,7 +159,6 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
   const [packageDate, setPackageDate] = useState(localDate());
   const [ubNumber, setUbNumber] = useState("");
   const [packageRows, setPackageRows] = useState<PackageRowState[]>([newPackageRow("ADULT")]);
-
   const [packageDescription, setPackageDescription] = useState("");
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
@@ -203,7 +203,6 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
 
   const totalPax = passengerTotals.ADULT + passengerTotals.CHILD + passengerTotals.INFANT;
   const grandTotal = passengerSubtotals.ADULT + passengerSubtotals.CHILD + passengerSubtotals.INFANT;
-
   const activeEntries = entries.filter((entry) => entry.status === "ACTIVE");
   const activeSaleTotal = activeEntries.filter((entry) => entry.transaction_type === "SALE").reduce((sum, entry) => sum + Number(entry.total_pkr || 0), 0);
   const activePurchaseTotal = activeEntries.filter((entry) => entry.transaction_type === "PURCHASE").reduce((sum, entry) => sum + Number(entry.total_pkr || 0), 0);
@@ -255,7 +254,6 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
     setMessage("");
     setError("");
     if (next === "PACKAGE") resetPackageForm({ keepDirection: true, keepService: true });
-    setService(next);
     setScreen("SERVICE_FORM");
   }
 
@@ -458,7 +456,7 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
             <button type="button" className={`booking-service-tile service-${item.key.toLowerCase()}`} key={item.key} onClick={() => chooseService(item.key)}>
               <span className="booking-service-icon"><ServiceIcon service={item.key} /></span>
               <b>{item.title}</b><small>{item.subtitle}</small>
-              {["PACKAGE", "TICKET", "HOTEL"].includes(item.key) ? <span className="booking-service-status live">LIVE</span> : <span className="booking-service-status pending">NEXT</span>}
+              <span className="booking-service-status live">LIVE</span>
             </button>
           ))}
         </div>
@@ -471,22 +469,10 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
     return (
       <div className={`package7d-row package-${row.passengerType.toLowerCase()}`} key={row.rowId}>
         <div className="package7d-row-number">{index + 1}</div>
-        <label className="package7d-passenger-name">
-          Passenger Name *
-          <input value={row.passengerName} onChange={(e) => updatePackageRow(row.rowId, "passengerName", e.target.value)} placeholder={row.count.trim() ? "Family head / group name" : `${passengerLabel} passenger name`} />
-        </label>
-        <label className="package7d-type">
-          Package Type *
-          <input list="package-type-options" value={row.packageType} onChange={(e) => updatePackageRow(row.rowId, "packageType", e.target.value)} placeholder="e.g. Full Umrah Package" />
-        </label>
-        <label>
-          Rate Per {passengerLabel} (PKR) *
-          <input type="number" min="0" step="0.01" value={row.rate} onChange={(e) => updatePackageRow(row.rowId, "rate", e.target.value)} placeholder="0" />
-        </label>
-        <label>
-          Qty (Optional)
-          <input type="number" min="1" step="1" value={row.count} onChange={(e) => updatePackageRow(row.rowId, "count", e.target.value)} placeholder="Blank = 1" />
-        </label>
+        <label className="package7d-passenger-name">Passenger Name *<input value={row.passengerName} onChange={(e) => updatePackageRow(row.rowId, "passengerName", e.target.value)} placeholder={row.count.trim() ? "Family head / group name" : `${passengerLabel} passenger name`} /></label>
+        <label className="package7d-type">Package Type *<input list="package-type-options" value={row.packageType} onChange={(e) => updatePackageRow(row.rowId, "packageType", e.target.value)} placeholder="e.g. Full Umrah Package" /></label>
+        <label>Rate Per {passengerLabel} (PKR) *<input type="number" min="0" step="0.01" value={row.rate} onChange={(e) => updatePackageRow(row.rowId, "rate", e.target.value)} placeholder="0" /></label>
+        <label>Qty (Optional)<input type="number" min="1" step="1" value={row.count} onChange={(e) => updatePackageRow(row.rowId, "count", e.target.value)} placeholder="Blank = 1" /></label>
         <div className="package7d-subtotal"><small>SUB TOTAL (PKR)</small><b>{money(rowTotal(row))}</b></div>
         <button type="button" className="package-remove-row" disabled={!(editingId ? canEdit : canCreate)} onClick={() => removePackageRow(row.rowId)} title="Remove row" aria-label="Remove package row">×</button>
       </div>
@@ -500,10 +486,7 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
     const buttonLabel = type === "ADULT" ? "+ Add Adult Row" : type === "CHILD" ? "+ Add Child Row" : "+ Add Infant Row";
     return (
       <section className={`package7d-passenger-section ${type.toLowerCase()}`}>
-        <div className="package7d-section-head">
-          <div><b>{label}</b><span>{type === "ADULT" ? "Required" : "Optional"}</span></div>
-          <button type="button" disabled={!canWrite} onClick={() => addPassengerRow(type)}>{buttonLabel}</button>
-        </div>
+        <div className="package7d-section-head"><div><b>{label}</b><span>{type === "ADULT" ? "Required" : "Optional"}</span></div><button type="button" disabled={!canWrite} onClick={() => addPassengerRow(type)}>{buttonLabel}</button></div>
         {rows.length ? <div className="package7d-rows">{rows.map((row, index) => renderPassengerRow(row, index))}</div> : <div className="package7d-empty-row">No {label.toLowerCase()} rows added. Use the button above when needed.</div>}
       </section>
     );
@@ -515,77 +498,39 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
       <section className="booking-entry-screen package-service-screen package7d-screen">
         <div className="booking-screen-toolbar package-screen-toolbar">
           <button type="button" className="booking-back-button" onClick={backToServices}>← Back to Booking Services</button>
-          <div className="package-toolbar-actions">
-            <span className={`direction-badge ${transactionType === "SALE" ? "sale" : "purchase"}`}>{transactionType === "SALE" ? "SALE TO PARTY" : "PURCHASE FROM VENDOR / SUPPLIER"}</span>
-            <button type="button" className="package-register-button" onClick={() => { setError(""); setMessage(""); setScreen("PACKAGE_REGISTER"); }}>Package Booking Register</button>
-          </div>
+          <div className="package-toolbar-actions"><span className={`direction-badge ${transactionType === "SALE" ? "sale" : "purchase"}`}>{transactionType === "SALE" ? "SALE TO PARTY" : "PURCHASE FROM VENDOR / SUPPLIER"}</span><button type="button" className="package-register-button" onClick={() => { setError(""); setMessage(""); setScreen("PACKAGE_REGISTER"); }}>Package Booking Register</button></div>
         </div>
 
-        <div className="booking-screen-heading package-form-heading">
-          <span className="eyebrow blue">PACKAGE BOOKING</span>
-          <h2>{editingId ? "Edit Package Booking" : "New Package Booking"}</h2>
-          <p>PKR only. If Qty is blank, Sub Total equals Rate and the row counts as 1 passenger.</p>
-        </div>
-
+        <div className="booking-screen-heading package-form-heading"><span className="eyebrow blue">PACKAGE BOOKING</span><h2>{editingId ? "Edit Package Booking" : "New Package Booking"}</h2><p>PKR only. If Qty is blank, Sub Total equals Rate and the row counts as 1 passenger.</p></div>
         {message && <div className="alert success">{message}</div>}
         {error && <div className="alert error">{error}</div>}
         {!((editingId && canEdit) || (!editingId && canCreate)) && <div className="alert info booking-info">READ ONLY: Your user role can view Package bookings and the register, but cannot save changes.</div>}
 
         <div className="package-form-card package7d-form-card">
           <div className="package7d-header-fields">
-            <label>
-              {transactionType === "SALE" ? "Party Name *" : "Vendor / Supplier Name *"}
-              <select value={counterpartyId} onChange={(e) => setCounterpartyId(e.target.value)}>
-                <option value="">{transactionType === "SALE" ? "Select Party" : "Select Vendor / Supplier"}</option>
-                {eligibleAccounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </label>
-            <label>Date of Booking *<input type="date" value={packageDate} onChange={(e) => setPackageDate(e.target.value)} /></label>
-            <label>UB # / Booking *<input value={ubNumber} onChange={(e) => setUbNumber(e.target.value)} placeholder="e.g. UB-001" /><small className="field-help">UB # must be unique for Package bookings.</small></label>
+            <label>{transactionType === "SALE" ? "Party / Customer *" : "Vendor / Supplier *"}<select value={counterpartyId} onChange={(e) => setCounterpartyId(e.target.value)}><option value="">{transactionType === "SALE" ? "Select Party / Customer" : "Select Vendor / Supplier"}</option>{eligibleAccounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><small className="booking-identity-helper">The account this Package booking belongs to.</small></label>
+            <label>Date of Booking *<input type="date" value={packageDate} onChange={(e) => setPackageDate(e.target.value)} /><small className="booking-identity-helper">Accounting date for this booking.</small></label>
+            <label>UB / Booking # *<input value={ubNumber} onChange={(e) => setUbNumber(e.target.value)} placeholder="e.g. UB-001" /><small className="booking-identity-helper">Booking reference for this Package service.</small></label>
           </div>
 
           {eligibleAccounts.length === 0 && <div className="alert info booking-info">No active {transactionType === "SALE" ? "Party" : "Vendor / Supplier"} exists yet. Create one from Dashboard first.</div>}
-
           <datalist id="package-type-options">{packageTypeSuggestions.map((item) => <option value={item} key={item} />)}</datalist>
-
-          <div className="package7d-passenger-stack">
-            {renderPassengerSection("ADULT")}
-            {renderPassengerSection("CHILD")}
-            {renderPassengerSection("INFANT")}
-          </div>
+          <div className="package7d-passenger-stack">{renderPassengerSection("ADULT")}{renderPassengerSection("CHILD")}{renderPassengerSection("INFANT")}</div>
 
           <div className="package7d-summary-grid package7e-summary-grid">
             <div className="package7d-pax-summary package7e-pax-summary">
-              <div className="package7e-summary-card adult">
-                <span>Adults</span>
-                <b>{passengerTotals.ADULT}</b>
-                <small>Sub Total <strong>{money(passengerSubtotals.ADULT)}</strong></small>
-              </div>
-              <div className="package7e-summary-card child">
-                <span>Children</span>
-                <b>{passengerTotals.CHILD}</b>
-                <small>Sub Total <strong>{money(passengerSubtotals.CHILD)}</strong></small>
-              </div>
-              <div className="package7e-summary-card infant">
-                <span>Infants</span>
-                <b>{passengerTotals.INFANT}</b>
-                <small>Sub Total <strong>{money(passengerSubtotals.INFANT)}</strong></small>
-              </div>
+              <div className="package7e-summary-card adult"><span>Adults</span><b>{passengerTotals.ADULT}</b><small>Sub Total <strong>{money(passengerSubtotals.ADULT)}</strong></small></div>
+              <div className="package7e-summary-card child"><span>Children</span><b>{passengerTotals.CHILD}</b><small>Sub Total <strong>{money(passengerSubtotals.CHILD)}</strong></small></div>
+              <div className="package7e-summary-card infant"><span>Infants</span><b>{passengerTotals.INFANT}</b><small>Sub Total <strong>{money(passengerSubtotals.INFANT)}</strong></small></div>
               <div className="total package7e-total-pax"><span>Total Pax</span><b>{totalPax}</b><small>All passenger rows</small></div>
             </div>
             <div className="package7d-grand-total"><span>GRAND PACKAGE TOTAL</span><b>{money(grandTotal)}</b><small>Adults + Children + Infants · PKR only</small></div>
           </div>
 
           <section className="package7d-details-card">
-            <div className="package7d-details-head">
-              <div><span className="eyebrow blue">PACKAGE BOOKING DETAILS</span><b>Optional details for this UB / Booking</b><small>These fields help you understand the package later and do not affect the booking total.</small></div>
-              <span className="package7d-optional-badge">OPTIONAL</span>
-            </div>
-
+            <div className="package7d-details-head"><div><span className="eyebrow blue">PACKAGE BOOKING DETAILS</span><b>Optional details for this UB / Booking</b><small>These fields help you understand the package later and do not affect the booking total.</small></div><span className="package7d-optional-badge">OPTIONAL</span></div>
             <div className="package7d-details-grid">
-              <label className="package7d-description">Package Type / Description
-                <div className="package7d-copy-field"><input value={packageDescription} onChange={(e) => setPackageDescription(e.target.value)} placeholder="e.g. 20 Days Economy Package - Shuttle 1000 Metres" /><button type="button" onClick={copyPackageTypeToDetails}>Use Package Type</button></div>
-              </label>
+              <label className="package7d-description">Package Type / Description<div className="package7d-copy-field"><input value={packageDescription} onChange={(e) => setPackageDescription(e.target.value)} placeholder="e.g. 20 Days Economy Package - Shuttle 1000 Metres" /><button type="button" onClick={copyPackageTypeToDetails}>Use Package Type</button></div></label>
               <label>Date of Departure<input type="date" value={departureDate} onChange={(e) => updateDeparture(e.target.value)} /></label>
               <label>Date of Arrival / Return<input type="date" value={returnDate} onChange={(e) => updateReturn(e.target.value)} /></label>
               <label>No. of Days<input type="number" min="0" step="1" value={noOfDays} onChange={(e) => setNoOfDays(e.target.value)} placeholder="Auto / editable" /><small className="field-help">Auto-calculated from both dates; you can edit it.</small></label>
@@ -604,48 +549,24 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
     );
   }
 
-  function renderPendingService() {
-    if (!transactionType || !service) return renderServicesScreen();
-    const card = serviceCards.find((item) => item.key === service);
-    return (
-      <section className="booking-entry-screen pending-service-screen">
-        <div className="booking-screen-toolbar"><button type="button" className="booking-back-button" onClick={backToServices}>← Back to Booking Services</button><span className={`direction-badge ${transactionType === "SALE" ? "sale" : "purchase"}`}>{transactionType === "SALE" ? "SALE TO PARTY" : "PURCHASE FROM VENDOR / SUPPLIER"}</span></div>
-        <div className="pending-service-card"><span className={`booking-service-icon service-${service.toLowerCase()}`}><ServiceIcon service={service} /></span><span className="eyebrow blue">{service} BOOKING</span><h2>{card?.title} setup will be added next</h2><p>This screen is intentionally waiting until its exact fields and calculation system are approved.</p><button type="button" className="primary" onClick={backToServices}>Choose Another Service</button></div>
-      </section>
-    );
-  }
-
   function renderPackageRegister() {
     return (
       <section className="booking-entry-screen package-register-screen">
         <div className="booking-screen-toolbar package-register-toolbar"><button type="button" className="booking-back-button" onClick={() => setScreen("SERVICE_FORM")}>← Back to Package Booking</button><span className="booking-foundation-badge active-engine">PACKAGE REGISTER</span></div>
-        <div className="package-history-title package-register-title-v2">
-          <div><span className="eyebrow blue">PACKAGE BOOKING REGISTER</span><h2>Package Booking Register</h2><p>Only Package bookings are shown here. Sale and Purchase records can be filtered below.</p></div>
-          <div className="package-mini-stats"><div><small>ACTIVE</small><b>{activeEntries.length}</b></div><div className="sale"><small>SALES</small><b>{money(activeSaleTotal)}</b></div><div className="purchase"><small>PURCHASES</small><b>{money(activePurchaseTotal)}</b></div><div><small>PAX</small><b>{activePax}</b></div></div>
-        </div>
-
+        <div className="package-history-title package-register-title-v2"><div><span className="eyebrow blue">PACKAGE BOOKING REGISTER</span><h2>Package Booking Register</h2><p>Only Package bookings are shown here. Sale and Purchase records can be filtered below.</p></div><div className="package-mini-stats"><div><small>ACTIVE</small><b>{activeEntries.length}</b></div><div className="sale"><small>SALES</small><b>{money(activeSaleTotal)}</b></div><div className="purchase"><small>PURCHASES</small><b>{money(activePurchaseTotal)}</b></div><div><small>PAX</small><b>{activePax}</b></div></div></div>
         {message && <div className="alert success">{message}</div>}
         {error && <div className="alert error">{error}</div>}
-
-        <div className="package-register-controls">
-          <div className="package-register-filter-tabs">{(["ALL", "SALE", "PURCHASE"] as RegisterTypeFilter[]).map((item) => <button type="button" key={item} className={registerType === item ? "active" : ""} onClick={() => setRegisterType(item)}>{item === "ALL" ? "All Package Bookings" : item === "SALE" ? "Sales" : "Purchases"}</button>)}</div>
-          <div className="search-box package-search"><span>⌕</span><input value={search} onChange={(e) => void changeSearch(e.target.value)} placeholder="Search UB #, Party/Vendor, Passenger, Package Type, contact or notes..." /></div>
-        </div>
+        <div className="package-register-controls"><div className="package-register-filter-tabs">{(["ALL", "SALE", "PURCHASE"] as RegisterTypeFilter[]).map((item) => <button type="button" key={item} className={registerType === item ? "active" : ""} onClick={() => setRegisterType(item)}>{item === "ALL" ? "All Package Bookings" : item === "SALE" ? "Sales" : "Purchases"}</button>)}</div><div className="search-box package-search"><span>⌕</span><input value={search} onChange={(e) => void changeSearch(e.target.value)} placeholder="Search UB #, Party/Vendor, Passenger, Package Type, contact or notes..." /></div></div>
 
         {visibleRegisterEntries.length === 0 ? <div className="empty-state compact-empty"><div className="empty-icon">PKG</div><h3>No package bookings found</h3><p>Create a Package booking or change the register filter/search.</p></div> : (
-          <div className="party-table-wrap package-register-wrap">
-            <table className="party-table package-register-table">
-              <thead><tr><th>DATE</th><th>UB #</th><th>TYPE</th><th>PARTY / VENDOR</th><th>PACKAGE ROWS</th><th>PAX</th><th>TOTAL PKR</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
-              <tbody>{visibleRegisterEntries.map((entry) => {
-                const pax = entry.lines.reduce((sum, line) => sum + Number(line.person_count || 0), 0);
-                return <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
-                  <td>{entry.transaction_date}</td><td><b>{entry.ub_number}</b></td><td><span className={`direction-badge ${entry.transaction_type === "SALE" ? "sale" : "purchase"}`}>{entry.transaction_type}</span></td><td><b>{entry.counterparty_name || "—"}</b></td>
-                  <td><div className="package-history-lines">{entry.lines.map((line) => <div className="package-history-line" key={line.id}><span className={`passenger-chip ${line.passenger_type.toLowerCase()}`}>{line.passenger_type}</span><b>{line.passenger_name || "—"}</b><span>{line.package_type}</span><small>{line.person_count} × {money(line.rate_per_person)} = {money(line.line_total_pkr)}</small></div>)}</div></td>
-                  <td className="centered"><b>{pax}</b></td><td className="amount"><b>{money(entry.total_pkr)}</b></td><td><span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span></td><td><div className="row-actions"><button type="button" disabled={!canEdit || entry.status !== "ACTIVE" || busy} onClick={() => editPackage(entry)}>Edit</button><button type="button" disabled={!canVoid || entry.status !== "ACTIVE" || busy} onClick={() => void voidPackage(entry)}>Void</button></div></td>
-                </tr>;
-              })}</tbody>
-            </table>
-          </div>
+          <div className="party-table-wrap package-register-wrap"><table className="party-table package-register-table"><thead><tr><th>DATE</th><th>UB #</th><th>TYPE</th><th>PARTY / VENDOR</th><th>PACKAGE ROWS</th><th>PAX</th><th>TOTAL PKR</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>{visibleRegisterEntries.map((entry) => {
+            const pax = entry.lines.reduce((sum, line) => sum + Number(line.person_count || 0), 0);
+            return <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
+              <td>{entry.transaction_date}</td><td><b>{entry.ub_number}</b></td><td><span className={`direction-badge ${entry.transaction_type === "SALE" ? "sale" : "purchase"}`}>{entry.transaction_type}</span></td><td><b>{entry.counterparty_name || "—"}</b></td>
+              <td><div className="package-history-lines">{entry.lines.map((line) => <div className="package-history-line" key={line.id}><span className={`passenger-chip ${line.passenger_type.toLowerCase()}`}>{line.passenger_type}</span><b>{line.passenger_name || "—"}</b><span>{line.package_type}</span><small>{line.person_count} × {money(line.rate_per_person)} = {money(line.line_total_pkr)}</small></div>)}</div></td>
+              <td className="centered"><b>{pax}</b></td><td className="amount"><b>{money(entry.total_pkr)}</b></td><td><span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span></td><td><div className="row-actions"><button type="button" disabled={!canEdit || entry.status !== "ACTIVE" || busy} onClick={() => editPackage(entry)}>Edit</button><button type="button" disabled={!canVoid || entry.status !== "ACTIVE" || busy} onClick={() => void voidPackage(entry)}>Void</button></div></td>
+            </tr>;
+          })}</tbody></table></div>
         )}
       </section>
     );
@@ -656,59 +577,11 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
       {screen === "DIRECTION" && renderDirectionScreen()}
       {screen === "SERVICES" && renderServicesScreen()}
       {screen === "SERVICE_FORM" && service === "PACKAGE" && renderPackageForm()}
-      {screen === "SERVICE_FORM" && service === "TICKET" && transactionType && (
-        <TicketBookingModule
-          companyId={companyId}
-          parties={parties}
-          transactionType={transactionType}
-          userId={userId}
-          canCreate={canCreate}
-          canEdit={canEdit}
-          canVoid={canVoid}
-          onBack={backToServices}
-          onChanged={onChanged}
-        />
-      )}
-      {screen === "SERVICE_FORM" && service === "HOTEL" && transactionType && (
-        <HotelBookingModule
-          companyId={companyId}
-          parties={parties}
-          transactionType={transactionType}
-          userId={userId}
-          canCreate={canCreate}
-          canEdit={canEdit}
-          canVoid={canVoid}
-          onBack={backToServices}
-          onChanged={onChanged}
-        />
-      )}
-      {screen === "SERVICE_FORM" && service === "VISA" && transactionType && (
-        <VisaBookingModule
-          companyId={companyId}
-          parties={parties}
-          transactionType={transactionType}
-          userId={userId}
-          canCreate={canCreate}
-          canEdit={canEdit}
-          canVoid={canVoid}
-          onBack={backToServices}
-          onChanged={onChanged}
-        />
-      )}
-      {screen === "SERVICE_FORM" && service === "TRANSPORT" && transactionType && (
-        <TransportBookingModule
-          companyId={companyId}
-          parties={parties}
-          transactionType={transactionType}
-          userId={userId}
-          canCreate={canCreate}
-          canEdit={canEdit}
-          canVoid={canVoid}
-          onBack={backToServices}
-          onChanged={onChanged}
-        />
-      )}
-      {screen === "SERVICE_FORM" && service && service !== "PACKAGE" && service !== "TICKET" && service !== "HOTEL" && service !== "VISA" && service !== "TRANSPORT" && renderPendingService()}
+      {screen === "SERVICE_FORM" && service === "TICKET" && transactionType && <TicketBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />}
+      {screen === "SERVICE_FORM" && service === "HOTEL" && transactionType && <HotelBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />}
+      {screen === "SERVICE_FORM" && service === "VISA" && transactionType && <VisaBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />}
+      {screen === "SERVICE_FORM" && service === "TRANSPORT" && transactionType && <TransportBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />}
+      {screen === "SERVICE_FORM" && service === "MISC" && transactionType && <MiscBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />}
       {screen === "PACKAGE_REGISTER" && renderPackageRegister()}
     </section>
   );
