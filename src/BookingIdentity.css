@@ -1,10 +1,10 @@
 /* Phase 13A — unified Booking Identity / UB section */
 
 .booking-identity-card,
-.ticket9-screen > .ticket9-card:first-of-type,
-.hotel10-screen > .hotel10-card:first-of-type,
-.visa11-screen > .visa11-card:first-of-type,
-.transport12a-page > .transport12a-section:first-of-type,
+.ticket9-card:has(.ticket9-header-grid),
+.hotel10-card:has(.hotel10-header-grid),
+.visa11-card:has(.visa11-header-grid),
+.transport12a-section:has(.transport12a-header-grid),
 .package7d-form-card > .package7d-header-fields {
   position: relative;
   overflow: hidden;
@@ -16,10 +16,10 @@
   box-shadow: 0 12px 30px rgba(20, 63, 107, .08);
 }
 
-.ticket9-screen > .ticket9-card:first-of-type,
-.hotel10-screen > .hotel10-card:first-of-type,
-.visa11-screen > .visa11-card:first-of-type,
-.transport12a-page > .transport12a-section:first-of-type {
+.ticket9-card:has(.ticket9-header-grid),
+.hotel10-card:has(.hotel10-header-grid),
+.visa11-card:has(.visa11-header-grid),
+.transport12a-section:has(.transport12a-header-grid) {
   border-left: 5px solid #174f89 !important;
 }
 
@@ -50,10 +50,10 @@
   font-weight: 600;
 }
 
-.ticket9-screen > .ticket9-card:first-of-type .ticket9-section-head,
-.hotel10-screen > .hotel10-card:first-of-type .hotel10-section-head,
-.visa11-screen > .visa11-card:first-of-type .visa11-section-head,
-.transport12a-page > .transport12a-section:first-of-type .transport12a-section-title,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-section-head,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-section-head,
+.visa11-card:has(.visa11-header-grid) .visa11-section-head,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-section-title,
 .booking-identity-head {
   margin: 0 !important;
   padding: 18px 22px 13px !important;
@@ -62,10 +62,10 @@
   color: #123f70 !important;
 }
 
-.ticket9-screen > .ticket9-card:first-of-type .ticket9-section-head span,
-.hotel10-screen > .hotel10-card:first-of-type .hotel10-section-head span,
-.visa11-screen > .visa11-card:first-of-type .visa11-section-head span,
-.transport12a-page > .transport12a-section:first-of-type .transport12a-section-title span,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-section-head span,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-section-head span,
+.visa11-card:has(.visa11-header-grid) .visa11-section-head span,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-section-title span,
 .booking-identity-step {
   display: inline-grid;
   place-items: center;
@@ -79,20 +79,20 @@
   font-weight: 900;
 }
 
-.ticket9-screen > .ticket9-card:first-of-type .ticket9-section-head b,
-.hotel10-screen > .hotel10-card:first-of-type .hotel10-section-head b,
-.visa11-screen > .visa11-card:first-of-type .visa11-section-head b,
-.transport12a-page > .transport12a-section:first-of-type .transport12a-section-title b,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-section-head b,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-section-head b,
+.visa11-card:has(.visa11-header-grid) .visa11-section-head b,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-section-title b,
 .booking-identity-head b {
   color: #123f70 !important;
   font-size: 13px;
   letter-spacing: .45px;
 }
 
-.ticket9-screen > .ticket9-card:first-of-type .ticket9-header-grid,
-.hotel10-screen > .hotel10-card:first-of-type .hotel10-header-grid,
-.visa11-screen > .visa11-card:first-of-type .visa11-header-grid,
-.transport12a-page > .transport12a-section:first-of-type .transport12a-header-grid,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid,
+.visa11-card:has(.visa11-header-grid) .visa11-header-grid,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-header-grid,
 .booking-identity-grid {
   display: grid;
   grid-template-columns: minmax(280px, 1.35fr) minmax(190px, .8fr) minmax(220px, 1fr) !important;
@@ -101,10 +101,10 @@
 }
 
 .booking-identity-grid label,
-.ticket9-screen > .ticket9-card:first-of-type label,
-.hotel10-screen > .hotel10-card:first-of-type label,
-.visa11-screen > .visa11-card:first-of-type label,
-.transport12a-page > .transport12a-section:first-of-type label,
+.ticket9-card:has(.ticket9-header-grid) label,
+.hotel10-card:has(.hotel10-header-grid) label,
+.visa11-card:has(.visa11-header-grid) label,
+.transport12a-section:has(.transport12a-header-grid) label,
 .package7d-form-card > .package7d-header-fields label {
   padding: 13px 13px 11px;
   border: 1px solid #d2deeb;
@@ -114,6 +114,10 @@
 }
 
 .booking-identity-grid label::before,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label::before,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label::before,
+.visa11-card:has(.visa11-header-grid) .visa11-header-grid label::before,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-header-grid label::before,
 .package7d-form-card > .package7d-header-fields label::before {
   display: inline-grid;
   place-items: center;
@@ -129,22 +133,36 @@
 }
 
 .booking-identity-grid label:nth-child(1)::before,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label:nth-child(1)::before,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label:nth-child(1)::before,
+.visa11-card:has(.visa11-header-grid) .visa11-header-grid label:nth-child(1)::before,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-header-grid label:nth-child(1)::before,
 .package7d-form-card > .package7d-header-fields label:nth-child(1)::before { content: "1"; }
+
 .booking-identity-grid label:nth-child(2)::before,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label:nth-child(2)::before,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label:nth-child(2)::before,
+.visa11-card:has(.visa11-header-grid) .visa11-header-grid label:nth-child(2)::before,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-header-grid label:nth-child(2)::before,
 .package7d-form-card > .package7d-header-fields label:nth-child(2)::before { content: "2"; }
+
 .booking-identity-grid label:nth-child(3)::before,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label:nth-child(3)::before,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label:nth-child(3)::before,
+.visa11-card:has(.visa11-header-grid) .visa11-header-grid label:nth-child(3)::before,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-header-grid label:nth-child(3)::before,
 .package7d-form-card > .package7d-header-fields label:nth-child(3)::before { content: "3"; }
 
 .booking-identity-grid input,
 .booking-identity-grid select,
-.ticket9-screen > .ticket9-card:first-of-type input,
-.ticket9-screen > .ticket9-card:first-of-type select,
-.hotel10-screen > .hotel10-card:first-of-type input,
-.hotel10-screen > .hotel10-card:first-of-type select,
-.visa11-screen > .visa11-card:first-of-type input,
-.visa11-screen > .visa11-card:first-of-type select,
-.transport12a-page > .transport12a-section:first-of-type input,
-.transport12a-page > .transport12a-section:first-of-type select,
+.ticket9-card:has(.ticket9-header-grid) input,
+.ticket9-card:has(.ticket9-header-grid) select,
+.hotel10-card:has(.hotel10-header-grid) input,
+.hotel10-card:has(.hotel10-header-grid) select,
+.visa11-card:has(.visa11-header-grid) input,
+.visa11-card:has(.visa11-header-grid) select,
+.transport12a-section:has(.transport12a-header-grid) input,
+.transport12a-section:has(.transport12a-header-grid) select,
 .package7d-form-card > .package7d-header-fields input,
 .package7d-form-card > .package7d-header-fields select {
   margin-top: 7px;
@@ -155,10 +173,10 @@
 }
 
 .booking-identity-grid label:last-child input,
-.ticket9-screen > .ticket9-card:first-of-type .ticket9-header-grid label:last-child input,
-.hotel10-screen > .hotel10-card:first-of-type .hotel10-header-grid label:last-child input,
-.visa11-screen > .visa11-card:first-of-type .visa11-header-grid label:last-child input,
-.transport12a-page > .transport12a-section:first-of-type .transport12a-header-grid label:last-child input,
+.ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label:last-child input,
+.hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label:last-child input,
+.visa11-card:has(.visa11-header-grid) .visa11-header-grid label:last-child input,
+.transport12a-section:has(.transport12a-header-grid) .transport12a-header-grid label:last-child input,
 .package7d-form-card > .package7d-header-fields label:last-child input {
   border: 2px solid #8fb3d8 !important;
   background: #fbfdff !important;
@@ -213,10 +231,10 @@
 .misc13-register-lines small { color:#7b8999; }
 
 @media(max-width:900px) {
-  .ticket9-screen > .ticket9-card:first-of-type .ticket9-header-grid,
-  .hotel10-screen > .hotel10-card:first-of-type .hotel10-header-grid,
-  .visa11-screen > .visa11-card:first-of-type .visa11-header-grid,
-  .transport12a-page > .transport12a-section:first-of-type .transport12a-header-grid,
+  .ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid,
+  .hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid,
+  .visa11-card:has(.visa11-header-grid) .visa11-header-grid,
+  .transport12a-section:has(.transport12a-header-grid) .transport12a-header-grid,
   .booking-identity-grid,
   .package7d-form-card > .package7d-header-fields {
     grid-template-columns:1fr !important;
