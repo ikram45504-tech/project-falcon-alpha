@@ -156,11 +156,20 @@ export default function PackageOperationalDetails({
         setHotels(saved.hotels.length ? saved.hotels.map(({ sortOrder: _sort, ...item }) => item) : [blankHotel()]);
         const outbound = saved.flights.find((item) => item.journey === "OUTBOUND");
         const returning = saved.flights.find((item) => item.journey === "RETURN");
-        setFlights([
+        const loadedFlights: FlightRow[] = [
           outbound ? (({ sortOrder: _sort, ...item }) => item)(outbound) : blankFlight("OUTBOUND"),
           returning ? (({ sortOrder: _sort, ...item }) => item)(returning) : blankFlight("RETURN"),
-        ]);
-        setStopovers(saved.stopovers.map(({ sortOrder: _sort, ...item }) => item));
+        ];
+        setFlights(loadedFlights);
+
+        const loadedStops = saved.stopovers.map(({ sortOrder: _sort, ...item }) => item);
+        const singleStops: StopoverRow[] = [];
+        for (const flight of loadedFlights) {
+          if (flight.flightType !== "INDIRECT") continue;
+          const existing = loadedStops.find((item) => item.journey === flight.journey);
+          singleStops.push(existing || blankStopover(flight.journey, flight.departureDate));
+        }
+        setStopovers(singleStops);
         setNotes(saved.notes || fallbackNotes || "");
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -171,11 +180,17 @@ export default function PackageOperationalDetails({
     return () => { cancelled = true; };
   }, [companyId, bookingId]);
 
+  const activeStopovers = useMemo(() => flights.flatMap((flight) => {
+    if (flight.flightType !== "INDIRECT") return [];
+    const stop = stopovers.find((item) => item.journey === flight.journey);
+    return stop ? [stop] : [];
+  }), [flights, stopovers]);
+
   const movementPreview = useMemo(() => buildPackageMovementEvents(
     flights.map(({ id: _id, ...item }) => item),
     hotels.map(({ id: _id, ...item }) => item),
-    stopovers.map(({ id: _id, ...item }) => item)
-  ), [flights, hotels, stopovers]);
+    activeStopovers.map(({ id: _id, ...item }) => item)
+  ), [flights, hotels, activeStopovers]);
 
   function updatePassenger(id: string, patch: Partial<PassengerRow>) {
     setPassengers((current) => current.map((row) => row.id === id ? { ...row, ...patch } : row));
@@ -209,33 +224,18 @@ export default function PackageOperationalDetails({
     });
   }
 
-  function addStopover(journey: PackageFlightJourney) {
-    const flight = flights.find((item) => item.journey === journey);
-    const existing = stopovers.filter((item) => item.journey === journey);
-    const defaultDate = existing[existing.length - 1]?.departureDate || flight?.departureDate || "";
-    setStopovers((current) => [...current, blankStopover(journey, defaultDate)]);
-    updateFlight(journey, { flightType: "INDIRECT" });
-  }
-
-  function removeStopover(id: string, journey: PackageFlightJourney) {
-    setStopovers((current) => {
-      const next = current.filter((row) => row.id !== id);
-      if (!next.some((row) => row.journey === journey)) {
-        setFlights((flightRows) => flightRows.map((flight) => flight.journey === journey ? { ...flight, flightType: "DIRECT" } : flight));
-      }
-      return next;
-    });
-  }
-
   function changeFlightType(journey: PackageFlightJourney, nextType: PackageFlightType) {
-    const journeyStops = stopovers.filter((item) => item.journey === journey);
+    const journeyStop = stopovers.find((item) => item.journey === journey);
     if (nextType === "INDIRECT") {
       updateFlight(journey, { flightType: "INDIRECT" });
-      if (!journeyStops.length) addStopover(journey);
+      if (!journeyStop) {
+        const flight = flights.find((item) => item.journey === journey);
+        setStopovers((current) => [...current, blankStopover(journey, flight?.departureDate || "")]);
+      }
       return;
     }
 
-    const hasStopoverData = journeyStops.some((item) => item.airport.trim() || item.departureDate || item.departureTime);
+    const hasStopoverData = !!journeyStop && Boolean(journeyStop.airport.trim() || journeyStop.departureDate || journeyStop.departureTime);
     if (hasStopoverData && !window.confirm(`Change ${journey === "OUTBOUND" ? "Outbound" : "Return"} flight to Direct and remove its Stopover / Via details?`)) return;
     setStopovers((current) => current.filter((item) => item.journey !== journey));
     updateFlight(journey, { flightType: "DIRECT" });
@@ -253,7 +253,7 @@ export default function PackageOperationalDetails({
           .filter((row) => row.cityName.trim() || row.hotelName.trim() || row.checkIn || row.checkOut)
           .map(({ id: _id, ...item }) => item),
         flights: flights.map(({ id: _id, ...item }) => item),
-        stopovers: stopovers
+        stopovers: activeStopovers
           .filter((row) => row.airport.trim() || row.departureDate || row.departureTime)
           .map(({ id: _id, ...item }) => item),
         notes,
@@ -315,46 +315,40 @@ export default function PackageOperationalDetails({
         </div>
       </section>
 
-      <section className="package15-panel package16-flight-panel">
-        <div className="package15-panel-head"><div><span>3</span><b>FLIGHT DETAILS</b><small>Outbound and Return are independent. Each can be Direct or Indirect / Via with its own Stopover segments.</small></div></div>
-        <div className="package16-flight-journeys">
-          {flights.map((row, index) => {
-            const journeyStops = stopovers.filter((item) => item.journey === row.journey);
-            return <section className={`package16-flight-card ${row.flightType.toLowerCase()}`} key={row.journey}>
-              <div className="package16-flight-card-head">
-                <div><span className="package16-flight-number">{index + 1}</span><span className="package15-journey">{row.journey}</span></div>
-                <label>FLIGHT TYPE<select value={row.flightType} onChange={(e) => changeFlightType(row.journey, e.target.value as PackageFlightType)} disabled={!canEdit}><option value="DIRECT">Direct</option><option value="INDIRECT">Indirect / Via</option></select></label>
-              </div>
-
-              <div className="package16-flight-grid">
-                <label>DEPARTURE DATE<input type="date" value={row.departureDate} onChange={(e) => updateFlight(row.journey, { departureDate: e.target.value })} /></label>
-                <label>PNR<input value={row.pnr} onChange={(e) => updateFlight(row.journey, { pnr: e.target.value.toUpperCase() })} placeholder="PNR" /></label>
-                <label>FLIGHT NO.<input value={row.flightNo} onChange={(e) => updateFlight(row.journey, { flightNo: e.target.value.toUpperCase() })} placeholder="Flight No." /></label>
-                <label>FROM ORIGIN (AIRPORT)<input value={row.fromAirport} onChange={(e) => updateFlight(row.journey, { fromAirport: e.target.value.toUpperCase() })} placeholder="KARACHI / KHI" /></label>
-                <label>TO DESTINATION (AIRPORT)<input value={row.toAirport} onChange={(e) => updateFlight(row.journey, { toAirport: e.target.value.toUpperCase() })} placeholder="JEDDAH / JED" /></label>
-                <label>ORIGIN DEPARTURE<input type="time" value={row.departureTime} onChange={(e) => updateFlight(row.journey, { departureTime: e.target.value })} /></label>
-                <label>DESTINATION ARRIVAL<input type="time" value={row.arrivalTime} onChange={(e) => updateFlight(row.journey, { arrivalTime: e.target.value })} /></label>
-              </div>
-
-              <div className="package16-stopover-zone">
-                <div className="package16-stopover-title"><div><b>TO STOPOVER / VIA (AIRPORT)</b><small>For an indirect journey, record each Stopover Airport and when the onward flight departs that stopover.</small></div><button type="button" disabled={!canEdit} onClick={() => addStopover(row.journey)}>+ Add Stopover</button></div>
-                {journeyStops.length === 0 ? (
-                  <div className="package16-no-stopover"><b>—</b><span>No Stopover / Direct Journey</span><button type="button" disabled={!canEdit} onClick={() => addStopover(row.journey)}>+</button></div>
-                ) : (
-                  <div className="package16-stopover-list">
-                    {journeyStops.map((stop, stopIndex) => <div className="package16-stopover-row" key={stop.id}>
-                      <span className="package16-via-badge">VIA {stopIndex + 1}</span>
-                      <label>STOPOVER AIRPORT<input value={stop.airport} onChange={(e) => updateStopover(stop.id, { airport: e.target.value.toUpperCase() })} placeholder="MUSCAT / MCT" /></label>
-                      <label>STOPOVER DEPARTURE DATE<input type="date" value={stop.departureDate} onChange={(e) => updateStopover(stop.id, { departureDate: e.target.value })} /></label>
-                      <label>STOPOVER DEPARTURE TIME<input type="time" value={stop.departureTime} onChange={(e) => updateStopover(stop.id, { departureTime: e.target.value })} /></label>
-                      <button type="button" className="package16-minus" disabled={!canEdit} onClick={() => removeStopover(stop.id, row.journey)} aria-label="Remove stopover">−</button>
-                    </div>)}
-                  </div>
-                )}
-              </div>
-            </section>;
-          })}
+      <section className="package15-panel package16-flight-panel compact">
+        <div className="package15-panel-head"><div><span>3</span><b>FLIGHT DETAILS</b><small>One compact header for Outbound and Return. Flight Type controls whether Stopover / Via fields are active.</small></div></div>
+        <div className="package15-table-wrap package16-compact-wrap">
+          <table className="package15-table package16-compact-flight-table">
+            <thead><tr>
+              <th>SR</th><th>JOURNEY</th><th>FLIGHT TYPE</th><th>DEPARTURE DATE</th><th>PNR</th><th>FLIGHT NO.</th>
+              <th>FROM ORIGIN (AIRPORT)</th><th>STOPOVER (AIRPORT)</th><th>TO DESTINATION (AIRPORT)</th>
+              <th>ORIGIN DEPARTURE</th><th>STOPOVER DEPARTURE</th><th>DESTINATION ARRIVAL</th>
+            </tr></thead>
+            <tbody>{flights.map((row, index) => {
+              const stop = stopovers.find((item) => item.journey === row.journey);
+              const indirect = row.flightType === "INDIRECT";
+              return <tr key={row.journey} className={indirect ? "indirect" : "direct"}>
+                <td className="package16-sr"><b>{index + 1}</b></td>
+                <td><span className="package15-journey">{row.journey}</span></td>
+                <td><select className="package16-flight-type" value={row.flightType} onChange={(e) => changeFlightType(row.journey, e.target.value as PackageFlightType)} disabled={!canEdit}><option value="DIRECT">Direct</option><option value="INDIRECT">Indirect / Via</option></select></td>
+                <td><input type="date" value={row.departureDate} onChange={(e) => {
+                  const value = e.target.value;
+                  updateFlight(row.journey, { departureDate: value });
+                  if (indirect && stop && !stop.departureDate) updateStopover(stop.id, { departureDate: value });
+                }} /></td>
+                <td><input value={row.pnr} onChange={(e) => updateFlight(row.journey, { pnr: e.target.value.toUpperCase() })} placeholder="PNR" /></td>
+                <td><input value={row.flightNo} onChange={(e) => updateFlight(row.journey, { flightNo: e.target.value.toUpperCase() })} placeholder="Flight No." /></td>
+                <td><input value={row.fromAirport} onChange={(e) => updateFlight(row.journey, { fromAirport: e.target.value.toUpperCase() })} placeholder="KARACHI / KHI" /></td>
+                <td>{indirect && stop ? <input className="package16-stopover-airport" value={stop.airport} onChange={(e) => updateStopover(stop.id, { airport: e.target.value.toUpperCase() })} placeholder="MUSCAT / MCT" /> : <span className="package16-dash" title="Direct flight — no stopover">—</span>}</td>
+                <td><input value={row.toAirport} onChange={(e) => updateFlight(row.journey, { toAirport: e.target.value.toUpperCase() })} placeholder="JEDDAH / JED" /></td>
+                <td><input type="time" value={row.departureTime} onChange={(e) => updateFlight(row.journey, { departureTime: e.target.value })} /></td>
+                <td>{indirect && stop ? <div className="package16-stopover-departure"><input type="date" value={stop.departureDate} onChange={(e) => updateStopover(stop.id, { departureDate: e.target.value })} /><input type="time" value={stop.departureTime} onChange={(e) => updateStopover(stop.id, { departureTime: e.target.value })} /></div> : <span className="package16-dash" title="Direct flight — no stopover departure">—</span>}</td>
+                <td><input type="time" value={row.arrivalTime} onChange={(e) => updateFlight(row.journey, { arrivalTime: e.target.value })} /></td>
+              </tr>;
+            })}</tbody>
+          </table>
         </div>
+        <div className="package16-flight-help"><b>Direct:</b> Stopover fields remain as —. <b>Indirect / Via:</b> enter one Stopover Airport plus its onward departure date/time. Outbound and Return are independent.</div>
       </section>
 
       <section className="package15-panel package15-movement-panel">
