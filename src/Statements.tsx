@@ -3,27 +3,15 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { downloadDir, join } from "@tauri-apps/api/path";
 
+import { Company, Party, PaymentEntry, getPayments } from "./db";
 import {
-  AccommodationEntry,
-  Company,
-  Party,
-  PaymentEntry,
-  ServiceEntry,
-  getAccommodations,
-  getPayments,
-  getServices,
-} from "./db";
+  BookingAccountingEntry,
+  accountDirectionLabel,
+  getBookingAccountingEntries,
+} from "./BookingAccounting";
+import { buildStatementPdf, StatementPdfData } from "./StatementJsPdf";
 
-import {
-  buildStatementPdf,
-  StatementPdfData,
-} from "./StatementJsPdf";
-
-type PeriodType =
-  | "FULL_LEDGER"
-  | "THIS_MONTH"
-  | "LAST_MONTH"
-  | "CUSTOM";
+type PeriodType = "FULL_LEDGER" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM";
 
 type Props = {
   company: Company;
@@ -49,61 +37,32 @@ function isoFromDate(date: Date) {
 
 function thisMonthRange() {
   const now = new Date();
-  return {
-    from: isoFromDate(
-      new Date(now.getFullYear(), now.getMonth(), 1)
-    ),
-    to: todayIso(),
-  };
+  return { from: isoFromDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: todayIso() };
 }
 
 function lastMonthRange() {
   const now = new Date();
   return {
-    from: isoFromDate(
-      new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    ),
-    to: isoFromDate(
-      new Date(now.getFullYear(), now.getMonth(), 0)
-    ),
+    from: isoFromDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+    to: isoFromDate(new Date(now.getFullYear(), now.getMonth(), 0)),
   };
 }
 
 function generatedDate() {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
     .format(new Date())
     .replace(/ /g, "-");
 }
 
 function makeStatementRef() {
   const now = new Date();
-
-  const date =
-    `${now.getFullYear()}` +
-    `${String(now.getMonth() + 1).padStart(2, "0")}` +
-    `${String(now.getDate()).padStart(2, "0")}`;
-
-  const time =
-    `${String(now.getHours()).padStart(2, "0")}` +
-    `${String(now.getMinutes()).padStart(2, "0")}` +
-    `${String(now.getSeconds()).padStart(2, "0")}`;
-
+  const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  const time = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
   return `FT-${date}-${time}`;
 }
 
 function safeFileName(text: string) {
-  return text
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, "-")
-    .replace(/\s+/g, "_");
-}
-
-function activeOnly<T extends { status: string }>(rows: T[]) {
-  return rows.filter((row) => row.status === "ACTIVE");
+  return text.trim().replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_");
 }
 
 function inPeriod(date: string, from: string, to: string) {
@@ -114,176 +73,86 @@ function beforePeriod(date: string, from: string) {
   return date < from;
 }
 
-function sum<T>(
-  rows: T[],
-  selector: (row: T) => number
-) {
-  return rows.reduce(
-    (total, row) => total + Number(selector(row) || 0),
-    0
-  );
+function sum<T>(rows: T[], selector: (row: T) => number) {
+  return rows.reduce((total, row) => total + Number(selector(row) || 0), 0);
 }
 
-function formatDate(value: string) {
-  if (!value) return "—";
-
-  const [y, m, d] = value.split("-").map(Number);
-
-  if (!y || !m || !d) return value;
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-    .format(new Date(y, m - 1, d))
-    .replace(/ /g, "-");
+function money(value: number) {
+  return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
 
-export default function StatementsModule({
-  company,
-  parties,
-  initialPartyId = "",
-  onOpenLedger,
-}: Props) {
-  const [partyId, setPartyId] = useState(
-    initialPartyId || parties[0]?.id || ""
-  );
-
-  const [periodType, setPeriodType] =
-    useState<PeriodType>("FULL_LEDGER");
-
+export default function StatementsModule({ company, parties, initialPartyId = "", onOpenLedger }: Props) {
+  const [partyId, setPartyId] = useState(initialPartyId || parties[0]?.id || "");
+  const [periodType, setPeriodType] = useState<PeriodType>("FULL_LEDGER");
   const [fromDate, setFromDate] = useState(todayIso());
   const [toDate, setToDate] = useState(todayIso());
-
-  const [allAccommodation, setAllAccommodation] =
-    useState<AccommodationEntry[]>([]);
-
-  const [allServices, setAllServices] =
-    useState<ServiceEntry[]>([]);
-
-  const [allPayments, setAllPayments] =
-    useState<PaymentEntry[]>([]);
-
-  const [statementRef, setStatementRef] =
-    useState(makeStatementRef());
-
-  const [generatedOn, setGeneratedOn] =
-    useState(generatedDate());
-
+  const [bookings, setBookings] = useState<BookingAccountingEntry[]>([]);
+  const [payments, setPayments] = useState<PaymentEntry[]>([]);
+  const [statementRef, setStatementRef] = useState(makeStatementRef());
+  const [generatedOn, setGeneratedOn] = useState(generatedDate());
   const [previewUrl, setPreviewUrl] = useState("");
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-
   const [loading, setLoading] = useState(false);
   const [buildingPdf, setBuildingPdf] = useState(false);
   const [savingPdf, setSavingPdf] = useState(false);
-
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const selectedParty = useMemo(
-    () =>
-      parties.find((party) => party.id === partyId) ?? null,
-    [parties, partyId]
-  );
+  const selectedParty = useMemo(() => parties.find((party) => party.id === partyId) ?? null, [parties, partyId]);
+  const accountDirection = selectedParty ? accountDirectionLabel(selectedParty.account_type) : "BOOKING";
 
   useEffect(() => {
-    if (
-      initialPartyId &&
-      parties.some((party) => party.id === initialPartyId)
-    ) {
+    if (initialPartyId && parties.some((party) => party.id === initialPartyId)) {
       setPartyId(initialPartyId);
     } else if (!partyId && parties[0]) {
       setPartyId(parties[0].id);
     }
-  }, [initialPartyId, parties]);
+  }, [initialPartyId, parties, partyId]);
 
   useEffect(() => {
-    if (!partyId) {
-      setAllAccommodation([]);
-      setAllServices([]);
-      setAllPayments([]);
+    if (!partyId || !selectedParty) {
+      setBookings([]);
+      setPayments([]);
       return;
     }
+    void loadPartyTransactions(partyId, selectedParty.account_type);
+  }, [company.id, partyId, selectedParty?.account_type]);
 
-    loadPartyTransactions(partyId);
-  }, [company.id, partyId]);
-
-  async function loadPartyTransactions(
-    selectedPartyId: string
-  ) {
+  async function loadPartyTransactions(selectedPartyId: string, accountType: Party["account_type"]) {
     setLoading(true);
     setError("");
     setMessage("");
-
     try {
-      const [
-        accommodationRows,
-        serviceRows,
-        paymentRows,
-      ] = await Promise.all([
-        getAccommodations(
-          company.id,
-          "",
-          selectedPartyId
-        ),
-        getServices(
-          company.id,
-          "",
-          selectedPartyId
-        ),
-        getPayments(
-          company.id,
-          "",
-          selectedPartyId
-        ),
+      const [bookingRows, paymentRows] = await Promise.all([
+        getBookingAccountingEntries(company.id, selectedPartyId),
+        getPayments(company.id, "", selectedPartyId),
       ]);
 
-      const accommodation =
-        activeOnly(accommodationRows);
-
-      const services =
-        activeOnly(serviceRows);
-
-      const payments =
-        activeOnly(paymentRows);
-
-      setAllAccommodation(accommodation);
-      setAllServices(services);
-      setAllPayments(payments);
-
-      applyAutomaticPeriod(
-        periodType,
-        accommodation,
-        services,
-        payments
+      const relevantDirection = accountType === "PARTY" ? "SALE" : accountType === "VENDOR" ? "PURCHASE" : null;
+      const activeBookings = bookingRows.filter(
+        (row) => row.status === "ACTIVE" && (!relevantDirection || row.transaction_type === relevantDirection)
       );
+      const activePayments = paymentRows.filter((row) => row.status === "ACTIVE");
 
+      setBookings(activeBookings);
+      setPayments(activePayments);
+      applyAutomaticPeriod(periodType, activeBookings, activePayments);
       refreshStatementIdentity();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : String(e)
-      );
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
   }
 
-  function applyAutomaticPeriod(
-    type: PeriodType,
-    accommodation = allAccommodation,
-    services = allServices,
-    payments = allPayments
-  ) {
+  function applyAutomaticPeriod(type: PeriodType, bookingRows = bookings, paymentRows = payments) {
     if (type === "CUSTOM") return;
-
     if (type === "THIS_MONTH") {
       const range = thisMonthRange();
       setFromDate(range.from);
       setToDate(range.to);
       return;
     }
-
     if (type === "LAST_MONTH") {
       const range = lastMonthRange();
       setFromDate(range.from);
@@ -292,19 +161,9 @@ export default function StatementsModule({
     }
 
     const dates = [
-      ...accommodation.map(
-        (row) => row.transaction_date
-      ),
-      ...services.map(
-        (row) => row.transaction_date
-      ),
-      ...payments.map(
-        (row) => row.transaction_date
-      ),
-    ]
-      .filter(Boolean)
-      .sort();
-
+      ...bookingRows.map((row) => row.transaction_date),
+      ...paymentRows.map((row) => row.transaction_date),
+    ].filter(Boolean).sort();
     if (dates.length) {
       setFromDate(dates[0]);
       setToDate(dates[dates.length - 1]);
@@ -319,7 +178,6 @@ export default function StatementsModule({
     setPeriodType(type);
     setError("");
     setMessage("");
-
     applyAutomaticPeriod(type);
     refreshStatementIdentity();
   }
@@ -330,538 +188,159 @@ export default function StatementsModule({
   }
 
   function validatePeriod() {
-    if (!partyId) {
-      setError("Select a Party / Vendor.");
-      return false;
-    }
-
-    if (!fromDate || !toDate) {
-      setError(
-        "Select both From Date and To Date."
-      );
-      return false;
-    }
-
-    if (fromDate > toDate) {
-      setError(
-        "From Date cannot be after To Date."
-      );
-      return false;
-    }
-
+    if (!partyId) return setError("Select a Party / Vendor."), false;
+    if (!fromDate || !toDate) return setError("Select both From Date and To Date."), false;
+    if (fromDate > toDate) return setError("From Date cannot be after To Date."), false;
     return true;
   }
 
-  function refreshPreview() {
-    if (!validatePeriod()) return;
-
-    setError("");
-    setMessage("");
-    refreshStatementIdentity();
-  }
-
-  const periodAccommodation = useMemo(
-    () =>
-      allAccommodation
-        .filter((row) =>
-          inPeriod(
-            row.transaction_date,
-            fromDate,
-            toDate
-          )
-        )
-        .sort(
-          (a, b) =>
-            a.transaction_date.localeCompare(
-              b.transaction_date
-            ) ||
-            a.created_at.localeCompare(
-              b.created_at
-            )
-        ),
-    [allAccommodation, fromDate, toDate]
+  const periodBookings = useMemo(
+    () => bookings.filter((row) => inPeriod(row.transaction_date, fromDate, toDate)),
+    [bookings, fromDate, toDate]
   );
-
-  const periodServices = useMemo(
-    () =>
-      allServices
-        .filter((row) =>
-          inPeriod(
-            row.transaction_date,
-            fromDate,
-            toDate
-          )
-        )
-        .sort(
-          (a, b) =>
-            a.transaction_date.localeCompare(
-              b.transaction_date
-            ) ||
-            a.created_at.localeCompare(
-              b.created_at
-            )
-        ),
-    [allServices, fromDate, toDate]
-  );
-
   const periodPayments = useMemo(
-    () =>
-      allPayments
-        .filter((row) =>
-          inPeriod(
-            row.transaction_date,
-            fromDate,
-            toDate
-          )
-        )
-        .sort(
-          (a, b) =>
-            a.transaction_date.localeCompare(
-              b.transaction_date
-            ) ||
-            a.created_at.localeCompare(
-              b.created_at
-            )
-        ),
-    [allPayments, fromDate, toDate]
+    () => payments.filter((row) => inPeriod(row.transaction_date, fromDate, toDate)),
+    [payments, fromDate, toDate]
   );
 
-  const openingPurchases = useMemo(
-    () =>
-      sum(
-        allAccommodation.filter((row) =>
-          beforePeriod(
-            row.transaction_date,
-            fromDate
-          )
-        ),
-        (row) => row.total_pkr
-      ) +
-      sum(
-        allServices.filter((row) =>
-          beforePeriod(
-            row.transaction_date,
-            fromDate
-          )
-        ),
-        (row) => row.total_pkr
-      ),
-    [allAccommodation, allServices, fromDate]
+  const openingBooked = useMemo(
+    () => sum(bookings.filter((row) => beforePeriod(row.transaction_date, fromDate)), (row) => row.total_pkr),
+    [bookings, fromDate]
   );
-
   const openingPayments = useMemo(
-    () =>
-      sum(
-        allPayments.filter((row) =>
-          beforePeriod(
-            row.transaction_date,
-            fromDate
-          )
-        ),
-        (row) => row.paid_amount
-      ),
-    [allPayments, fromDate]
+    () => sum(payments.filter((row) => beforePeriod(row.transaction_date, fromDate)), (row) => row.paid_amount),
+    [payments, fromDate]
   );
+  const openingBalance = openingBooked - openingPayments;
+  const bookingsDuringPeriod = sum(periodBookings, (row) => row.total_pkr);
+  const paymentsDuringPeriod = sum(periodPayments, (row) => row.paid_amount);
+  const closingBalance = openingBalance + bookingsDuringPeriod - paymentsDuringPeriod;
 
-  const openingBalance =
-    openingPurchases - openingPayments;
-
-  const accommodationSubtotal = sum(
-    periodAccommodation,
-    (row) => row.total_pkr
-  );
-
-  const servicesSubtotal = sum(
-    periodServices,
-    (row) => row.total_pkr
-  );
-
-  const purchasesDuringPeriod =
-    accommodationSubtotal +
-    servicesSubtotal;
-
-  const paymentsDuringPeriod = sum(
-    periodPayments,
-    (row) => row.paid_amount
-  );
-
-  const closingBalance =
-    openingBalance +
-    purchasesDuringPeriod -
-    paymentsDuringPeriod;
-
-  const pdfData =
-    useMemo<StatementPdfData | null>(() => {
-      if (
-        !selectedParty ||
-        !fromDate ||
-        !toDate
-      ) {
-        return null;
-      }
-
-      return {
-        company,
-        party: selectedParty,
-        fromDate,
-        toDate,
-        generatedOn,
-        statementRef,
-        openingBalance,
-        purchasesDuringPeriod,
-        paymentsDuringPeriod,
-        closingBalance,
-        accommodationSubtotal,
-        servicesSubtotal,
-        accommodation:
-          periodAccommodation,
-        services: periodServices,
-        payments: periodPayments,
-      };
-    }, [
+  const pdfData = useMemo<StatementPdfData | null>(() => {
+    if (!selectedParty || !fromDate || !toDate) return null;
+    return {
       company,
-      selectedParty,
+      party: selectedParty,
+      accountDirection,
       fromDate,
       toDate,
       generatedOn,
       statementRef,
       openingBalance,
-      purchasesDuringPeriod,
+      bookingsDuringPeriod,
       paymentsDuringPeriod,
       closingBalance,
-      accommodationSubtotal,
-      servicesSubtotal,
-      periodAccommodation,
-      periodServices,
-      periodPayments,
-    ]);
+      bookings: periodBookings,
+      payments: periodPayments,
+    };
+  }, [company, selectedParty, accountDirection, fromDate, toDate, generatedOn, statementRef, openingBalance, bookingsDuringPeriod, paymentsDuringPeriod, closingBalance, periodBookings, periodPayments]);
 
   useEffect(() => {
     let cancelled = false;
     let nextUrl = "";
-
     async function buildPreview() {
       if (!pdfData) {
         setPdfBlob(null);
         setPreviewUrl("");
         return;
       }
-
       setBuildingPdf(true);
       setError("");
-
       try {
         const doc = buildStatementPdf(pdfData);
         const blob = doc.output("blob");
-
         if (cancelled) return;
-
         nextUrl = URL.createObjectURL(blob);
-
         setPdfBlob(blob);
         setPreviewUrl(nextUrl);
       } catch (e) {
-        if (!cancelled) {
-          setError(
-            `Could not build statement PDF: ${
-              e instanceof Error
-                ? e.message
-                : String(e)
-            }`
-          );
-        }
+        if (!cancelled) setError(`Could not build statement PDF: ${e instanceof Error ? e.message : String(e)}`);
       } finally {
-        if (!cancelled) {
-          setBuildingPdf(false);
-        }
+        if (!cancelled) setBuildingPdf(false);
       }
     }
-
-    buildPreview();
-
+    void buildPreview();
     return () => {
       cancelled = true;
-
-      if (nextUrl) {
-        URL.revokeObjectURL(nextUrl);
-      }
+      if (nextUrl) URL.revokeObjectURL(nextUrl);
     };
   }, [pdfData]);
 
   async function savePdf() {
-    if (
-      !pdfBlob ||
-      !pdfData ||
-      !selectedParty
-    ) {
-      setError(
-        "Statement PDF is not ready yet."
-      );
-      return;
-    }
-
+    if (!pdfBlob || !pdfData || !selectedParty) return setError("Statement PDF is not ready yet.");
     if (!validatePeriod()) return;
-
     setSavingPdf(true);
     setError("");
     setMessage("");
-
     try {
-      const bytes = new Uint8Array(
-        await pdfBlob.arrayBuffer()
-      );
-
-      const fileName =
-        `${safeFileName(company.name)}_Statement_` +
-        `${safeFileName(selectedParty.name)}_` +
-        `${fromDate}_to_${toDate}.pdf`;
-
-      const defaultPath = await join(
-        await downloadDir(),
-        fileName
-      );
-
-      const filePath = await save({
-        title: "Save Statement PDF",
-        defaultPath,
-        filters: [
-          {
-            name: "PDF Document",
-            extensions: ["pdf"],
-          },
-        ],
-      });
-
+      const bytes = new Uint8Array(await pdfBlob.arrayBuffer());
+      const fileName = `${safeFileName(company.name)}_Statement_${safeFileName(selectedParty.name)}_${fromDate}_to_${toDate}.pdf`;
+      const defaultPath = await join(await downloadDir(), fileName);
+      const filePath = await save({ title: "Save Statement PDF", defaultPath, filters: [{ name: "PDF Document", extensions: ["pdf"] }] });
       if (!filePath) return;
-
       await writeFile(filePath, bytes);
-
-      setMessage(
-        "PDF saved successfully."
-      );
+      setMessage("PDF saved successfully.");
     } catch (e) {
-      setError(
-        `Could not save PDF: ${
-          e instanceof Error
-            ? e.message
-            : String(e)
-        }`
-      );
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSavingPdf(false);
     }
   }
 
-  if (!parties.length) {
-    return (
-      <section className="content-card statement-no-party">
-        <span className="eyebrow blue">
-          STATEMENT GENERATOR
-        </span>
-
-        <h2>
-          No Party / Vendor available
-        </h2>
-
-        <p>
-          Create at least one Party / Vendor
-          before generating an account statement.
-        </p>
-      </section>
-    );
-  }
+  const accountLabel = selectedParty?.account_type === "VENDOR" ? "Vendor / Supplier" : "Party / Customer";
+  const bookedLabel = selectedParty?.account_type === "VENDOR" ? "PURCHASE BOOKINGS" : "SALE BOOKINGS";
+  const balanceLabel = selectedParty?.account_type === "VENDOR" ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE";
 
   return (
-    <section className="statement-v6-page">
-      <div className="statement-v6-controls">
-        <div className="statement-v6-title-row">
-          <div>
-            <span className="eyebrow blue">
-              MANUAL A4 PDF ENGINE
-            </span>
-
-            <h2>
-              Statement of Account
-            </h2>
-
-            <p>
-              The preview below is the exact PDF
-              that will be saved. Rows and page
-              breaks are drawn at fixed A4
-              coordinates.
-            </p>
-          </div>
-
-          {selectedParty && (
-            <button
-              className="secondary"
-              onClick={() =>
-                onOpenLedger(selectedParty)
-              }
-            >
-              Open Party Ledger
-            </button>
-          )}
+    <section className="content-card statements-page">
+      <div className="page-title">
+        <div>
+          <span className="eyebrow blue">BOOKING ACCOUNT STATEMENT</span>
+          <h2>Statements</h2>
+          <p>Statements now use Package, Ticket, Hotel, Visa, Transport and Misc bookings as the commercial source of truth.</p>
         </div>
-
-        {error && (
-          <div className="alert error">
-            {error}
-          </div>
-        )}
-
-        {message && (
-          <div className="alert success">
-            {message}
-          </div>
-        )}
-
-        <div className="statement-v6-form">
-          <label>
-            Party / Vendor
-            <select
-              value={partyId}
-              onChange={(e) => {
-                setPartyId(e.target.value);
-                setError("");
-                setMessage("");
-              }}
-            >
-              {parties.map((party) => (
-                <option
-                  key={party.id}
-                  value={party.id}
-                >
-                  {party.name}
-                  {party.status === "INACTIVE"
-                    ? " (INACTIVE)"
-                    : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Period Type
-            <select
-              value={periodType}
-              onChange={(e) =>
-                changePeriod(
-                  e.target.value as PeriodType
-                )
-              }
-            >
-              <option value="FULL_LEDGER">
-                FULL LEDGER
-              </option>
-
-              <option value="THIS_MONTH">
-                THIS MONTH
-              </option>
-
-              <option value="LAST_MONTH">
-                LAST MONTH
-              </option>
-
-              <option value="CUSTOM">
-                CUSTOM DATE RANGE
-              </option>
-            </select>
-          </label>
-
-          <label>
-            From Date
-            <input
-              type="date"
-              value={fromDate}
-              disabled={
-                periodType !== "CUSTOM"
-              }
-              onChange={(e) => {
-                setFromDate(e.target.value);
-                setError("");
-                setMessage("");
-              }}
-            />
-          </label>
-
-          <label>
-            To Date
-            <input
-              type="date"
-              value={toDate}
-              disabled={
-                periodType !== "CUSTOM"
-              }
-              onChange={(e) => {
-                setToDate(e.target.value);
-                setError("");
-                setMessage("");
-              }}
-            />
-          </label>
-        </div>
-
-        <div className="statement-v6-actions">
-          <div className="statement-v6-period">
-            <small>
-              SELECTED PERIOD
-            </small>
-
-            <b>
-              {formatDate(fromDate)}
-              {" → "}
-              {formatDate(toDate)}
-            </b>
-          </div>
-
-          <div className="statement-v6-badge">
-            EXACT PDF PREVIEW
-          </div>
-
-          <button
-            className="secondary"
-            onClick={refreshPreview}
-            disabled={loading}
-          >
-            {loading
-              ? "Loading..."
-              : "Refresh Preview"}
-          </button>
-
-          <button
-            className="primary statement-v6-save"
-            onClick={savePdf}
-            disabled={
-              savingPdf ||
-              buildingPdf ||
-              loading ||
-              !pdfBlob
-            }
-          >
-            {savingPdf
-              ? "Saving..."
-              : buildingPdf
-              ? "Building PDF..."
-              : "Save PDF"}
-          </button>
-        </div>
+        {selectedParty && <button className="secondary" onClick={() => onOpenLedger(selectedParty)}>Open Account Ledger</button>}
       </div>
 
-      <div className="statement-v6-preview-shell">
-        {previewUrl ? (
-          <iframe
-            className="statement-v6-pdf-viewer"
-            src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-            title="Statement PDF Preview"
-          />
-        ) : (
-          <div className="statement-v6-loading">
-            {buildingPdf
-              ? "Building exact A4 statement..."
-              : "Preparing statement..."}
-          </div>
-        )}
+      {message && <div className="alert success">{message}</div>}
+      {error && <div className="alert error">{error}</div>}
+
+      <div className="statement-controls">
+        <label>{accountLabel}
+          <select value={partyId} onChange={(e) => setPartyId(e.target.value)}>
+            <option value="">Select account...</option>
+            {parties.filter((party) => party.account_type !== "UNASSIGNED").map((party) => <option key={party.id} value={party.id}>{party.name} · {party.account_type}</option>)}
+          </select>
+        </label>
+        <div className="statement-period-tabs">
+          {(["FULL_LEDGER", "THIS_MONTH", "LAST_MONTH", "CUSTOM"] as PeriodType[]).map((type) => (
+            <button key={type} type="button" className={periodType === type ? "active" : ""} onClick={() => changePeriod(type)}>
+              {type === "FULL_LEDGER" ? "Full Ledger" : type === "THIS_MONTH" ? "This Month" : type === "LAST_MONTH" ? "Last Month" : "Custom"}
+            </button>
+          ))}
+        </div>
+        <label>From Date<input type="date" value={fromDate} onChange={(e) => { setPeriodType("CUSTOM"); setFromDate(e.target.value); refreshStatementIdentity(); }} /></label>
+        <label>To Date<input type="date" value={toDate} onChange={(e) => { setPeriodType("CUSTOM"); setToDate(e.target.value); refreshStatementIdentity(); }} /></label>
+      </div>
+
+      <div className="module-summary-row statement-summary-row">
+        <div><small>OPENING BALANCE</small><b>{money(openingBalance)}</b></div>
+        <div><small>{bookedLabel}</small><b>{money(bookingsDuringPeriod)}</b></div>
+        <div><small>PAYMENTS</small><b>{money(paymentsDuringPeriod)}</b></div>
+        <div><small>{balanceLabel}</small><b>{money(closingBalance)}</b></div>
+      </div>
+
+      <div className="statement-accounting-note">
+        <b>{selectedParty ? `${selectedParty.name} · ${accountDirection}` : "Select an account"}</b>
+        <span>{selectedParty?.account_type === "VENDOR" ? "Purchase bookings increase payable; payments reduce payable." : "Sale bookings increase receivable; payments reduce receivable."}</span>
+      </div>
+
+      <div className="statement-preview-shell">
+        <div className="statement-preview-head">
+          <div><b>PDF Preview</b><span>{loading ? "Loading booking data..." : buildingPdf ? "Building preview..." : `${periodBookings.length} booking(s) · ${periodPayments.length} payment(s)`}</span></div>
+          <button className="primary statement-primary" disabled={!pdfBlob || savingPdf || buildingPdf} onClick={() => void savePdf()}>{savingPdf ? "Saving..." : "Save PDF"}</button>
+        </div>
+        {previewUrl ? <iframe className="statement-pdf-preview" src={previewUrl} title="Statement PDF Preview" /> : <div className="empty-state"><h3>No statement preview yet</h3><p>Select an account with booking or payment activity.</p></div>}
       </div>
     </section>
   );
