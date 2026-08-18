@@ -1,10 +1,10 @@
 import { useState } from "react";
-import PackageBookingFlow from "./PackageBookingFlow";
-import TicketBookingModule from "./TicketBooking";
-import HotelBookingModule from "./HotelBooking";
-import VisaBookingModule from "./VisaBooking";
-import TransportBookingModule from "./TransportBooking";
-import MiscBookingModule from "./MiscBooking";
+import PackageBookingFlow from "./PackageBookingFlowV2";
+import TicketBookingModule from "./TicketBookingFlowV2";
+import HotelBookingModule from "./HotelBookingFlowV2";
+import VisaBookingModule from "./VisaBookingFlowV2";
+import TransportBookingModule from "./TransportBookingFlowV2";
+import MiscBookingModule from "./MiscBookingFlowV2";
 import type { BookingTransactionType, Party } from "./db";
 
 type BookingService = "PACKAGE" | "TICKET" | "HOTEL" | "VISA" | "TRANSPORT" | "MISC";
@@ -137,40 +137,28 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
     );
   }
 
+  const sharedProps = transactionType ? {
+    companyId,
+    parties,
+    transactionType,
+    userId,
+    canCreate,
+    canEdit,
+    canVoid,
+    onBack: backToServices,
+    onChanged,
+  } : null;
+
   return (
     <section className="content-card bookings-page bookings-flow-v2">
       {screen === "DIRECTION" && renderDirectionScreen()}
       {screen === "SERVICES" && renderServicesScreen()}
-
-      {screen === "SERVICE_FORM" && service === "PACKAGE" && transactionType && (
-        <PackageBookingFlow
-          companyId={companyId}
-          parties={parties}
-          transactionType={transactionType}
-          userId={userId}
-          canCreate={canCreate}
-          canEdit={canEdit}
-          canVoid={canVoid}
-          onBack={backToServices}
-          onChanged={onChanged}
-        />
-      )}
-
-      {screen === "SERVICE_FORM" && service === "TICKET" && transactionType && (
-        <TicketBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />
-      )}
-      {screen === "SERVICE_FORM" && service === "HOTEL" && transactionType && (
-        <HotelBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />
-      )}
-      {screen === "SERVICE_FORM" && service === "VISA" && transactionType && (
-        <VisaBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />
-      )}
-      {screen === "SERVICE_FORM" && service === "TRANSPORT" && transactionType && (
-        <TransportBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />
-      )}
-      {screen === "SERVICE_FORM" && service === "MISC" && transactionType && (
-        <MiscBookingModule companyId={companyId} parties={parties} transactionType={transactionType} userId={userId} canCreate={canCreate} canEdit={canEdit} canVoid={canVoid} onBack={backToServices} onChanged={onChanged} />
-      )}
+      {screen === "SERVICE_FORM" && service === "PACKAGE" && sharedProps && <PackageBookingFlow {...sharedProps} />}
+      {screen === "SERVICE_FORM" && service === "TICKET" && sharedProps && <TicketBookingModule {...sharedProps} />}
+      {screen === "SERVICE_FORM" && service === "HOTEL" && sharedProps && <HotelBookingModule {...sharedProps} />}
+      {screen === "SERVICE_FORM" && service === "VISA" && sharedProps && <VisaBookingModule {...sharedProps} />}
+      {screen === "SERVICE_FORM" && service === "TRANSPORT" && sharedProps && <TransportBookingModule {...sharedProps} />}
+      {screen === "SERVICE_FORM" && service === "MISC" && sharedProps && <MiscBookingModule {...sharedProps} />}
     </section>
   );
 }
