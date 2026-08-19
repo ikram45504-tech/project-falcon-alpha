@@ -11,8 +11,9 @@ import type {
   VisaType,
   VisaVehicleType,
 } from "./db";
-import { createVisaBooking, getVisaBookings, updateVisaBooking, voidVisaBooking } from "./db";
+import { createVisaBooking, getVisaBookings } from "./db";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
+import BookingLifecycleCenter from "./BookingLifecycleCenter";
 import { bookingDigitsFromUb, normalizeBookingUb } from "./bookingUb";
 import { passportValidityForTravel } from "./passportValidity";
 import { getVisaOperationalDetails, saveVisaOperationalDetails, type VisaOperationalPassenger } from "./VisaOperationalDb";
@@ -34,7 +35,6 @@ type VisaRow = { rowId: string; passengerType: VisaPassengerType; passengerName:
 type FleetRow = { rowId: string; vehicleType: VisaVehicleType; quantity: string; ratePerVehicleSar: string };
 type PassengerRow = Omit<VisaOperationalPassenger, "id" | "sortOrder"> & { rowId: string };
 type Mode = "FORM" | "REGISTER";
-type Filter = "ALL" | BookingTransactionType;
 
 const visaTypes: Array<{ value: VisaType; label: string }> = [
   { value: "ONLY_UMRAH_VISA", label: "Only Umrah Visa" },
@@ -56,7 +56,6 @@ function whole(value: string) { return Math.max(0, Math.trunc(num(value))); }
 function money(value: number, currency = "SAR") { return `${currency} ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`; }
 function pkr(value: number) { return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`; }
 function vehicleCapacity(type: VisaVehicleType) { return vehicles.find((item) => item.value === type)?.capacity || 0; }
-function vehicleLabel(type: VisaVehicleType) { return vehicles.find((item) => item.value === type)?.label || type; }
 function visaLabel(type: VisaType) { return visaTypes.find((item) => item.value === type)?.label || type; }
 function newVisaRow(type: VisaPassengerType = "ADULT", roe = ""): VisaRow { return { rowId: crypto.randomUUID(), passengerType: type, passengerName: "", visaType: "", visaRateSar: "", paxCount: "1", roe }; }
 function rowHasData(row: VisaRow) { return Boolean(row.passengerName.trim() || row.visaType || row.visaRateSar.trim() || row.paxCount.trim() || row.roe.trim()); }
@@ -105,11 +104,9 @@ export default function VisaBookingFlowV3({ companyId, parties, transactionType,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<Filter>("ALL");
 
   useEffect(() => { if (!editingId) setTx(transactionType); }, [transactionType, editingId]);
-  useEffect(() => { void loadEntries(""); }, [companyId]);
+  useEffect(() => { void loadEntries(); }, [companyId]);
 
   const summary = useMemo(() => {
     const by = { ADULT: 0, CHILD: 0, INFANT: 0 } as Record<VisaPassengerType, number>;
@@ -137,15 +134,15 @@ export default function VisaBookingFlowV3({ companyId, parties, transactionType,
 
   const hasPrivate = summary.privatePax > 0;
   const hasBus = summary.fullBusPax > 0;
+  const commercialLocked = Boolean(editingId);
   useEffect(() => {
+    if (commercialLocked) return;
     if (!hasPrivate) { setFleet([]); setFleetTouched(false); }
     else if (!fleetTouched && fleet.length === 0) setFleet(suggestedFleet(summary.privatePax));
-  }, [hasPrivate, summary.privatePax, fleetTouched, fleet.length]);
+  }, [commercialLocked, hasPrivate, summary.privatePax, fleetTouched, fleet.length]);
 
-  const visible = entries.filter((entry) => filter === "ALL" || entry.transaction_type === filter);
-
-  async function loadEntries(query = search) {
-    try { setEntries(await getVisaBookings(companyId, query)); }
+  async function loadEntries() {
+    try { setEntries(await getVisaBookings(companyId)); }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   }
 
@@ -165,10 +162,23 @@ export default function VisaBookingFlowV3({ companyId, parties, transactionType,
     setUbNumber(formatted); setAssigned(true); setMessage(`${formatted} is ready. Enter Visa Services & Rates below.`);
   }
 
-  function updateRow(rowId: string, patch: Partial<VisaRow>) { setRows((current) => current.map((row) => row.rowId === rowId ? { ...row, ...patch } : row)); }
-  function addRow() { const inheritedRoe = [...rows].reverse().find((row) => row.roe.trim())?.roe || ""; setRows((current) => [...current, newVisaRow("ADULT", inheritedRoe)]); }
-  function removeRow(rowId: string) { setRows((current) => { const next = current.filter((row) => row.rowId !== rowId); return next.length ? next : [newVisaRow()]; }); }
-  function updateFleet(rowId: string, patch: Partial<FleetRow>) { setFleetTouched(true); setFleet((current) => current.map((row) => row.rowId === rowId ? { ...row, ...patch } : row)); }
+  function updateRow(rowId: string, patch: Partial<VisaRow>) {
+    if (commercialLocked) return;
+    setRows((current) => current.map((row) => row.rowId === rowId ? { ...row, ...patch } : row));
+  }
+  function addRow() {
+    if (commercialLocked) return;
+    const inheritedRoe = [...rows].reverse().find((row) => row.roe.trim())?.roe || "";
+    setRows((current) => [...current, newVisaRow("ADULT", inheritedRoe)]);
+  }
+  function removeRow(rowId: string) {
+    if (commercialLocked) return;
+    setRows((current) => { const next = current.filter((row) => row.rowId !== rowId); return next.length ? next : [newVisaRow()]; });
+  }
+  function updateFleet(rowId: string, patch: Partial<FleetRow>) {
+    if (commercialLocked) return;
+    setFleetTouched(true); setFleet((current) => current.map((row) => row.rowId === rowId ? { ...row, ...patch } : row));
+  }
 
   function lineInputs(): VisaBookingLineInput[] {
     return rows.filter(rowHasData).map((row) => ({ passengerType: row.passengerType, passengerName: row.passengerName.trim(), visaType: row.visaType as VisaType, visaRateSar: Math.max(0, num(row.visaRateSar)), paxCount: whole(row.paxCount), roe: row.roe.trim() ? Math.max(0, num(row.roe)) : null }));
@@ -200,14 +210,15 @@ export default function VisaBookingFlowV3({ companyId, parties, transactionType,
   }
 
   async function saveCommercial() {
+    if (editingId) return setError("Commercial Visa values are locked after saving. Use Visa Booking Register → Booking Adjustment for Correction, Amendment or Cancellation.");
     if (!assigned) return setError("Create / Assign the Booking UB first.");
     if (!rows.some(rowHasData)) return setError("Add at least one Visa row.");
     if (hasPrivate && summary.fleetCapacity < summary.privatePax) return setError(`Private transport capacity is ${summary.fleetCapacity} Pax but ${summary.privatePax} Pax require private transport. Increase the fleet before saving.`);
     setBusy(true); setError("");
     try {
-      if (editingId) { await updateVisaBooking(companyId, editingId, commercialInput(), userId); setMessage(`Visa Services & Rates for ${ubNumber} updated.`); }
-      else { const id = await createVisaBooking(companyId, commercialInput(), userId); setEditingId(id); setSaved(true); setMessage(`Visa booking ${ubNumber} saved. Optional passenger / visa document details are now available.`); }
-      setSaved(true); syncPassengers(); await loadEntries(search); await onChanged?.();
+      const id = await createVisaBooking(companyId, commercialInput(), userId);
+      setEditingId(id); setSaved(true); setMessage(`Visa booking ${ubNumber} saved. Optional passenger / visa document details are now available.`);
+      syncPassengers(); await loadEntries(); await onChanged?.();
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   }
@@ -226,8 +237,8 @@ export default function VisaBookingFlowV3({ companyId, parties, transactionType,
     finally { setBusy(false); }
   }
 
-  async function edit(entry: VisaBooking) {
-    if (!canEdit || entry.status !== "ACTIVE") return;
+  async function openEntry(entry: VisaBooking) {
+    if (entry.status !== "ACTIVE") return;
     setTx(entry.transaction_type); setCounterpartyId(entry.counterparty_id); setBookingDate(entry.transaction_date); setUbNumber(entry.ub_number); setUbDigits(bookingDigitsFromUb(entry.ub_number)); setAssigned(true); setSaved(true); setDetailsOpen(false); setEditingId(entry.id);
     setRows(entry.lines.length ? entry.lines.map((line) => ({ rowId: crypto.randomUUID(), passengerType: line.passenger_type, passengerName: line.passenger_name, visaType: line.visa_type, visaRateSar: String(line.visa_rate_sar || ""), paxCount: String(line.pax_count || 1), roe: Number(line.roe || 0) > 0 ? String(line.roe) : "" })) : [newVisaRow()]);
     setFleet(entry.fleet.map((item) => ({ rowId: crypto.randomUUID(), vehicleType: item.vehicle_type, quantity: String(item.quantity || 1), ratePerVehicleSar: String(item.rate_per_vehicle_sar || "") })));
@@ -238,38 +249,49 @@ export default function VisaBookingFlowV3({ companyId, parties, transactionType,
     setExpectedEntryDate(details.expectedEntryDate || entry.expected_entry_date || "");
     const fallback: PassengerRow[] = entry.passports.map((item) => ({ rowId: crypto.randomUUID(), sourceFamilyName: item.source_family_name, passengerType: item.passenger_type, visaType: item.visa_type, givenName: item.given_name, surname: item.surname, passportNumber: item.passport_number, nationality: item.nationality, dateOfBirth: item.date_of_birth, passportIssuance: item.passport_issuance, passportExpiry: item.passport_expiry, visaNumber: "", mofaReference: "" }));
     setPassengers(details.passengers.length ? details.passengers.map((item) => ({ ...item, rowId: crypto.randomUUID() })) : fallback);
-    setNotes(details.notes || entry.notes || ""); setMode("FORM"); setMessage(`Editing Visa booking ${entry.ub_number}. Identity is locked; Sections 02 and 03 save independently.`); window.scrollTo({ top: 0, behavior: "smooth" });
+    setNotes(details.notes || entry.notes || ""); setMode("FORM"); setMessage(`Opened Visa booking ${entry.ub_number}. Commercial values are read-only here; use Booking Adjustment from the Visa Booking Register. Section 03 operational details remain available.`); window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function voidEntry(entry: VisaBooking) {
-    if (!canVoid || entry.status !== "ACTIVE" || busy) return;
-    if (!window.confirm(`Void Visa booking ${entry.ub_number}?`)) return;
-    setBusy(true);
-    try { await voidVisaBooking(companyId, entry.id, userId); await loadEntries(search); await onChanged?.(); setMessage(`Visa booking ${entry.ub_number} voided.`); }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-    finally { setBusy(false); }
+  async function openEntryById(bookingId: string) {
+    const latest = await getVisaBookings(companyId);
+    setEntries(latest);
+    const entry = latest.find((item) => item.id === bookingId);
+    if (entry) await openEntry(entry);
+  }
+
+  async function lifecycleChanged() {
+    await loadEntries();
+    await onChanged?.();
   }
 
   function updatePassenger(rowId: string, patch: Partial<PassengerRow>) { setPassengers((current) => current.map((row) => row.rowId === rowId ? { ...row, ...patch } : row)); }
 
-  if (mode === "REGISTER") {
-    return <section className="booking-entry-screen bf-page"><div className="booking-screen-toolbar"><button className="booking-back-button" onClick={() => setMode("FORM")}>← Back to Visa Booking</button><span className="booking-foundation-badge active-engine">VISA REGISTER</span></div><div className="bf-title"><div><span className="eyebrow blue">VISA BOOKING REGISTER</span><h2>Visa Booking Register</h2></div></div><div className="package14-register-controls"><div className="package-register-filter-tabs">{(["ALL", "SALE", "PURCHASE"] as Filter[]).map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><div className="search-box"><input value={search} onChange={(e) => { setSearch(e.target.value); void loadEntries(e.target.value); }} placeholder="Search UB, family, visa type, party/vendor..." /></div></div><div className="party-table-wrap"><table className="party-table"><thead><tr><th>DATE</th><th>UB #</th><th>TYPE</th><th>PARTY / VENDOR</th><th>VISA SERVICES</th><th>TOTAL SAR</th><th>TOTAL PKR</th><th>PENDING SAR</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>{visible.map((entry) => <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}><td>{entry.transaction_date}</td><td><b>{entry.ub_number}</b></td><td>{entry.transaction_type}</td><td>{entry.counterparty_name}</td><td>{entry.lines.map((line) => `${line.passenger_name}: ${visaLabel(line.visa_type)} (${line.pax_count})`).join(" · ")}</td><td>{money(entry.total_sar)}</td><td>{pkr(entry.total_pkr)}</td><td>{money(entry.unconverted_sar)}</td><td><span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span></td><td><div className="row-actions"><button disabled={!canEdit || entry.status !== "ACTIVE"} onClick={() => void edit(entry)}>Edit / Details</button><button disabled={!canVoid || entry.status !== "ACTIVE"} onClick={() => void voidEntry(entry)}>Void</button></div></td></tr>)}</tbody></table></div></section>;
-  }
+  if (mode === "REGISTER") return <BookingLifecycleCenter
+    service="VISA"
+    companyId={companyId}
+    transactionType={transactionType}
+    userId={userId}
+    canEdit={canEdit}
+    canVoid={canVoid}
+    onBack={() => setMode("FORM")}
+    onOpenBooking={openEntryById}
+    onChanged={lifecycleChanged}
+  />;
 
   return <section className="booking-entry-screen bf-page package14-page">
-    <div className="booking-screen-toolbar"><button className="booking-back-button" onClick={onBack}>← Back to Booking Services</button><div className="bf-toolbar-actions"><span className={`direction-badge ${tx === "SALE" ? "sale" : "purchase"}`}>{tx === "SALE" ? "SALE TO PARTY" : "PURCHASE FROM VENDOR / SUPPLIER"}</span><button className="booking-foundation-badge active-engine" onClick={() => { setMode("REGISTER"); void loadEntries(search); }}>Visa Booking Register</button></div></div>
-    <div className="bf-title"><div><span className="eyebrow blue">VISA BOOKING</span><h2>{saved ? `Visa Booking — ${ubNumber}` : "New Visa Booking"}</h2><p>Create the UB first, save Visa accounting second, then complete optional passenger / document details.</p></div></div>
+    <div className="booking-screen-toolbar"><button className="booking-back-button" onClick={onBack}>← Back to Booking Services</button><div className="bf-toolbar-actions"><span className={`direction-badge ${tx === "SALE" ? "sale" : "purchase"}`}>{tx === "SALE" ? "SALE TO PARTY" : "PURCHASE FROM VENDOR / SUPPLIER"}</span><button className="booking-foundation-badge active-engine" onClick={() => setMode("REGISTER")}>Visa Booking Register</button></div></div>
+    <div className="bf-title"><div><span className="eyebrow blue">VISA BOOKING</span><h2>{saved ? `Visa Booking — ${ubNumber}` : "New Visa Booking"}</h2><p>{editingId ? "Review the current effective Visa booking. Commercial changes are protected by Booking Adjustment history." : "Create the UB first, save Visa accounting second, then complete optional passenger / document details."}</p></div></div>
     {message && <div className="alert success">{message}</div>}{error && <div className="alert error">{error}</div>}
-    <ProgressiveBookingIdentity companyId={companyId} userId={userId} transactionType={tx} parties={parties} counterpartyId={counterpartyId} onCounterpartyChange={setCounterpartyId} bookingDate={bookingDate} onBookingDateChange={setBookingDate} ubDigits={ubDigits} onUbDigitsChange={setUbDigits} ubNumber={ubNumber} assigned={assigned} saved={saved} onAssign={assign} onEditHeader={() => { setAssigned(false); setMessage(""); }} onAccountsChanged={onChanged} onError={setError} onMessage={setMessage} serviceLabel="Visa" />
+    <ProgressiveBookingIdentity companyId={companyId} userId={userId} transactionType={tx} parties={parties} counterpartyId={counterpartyId} onCounterpartyChange={setCounterpartyId} bookingDate={bookingDate} onBookingDateChange={setBookingDate} ubDigits={ubDigits} onUbDigitsChange={setUbDigits} ubNumber={ubNumber} assigned={assigned} saved={saved} onAssign={assign} onEditHeader={() => { if (!editingId) { setAssigned(false); setMessage(""); } }} onAccountsChanged={onChanged} onError={setError} onMessage={setMessage} serviceLabel="Visa" />
 
     {assigned && <section className="bf-card">
-      <div className="bf-section-head"><div><span>02</span><div><b>VISA SERVICES & RATES</b><small>Commercial / accounting Visa rows under {ubNumber}</small></div></div><button className="primary small" onClick={addRow}>+ Visa Row</button></div>
-      <div className="bf-table-wrap"><table className="bf-table visa-v3-table"><thead><tr><th>SR</th><th>PAX TYPE</th><th>PASSENGER / FAMILY HEAD</th><th>VISA SERVICE</th><th>RATE / PAX SAR</th><th>QTY</th><th>ROE</th><th>TOTAL SAR</th><th>TOTAL PKR</th><th>ACTION</th></tr></thead><tbody>{rows.map((row, index) => { const q = rowPax(row); let totalSar = num(row.visaRateSar) * q; if (needsPrivate(row.visaType)) totalSar += summary.privatePerPax * q; if (needsBus(row.visaType)) totalSar += num(busRate) * q; return <tr key={row.rowId}><td>{index + 1}</td><td><select value={row.passengerType} onChange={(e) => updateRow(row.rowId, { passengerType: e.target.value as VisaPassengerType })}><option value="ADULT">Adult</option><option value="CHILD">Child</option><option value="INFANT">Infant</option></select></td><td><input value={row.passengerName} onChange={(e) => updateRow(row.rowId, { passengerName: e.target.value })} /></td><td><select value={row.visaType} onChange={(e) => updateRow(row.rowId, { visaType: e.target.value as VisaType })}><option value="">Select</option>{visaTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></td><td><input type="number" min="0" value={row.visaRateSar} onChange={(e) => updateRow(row.rowId, { visaRateSar: e.target.value })} /></td><td><input type="number" min="1" value={row.paxCount} onChange={(e) => updateRow(row.rowId, { paxCount: e.target.value })} /></td><td><input type="number" min="0" value={row.roe} onChange={(e) => updateRow(row.rowId, { roe: e.target.value })} /></td><td className="bf-money">{money(totalSar)}</td><td className="bf-money">{num(row.roe) > 0 ? pkr(totalSar * num(row.roe)) : "—"}</td><td><button className="bf-remove" onClick={() => removeRow(row.rowId)}>×</button></td></tr>; })}</tbody></table></div>
+      <div className="bf-section-head"><div><span>02</span><div><b>VISA SERVICES & RATES</b><small>{commercialLocked ? "Current effective commercial rows — use Booking Adjustment to change them." : `Commercial / accounting Visa rows under ${ubNumber}`}</small></div></div>{!commercialLocked && <button className="primary small" onClick={addRow}>+ Visa Row</button>}</div>
+      <div className="bf-table-wrap"><table className="bf-table visa-v3-table"><thead><tr><th>SR</th><th>PAX TYPE</th><th>PASSENGER / FAMILY HEAD</th><th>VISA SERVICE</th><th>RATE / PAX SAR</th><th>QTY</th><th>ROE</th><th>TOTAL SAR</th><th>TOTAL PKR</th>{!commercialLocked && <th>ACTION</th>}</tr></thead><tbody>{rows.map((row, index) => { const q = rowPax(row); let totalSar = num(row.visaRateSar) * q; if (needsPrivate(row.visaType)) totalSar += summary.privatePerPax * q; if (needsBus(row.visaType)) totalSar += num(busRate) * q; return <tr key={row.rowId}><td>{index + 1}</td><td><select disabled={commercialLocked} value={row.passengerType} onChange={(e) => updateRow(row.rowId, { passengerType: e.target.value as VisaPassengerType })}><option value="ADULT">Adult</option><option value="CHILD">Child</option><option value="INFANT">Infant</option></select></td><td><input disabled={commercialLocked} value={row.passengerName} onChange={(e) => updateRow(row.rowId, { passengerName: e.target.value })} /></td><td><select disabled={commercialLocked} value={row.visaType} onChange={(e) => updateRow(row.rowId, { visaType: e.target.value as VisaType })}><option value="">Select</option>{visaTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></td><td><input disabled={commercialLocked} type="number" min="0" value={row.visaRateSar} onChange={(e) => updateRow(row.rowId, { visaRateSar: e.target.value })} /></td><td><input disabled={commercialLocked} type="number" min="1" value={row.paxCount} onChange={(e) => updateRow(row.rowId, { paxCount: e.target.value })} /></td><td><input disabled={commercialLocked} type="number" min="0" value={row.roe} onChange={(e) => updateRow(row.rowId, { roe: e.target.value })} /></td><td className="bf-money">{money(totalSar)}</td><td className="bf-money">{num(row.roe) > 0 ? pkr(totalSar * num(row.roe)) : "—"}</td>{!commercialLocked && <td><button className="bf-remove" onClick={() => removeRow(row.rowId)}>×</button></td>}</tr>; })}</tbody></table></div>
 
-      {(hasPrivate || hasBus) && <section className="bf-transport-component"><div className="bf-subsection-head"><div><b>TRANSPORT COMPONENT</b><small>Commercial transport cost included with applicable Visa services.</small></div>{hasPrivate && <span className={`bf-capacity ${summary.fleetCapacity >= summary.privatePax ? "ok" : "bad"}`}>Private capacity {summary.fleetCapacity}/{summary.privatePax} Pax</span>}</div>{hasPrivate && <><div className="bf-inline-toolbar"><b>PRIVATE VEHICLES</b><button className="primary small" onClick={() => { setFleetTouched(true); setFleet((current) => [...current, { rowId: crypto.randomUUID(), vehicleType: "STARIA", quantity: "1", ratePerVehicleSar: "" }]); }}>+ Vehicle</button></div><div className="bf-table-wrap"><table className="bf-table"><thead><tr><th>SR</th><th>VEHICLE</th><th>QTY</th><th>CAPACITY / VEHICLE</th><th>TOTAL CAPACITY</th><th>RATE / VEHICLE SAR</th><th>TOTAL SAR</th><th>ACTION</th></tr></thead><tbody>{fleet.map((item, index) => { const quantity = Math.max(1, whole(item.quantity)); const cap = vehicleCapacity(item.vehicleType); return <tr key={item.rowId}><td>{index + 1}</td><td><select value={item.vehicleType} onChange={(e) => updateFleet(item.rowId, { vehicleType: e.target.value as VisaVehicleType })}>{vehicles.map((vehicle) => <option key={vehicle.value} value={vehicle.value}>{vehicle.label}</option>)}</select></td><td><input type="number" min="1" value={item.quantity} onChange={(e) => updateFleet(item.rowId, { quantity: e.target.value })} /></td><td>{cap}</td><td><b>{cap * quantity}</b></td><td><input type="number" min="0" value={item.ratePerVehicleSar} onChange={(e) => updateFleet(item.rowId, { ratePerVehicleSar: e.target.value })} /></td><td className="bf-money">{money(num(item.ratePerVehicleSar) * quantity)}</td><td><button className="bf-remove" onClick={() => { setFleetTouched(true); setFleet((current) => current.filter((row) => row.rowId !== item.rowId)); }}>×</button></td></tr>; })}</tbody></table></div></>}{hasBus && <div className="bf-inline-toolbar"><label>INTERCITY BUS RATE / PAX SAR<input type="number" min="0" value={busRate} onChange={(e) => setBusRate(e.target.value)} /></label><div><small>APPLICABLE FULL-TRANSPORT PAX</small><b>{summary.fullBusPax}</b></div><div><small>INTERCITY BUS TOTAL</small><b>{money(summary.busSar)}</b></div></div>}</section>}
+      {(hasPrivate || hasBus) && <section className="bf-transport-component"><div className="bf-subsection-head"><div><b>TRANSPORT COMPONENT</b><small>{commercialLocked ? "Commercial transport component is read-only. Use Booking Adjustment to change it." : "Commercial transport cost included with applicable Visa services."}</small></div>{hasPrivate && <span className={`bf-capacity ${summary.fleetCapacity >= summary.privatePax ? "ok" : "bad"}`}>Private capacity {summary.fleetCapacity}/{summary.privatePax} Pax</span>}</div>{hasPrivate && <><div className="bf-inline-toolbar"><b>PRIVATE VEHICLES</b>{!commercialLocked && <button className="primary small" onClick={() => { setFleetTouched(true); setFleet((current) => [...current, { rowId: crypto.randomUUID(), vehicleType: "STARIA", quantity: "1", ratePerVehicleSar: "" }]); }}>+ Vehicle</button>}</div><div className="bf-table-wrap"><table className="bf-table"><thead><tr><th>SR</th><th>VEHICLE</th><th>QTY</th><th>CAPACITY / VEHICLE</th><th>TOTAL CAPACITY</th><th>RATE / VEHICLE SAR</th><th>TOTAL SAR</th>{!commercialLocked && <th>ACTION</th>}</tr></thead><tbody>{fleet.map((item, index) => { const quantity = Math.max(1, whole(item.quantity)); const cap = vehicleCapacity(item.vehicleType); return <tr key={item.rowId}><td>{index + 1}</td><td><select disabled={commercialLocked} value={item.vehicleType} onChange={(e) => updateFleet(item.rowId, { vehicleType: e.target.value as VisaVehicleType })}>{vehicles.map((vehicle) => <option key={vehicle.value} value={vehicle.value}>{vehicle.label}</option>)}</select></td><td><input disabled={commercialLocked} type="number" min="1" value={item.quantity} onChange={(e) => updateFleet(item.rowId, { quantity: e.target.value })} /></td><td>{cap}</td><td><b>{cap * quantity}</b></td><td><input disabled={commercialLocked} type="number" min="0" value={item.ratePerVehicleSar} onChange={(e) => updateFleet(item.rowId, { ratePerVehicleSar: e.target.value })} /></td><td className="bf-money">{money(num(item.ratePerVehicleSar) * quantity)}</td>{!commercialLocked && <td><button className="bf-remove" onClick={() => { setFleetTouched(true); setFleet((current) => current.filter((row) => row.rowId !== item.rowId)); }}>×</button></td>}</tr>; })}</tbody></table></div></>}{hasBus && <div className="bf-inline-toolbar"><label>INTERCITY BUS RATE / PAX SAR<input disabled={commercialLocked} type="number" min="0" value={busRate} onChange={(e) => { if (!commercialLocked) setBusRate(e.target.value); }} /></label><div><small>APPLICABLE FULL-TRANSPORT PAX</small><b>{summary.fullBusPax}</b></div><div><small>INTERCITY BUS TOTAL</small><b>{money(summary.busSar)}</b></div></div>}</section>}
 
       <div className="bf-summary six"><div><small>ADULTS</small><b>{summary.ADULT}</b></div><div><small>CHILDREN</small><b>{summary.CHILD}</b></div><div><small>INFANTS</small><b>{summary.INFANT}</b></div><div><small>TOTAL VISA PAX</small><b>{summary.visaPax}</b></div><div><small>GRAND TOTAL SAR</small><b>{money(summary.totalSar)}</b></div><div className="grand"><small>GRAND TOTAL PKR</small><b>{pkr(summary.convertedPkr)}</b>{summary.unconvertedSar > 0 && <span>{money(summary.unconvertedSar)} pending ROE</span>}</div></div>
-      <div className="package14-commercial-actions">{saved && <button className="secondary" onClick={reset}>+ New Visa Booking</button>}<button className="primary" disabled={busy || (!editingId && !canCreate) || (!!editingId && !canEdit)} onClick={() => void saveCommercial()}>{busy ? "Saving..." : editingId ? `Update Visa Services & Rates — ${ubNumber}` : `Save Visa Booking — ${ubNumber}`}</button></div>
+      <div className="package14-commercial-actions">{saved && <button className="secondary" onClick={reset}>+ New Visa Booking</button>}{!editingId && <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>{busy ? "Saving..." : `Save Visa Booking — ${ubNumber}`}</button>}{editingId && <div className="adj-rule-note"><b>Commercial values locked:</b> use Visa Booking Register → Booking Adjustment for Correction, Amendment, Partial Cancellation or Full Cancellation.</div>}</div>
     </section>}
 
     {saved && editingId && <section className={`package14-additional ${detailsOpen ? "open" : "closed"}`}>
