@@ -5,9 +5,9 @@ import {
   savePackageCancellation,
   savePackageCorrectionOrAmendment,
   type PackageAdjustmentRecord,
-  type PackageAdjustmentRequestedBy,
   type PackageAdjustmentType,
 } from "./PackageAdjustmentDb";
+import { bookingAccountTerms, bookingLifecycleConfigs } from "./BookingLifecycle";
 import "./PackageBookingAdjustment.css";
 
 type Props = {
@@ -30,15 +30,7 @@ type RowState = {
   qty: string;
 };
 
-const amendmentCategories = [
-  "Date Change",
-  "Passenger Change",
-  "Package Change",
-  "Rate Change",
-  "Hotel Change",
-  "Ticket / Flight Change",
-  "Other",
-];
+const amendmentCategories = bookingLifecycleConfigs.PACKAGE.amendmentTypes;
 
 function today() {
   const date = new Date();
@@ -102,7 +94,6 @@ export default function PackageBookingAdjustment({
   const [view, setView] = useState<"ADJUSTMENT" | "HISTORY">(initialView);
   const [adjustmentType, setAdjustmentType] = useState<PackageAdjustmentType | "">("");
   const [adjustmentDate, setAdjustmentDate] = useState(today());
-  const [requestedBy, setRequestedBy] = useState<PackageAdjustmentRequestedBy>(booking.transaction_type === "SALE" ? "CUSTOMER" : "VENDOR");
   const [category, setCategory] = useState("");
   const [reason, setReason] = useState("");
   const [reference, setReference] = useState("");
@@ -143,7 +134,7 @@ export default function PackageBookingAdjustment({
   const revisedEffective = adjustmentType === "CORRECTION"
     ? revisedBase + carriedAdjustment
     : revisedBase + carriedAdjustment + chargeValue - creditValue;
-  const editDelta = revisedEffective - Number(booking.total_pkr || 0);
+  const baseDifference = revisedBase - currentBase;
 
   const cancelledValue = useMemo(() => {
     if (adjustmentType === "FULL_CANCELLATION") return currentBase;
@@ -159,12 +150,13 @@ export default function PackageBookingAdjustment({
     ? Math.max(0, carriedAdjustment + cancellationCharge)
     : Math.max(0, Number(booking.total_pkr || 0) - cancelledValue + cancellationCharge);
   const cancellationCredit = Math.max(0, Number(booking.total_pkr || 0) - cancellationEffective);
-  const accountNoun = booking.transaction_type === "SALE" ? "Party Receivable" : "Vendor Payable";
+  const accountTerms = bookingAccountTerms(booking.transaction_type);
+  const accountNoun = accountTerms.accountImpact;
+  const requestedBy = booking.transaction_type === "SALE" ? "CUSTOMER" as const : "VENDOR" as const;
 
   function chooseType(type: PackageAdjustmentType) {
     setAdjustmentType(type);
     setAdjustmentDate(today());
-    setRequestedBy(booking.transaction_type === "SALE" ? "CUSTOMER" : "VENDOR");
     setCategory(type === "CORRECTION" ? "Data / Entry Correction" : type === "AMENDMENT" ? "" : adjustmentLabel(type));
     setReason("");
     setReference("");
@@ -243,7 +235,7 @@ export default function PackageBookingAdjustment({
   function renderSelection() {
     const choices: Array<{ type: PackageAdjustmentType; title: string; text: string; badge: string }> = [
       { type: "CORRECTION", title: "Correction", text: "Fix an incorrect booking entry. No amendment fee is charged; only the correct booking value is restored.", badge: "NO FEE" },
-      { type: "AMENDMENT", title: "Amendment", text: "Record a genuine post-booking change requested by the customer/vendor. May include charges or credits.", badge: "COMMERCIAL" },
+      { type: "AMENDMENT", title: "Amendment", text: "Record a genuine post-booking commercial change. The result may be an extra charge, a credit, or no financial change.", badge: "COMMERCIAL" },
       { type: "PARTIAL_CANCELLATION", title: "Partial Cancellation", text: "Cancel selected Package passengers / quantities and calculate cancellation charges and account credit.", badge: "SELECT ITEMS" },
       { type: "FULL_CANCELLATION", title: "Full Cancellation", text: "Cancel the complete Package booking while retaining any applicable cancellation charge.", badge: "FULL BOOKING" },
     ];
@@ -272,7 +264,7 @@ export default function PackageBookingAdjustment({
     return <div className="adj-history-view">
       <div className="adj-history-summary"><div><small>CURRENT STATUS</small><b>{latestStatus}</b></div><div><small>CURRENT REVISION</small><b>REV {revision}</b></div><div><small>CURRENT VALUE</small><b>{money(booking.total_pkr)}</b></div></div>
       <div className="adj-timeline"><article className="adj-history-item original"><span>REV 1</span><div><small>{booking.transaction_date}</small><h4>Original Package Booking</h4><p>{booking.transaction_type} · {booking.counterparty_name || "Account"}</p></div><strong>{money(originalValue)}</strong></article>
-      {history.map((item) => <article className={`adj-history-item ${item.adjustment_type.toLowerCase()}`} key={item.id}><span>REV {item.revision_no}</span><div><small>{item.adjustment_date} · {item.requested_by}</small><h4>{adjustmentLabel(item.adjustment_type)}</h4><p>{item.category || "Booking adjustment"} — {item.reason}</p>{item.reference && <em>Ref: {item.reference}</em>}{item.notes && <em>{item.notes}</em>}<div className="adj-history-numbers"><span>Previous {money(item.previous_total_pkr)}</span><span>Base after {money(item.revised_base_pkr)}</span>{Number(item.charge_pkr) > 0 && <span>Charge +{money(item.charge_pkr)}</span>}{Number(item.credit_pkr) > 0 && <span>Credit {money(item.credit_pkr)}</span>}</div></div><strong className={Number(item.account_delta_pkr) >= 0 ? "positive" : "negative"}>{signedMoney(Number(item.account_delta_pkr))}<small>→ {money(item.effective_total_pkr)}</small></strong></article>)}</div>
+      {history.map((item) => <article className={`adj-history-item ${item.adjustment_type.toLowerCase()}`} key={item.id}><span>REV {item.revision_no}</span><div><small>{item.adjustment_date}</small><h4>{adjustmentLabel(item.adjustment_type)}</h4><p>{item.category || "Booking adjustment"} — {item.reason}</p>{item.reference && <em>Ref: {item.reference}</em>}{item.notes && <em>{item.notes}</em>}<div className="adj-history-numbers"><span>Previous {money(item.previous_total_pkr)}</span><span>Base after {money(item.revised_base_pkr)}</span>{Number(item.charge_pkr) > 0 && <span>Charge +{money(item.charge_pkr)}</span>}{Number(item.credit_pkr) > 0 && <span>Credit {money(item.credit_pkr)}</span>}</div></div><strong className={Number(item.account_delta_pkr) >= 0 ? "positive" : "negative"}>{signedMoney(Number(item.account_delta_pkr))}<small>→ {money(item.effective_total_pkr)}</small></strong></article>)}</div>
       {!history.length && <div className="adj-empty-history">No booking adjustments yet. This is still the original Package booking.</div>}
     </div>;
   }
@@ -289,15 +281,15 @@ export default function PackageBookingAdjustment({
         <div className="adj-identity-strip"><div><small>UB</small><b>{booking.ub_number}</b></div><div><small>ACCOUNT</small><b>{booking.counterparty_name || "—"}</b></div><div><small>BOOKING DATE</small><b>{booking.transaction_date}</b></div><div><small>TRANSACTION</small><b>{booking.transaction_type}</b></div><div><small>CURRENT VALUE</small><b>{money(booking.total_pkr)}</b></div></div>
         {!adjustmentType ? <><div className="adj-intro"><h3>What do you want to do?</h3><p>Every option preserves the original UB and records a revision in Booking History. Refunds remain a separate cash/bank movement in Payments.</p></div>{renderSelection()}</> : <>
           <button type="button" className="adj-back-choice" onClick={() => { setAdjustmentType(""); setError(""); }}>← Change Adjustment Type</button>
-          <section className="adj-section"><div className="adj-section-title"><span>01</span><div><b>{adjustmentLabel(adjustmentType).toUpperCase()} HEADER</b><small>The genuine UB, Party/Vendor and original booking identity remain locked.</small></div></div><div className="adj-form-grid"><label>{isCancellation ? "Cancellation Date" : "Adjustment Date"} *<input type="date" value={adjustmentDate} onChange={(e) => setAdjustmentDate(e.target.value)} /></label><label>Requested By<select value={requestedBy} onChange={(e) => setRequestedBy(e.target.value as PackageAdjustmentRequestedBy)}><option value="CUSTOMER">Customer / Party</option><option value="VENDOR">Vendor / Supplier</option><option value="INTERNAL">Company / Internal</option></select></label>{adjustmentType === "AMENDMENT" && <label>Amendment Type *<select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">Select change type</option>{amendmentCategories.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>}<label className="wide">Reason *<textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={adjustmentType === "CORRECTION" ? "e.g. Incorrect rate entered when booking was created" : isCancellation ? "Why is this booking being cancelled?" : "What genuine post-booking change was requested?"} /></label></div></section>
+          <section className="adj-section"><div className="adj-section-title"><span>01</span><div><b>{adjustmentLabel(adjustmentType).toUpperCase()} DETAILS</b><small>The genuine UB, Party/Vendor and original booking identity remain locked.</small></div></div><div className="adj-form-grid polished-header"><label>{isCancellation ? "Cancellation Date" : adjustmentType === "AMENDMENT" ? "Amendment Date" : "Correction Date"} *<input type="date" value={adjustmentDate} onChange={(e) => setAdjustmentDate(e.target.value)} /></label>{adjustmentType === "AMENDMENT" && <label>Change Type *<select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">Select change type</option>{amendmentCategories.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>}<label className="wide">Reason / Remarks *<textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={adjustmentType === "CORRECTION" ? "e.g. Incorrect rate entered when booking was created" : isCancellation ? "Why is this booking being cancelled?" : "Describe the genuine post-booking change"} /></label></div></section>
           <section className="adj-section"><div className="adj-section-title"><span>02</span><div><b>{isCancellation ? "CANCELLATION & ACCOUNTING" : "REVISED BOOKING & ACCOUNTING"}</b><small>Review the commercial effect before saving. Payments/refunds are not created here.</small></div></div>{isCancellation ? renderCancellationRows() : renderEditableRows()}
-            {adjustmentType === "AMENDMENT" && <div className="adj-charge-grid"><label>Amendment Charge (PKR)<input type="number" min="0" step="0.01" value={amendmentCharge} onChange={(e) => setAmendmentCharge(e.target.value)} placeholder="0" /><small>Additional charge on this Party/Vendor booking.</small></label><label>Credit / Deduction (PKR)<input type="number" min="0" step="0.01" value={credit} onChange={(e) => setCredit(e.target.value)} placeholder="0" /><small>Commercial credit applied to this booking.</small></label></div>}
+            {adjustmentType === "AMENDMENT" && <div className="adj-charge-grid"><label>{accountTerms.chargeLabel} (PKR)<input type="number" min="0" step="0.01" value={amendmentCharge} onChange={(e) => setAmendmentCharge(e.target.value)} placeholder="0" /><small>{accountTerms.chargeHelp}</small></label><label>{accountTerms.creditLabel} (PKR)<input type="number" min="0" step="0.01" value={credit} onChange={(e) => setCredit(e.target.value)} placeholder="0" /><small>{accountTerms.creditHelp}</small></label></div>}
             {isCancellation && <div className="adj-charge-grid"><label>Cancellation Charge (PKR)<input type="number" min="0" step="0.01" value={amendmentCharge} onChange={(e) => setAmendmentCharge(e.target.value)} placeholder="0" /><small>Amount retained/charged despite cancellation.</small></label><div className="adj-credit-preview"><small>NET ACCOUNT CREDIT</small><b>{money(cancellationCredit)}</b><span>This is not a cash refund. Refund movement is recorded later in Payments if money is returned.</span></div></div>}
-            <div className="adj-accounting-preview"><div><small>BEFORE</small><b>{money(booking.total_pkr)}</b></div><div><small>{isCancellation ? "CANCELLED VALUE" : "REVISED BASE"}</small><b>{money(isCancellation ? cancelledValue : revisedBase)}</b></div><div className={previewDelta > 0 ? "increase" : previewDelta < 0 ? "decrease" : "neutral"}><small>{accountNoun.toUpperCase()} IMPACT</small><b>{signedMoney(previewDelta)}</b></div><div className="effective"><small>NEW EFFECTIVE BOOKING VALUE</small><strong>{money(previewTotal)}</strong></div></div>
+            {adjustmentType === "AMENDMENT" ? <div className="adj-financial-breakdown"><div><small>CURRENT EFFECTIVE VALUE</small><b>{money(booking.total_pkr)}</b></div><div><small>REVISED BASE VALUE</small><b>{money(revisedBase)}</b></div><div className={baseDifference > 0 ? "increase" : baseDifference < 0 ? "decrease" : "neutral"}><small>BASE DIFFERENCE</small><b>{signedMoney(baseDifference)}</b></div><div><small>{accountTerms.chargeLabel.toUpperCase()}</small><b>{chargeValue > 0 ? `+${money(chargeValue)}` : money(0)}</b></div><div><small>{accountTerms.creditLabel.toUpperCase()}</small><b>{creditValue > 0 ? `−${money(creditValue)}` : money(0)}</b></div><div className={previewDelta > 0 ? "increase" : previewDelta < 0 ? "decrease" : "neutral"}><small>FINAL {accountNoun.toUpperCase()} IMPACT</small><b>{signedMoney(previewDelta)}</b></div><div className="effective"><small>NEW EFFECTIVE BOOKING VALUE</small><strong>{money(previewTotal)}</strong></div></div> : <div className="adj-accounting-preview"><div><small>BEFORE</small><b>{money(booking.total_pkr)}</b></div><div><small>{isCancellation ? "CANCELLED VALUE" : "REVISED BASE"}</small><b>{money(isCancellation ? cancelledValue : revisedBase)}</b></div><div className={previewDelta > 0 ? "increase" : previewDelta < 0 ? "decrease" : "neutral"}><small>{accountNoun.toUpperCase()} IMPACT</small><b>{signedMoney(previewDelta)}</b></div><div className="effective"><small>NEW EFFECTIVE BOOKING VALUE</small><strong>{money(previewTotal)}</strong></div></div>}
             {adjustmentType === "CORRECTION" && <div className="adj-rule-note"><b>Correction:</b> no amendment fee is added. If you fix only text/data and the amounts stay the same, accounting impact will be Rs 0.</div>}
-            {adjustmentType === "AMENDMENT" && <div className="adj-rule-note"><b>Amendment:</b> the base rate/quantity difference plus amendment charge/credit changes this account. If the related supplier also changes its cost, amend the genuine PURCHASE booking under the same UB separately.</div>}
+            {adjustmentType === "AMENDMENT" && <div className="adj-rule-note"><b>Amendment:</b> revised base difference + {accountTerms.chargeLabel.toLowerCase()} − {accountTerms.creditLabel.toLowerCase()} = final {accountNoun.toLowerCase()} impact. A genuine change can therefore increase, decrease or leave the account unchanged.</div>}
           </section>
-          <section className="adj-section"><div className="adj-section-title"><span>03</span><div><b>SUPPORTING INFORMATION</b><small>Reference and internal notes support the audit trail and do not independently change accounting.</small></div></div><div className="adj-form-grid"><label>Reference<input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Airline / hotel / internal reference" /></label><label className="wide">Supporting / Internal Notes<textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></label></div></section>
+          <section className="adj-section"><div className="adj-section-title"><span>03</span><div><b>SUPPORTING INFORMATION</b><small>Reference and internal notes support the audit trail and do not independently change accounting.</small></div></div><div className="adj-form-grid"><label>Reference<input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Airline / hotel / supplier / internal reference" /></label><label className="wide">Supporting / Internal Notes<textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></label></div></section>
           <div className="adj-savebar"><div><small>FINAL PREVIEW</small><b>{accountNoun}: {signedMoney(previewDelta)}</b><span>Current value after save: {money(previewTotal)}</span></div><button type="button" className="primary" disabled={busy || !canEdit} onClick={() => void save()}>{busy ? "Saving Adjustment..." : `Save ${adjustmentLabel(adjustmentType)}`}</button></div>
         </>}
       </>}
