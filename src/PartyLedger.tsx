@@ -10,10 +10,12 @@ import {
 type Props = {
   companyId: string;
   party: Party;
+  parties?: Party[];
   onBack: () => void;
   onEditParty: (party: Party) => void;
   onGenerateStatement: (party: Party) => void;
-  onOpenPayments: () => void;
+  onOpenPayments?: () => void;
+  onChanged?: () => void | Promise<void>;
 };
 
 function formatDate(value: string) {
@@ -88,81 +90,19 @@ export default function PartyLedger({ companyId, party, onBack, onEditParty, onG
       {loading && <div className="alert info ledger-alert">Loading booking ledger...</div>}
 
       <div className="ledger-summary">
-        <div className="purchase">
-          <small>{isVendor ? "PURCHASE BOOKINGS" : "SALE BOOKINGS"}</small>
-          <b>{formatMoney(bookingTotal)}</b>
-        </div>
-        <div className="paid">
-          <small>PAYMENTS</small>
-          <b>{formatMoney(paymentTotal)}</b>
-        </div>
-        <div className="balance">
-          <small>{isVendor ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE"}</small>
-          <b>{formatMoney(balance)}</b>
-        </div>
+        <div className="purchase"><small>{isVendor ? "PURCHASE BOOKINGS" : "SALE BOOKINGS"}</small><b>{formatMoney(bookingTotal)}</b></div>
+        <div className="paid"><small>PAYMENTS</small><b>{formatMoney(paymentTotal)}</b></div>
+        <div className="balance"><small>{isVendor ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE"}</small><b>{formatMoney(balance)}</b></div>
       </div>
 
       <div className="ledger-section blue-section services-ledger-section">
-        <div className="ledger-section-title">
-          <b>{isVendor ? "PURCHASE BOOKINGS" : "SALE BOOKINGS"} — PACKAGE / TICKET / HOTEL / VISA / TRANSPORT / MISC</b>
-          <div className="section-right"><strong>TOTAL: {formatMoney(bookingTotal)}</strong></div>
-        </div>
-        {bookings.length === 0 ? (
-          <div className="coming-data">No booking transactions for this account yet. Create them from the Bookings module.</div>
-        ) : (
-          <div className="ledger-table-wrap">
-            <table className="ledger-service-table">
-              <thead><tr><th>SR</th><th>DATE</th><th>UB #</th><th>SERVICE</th><th>TYPE</th><th>TOTAL SAR</th><th>PENDING SAR</th><th>TOTAL PKR</th><th>STATUS</th></tr></thead>
-              <tbody>{bookings.map((entry, index) => (
-                <tr key={`${entry.service_type}-${entry.id}`} className={entry.status === "VOID" ? "void-row" : ""}>
-                  <td className="centered">{index + 1}</td>
-                  <td>{formatDate(entry.transaction_date)}</td>
-                  <td><b>{entry.ub_number || "—"}</b></td>
-                  <td><b>{entry.service_type}</b></td>
-                  <td className="centered">{entry.transaction_type}</td>
-                  <td className="right">{entry.total_sar ? `SAR ${formatNumber(entry.total_sar)}` : "—"}</td>
-                  <td className="right">{entry.unconverted_sar ? `SAR ${formatNumber(entry.unconverted_sar)}` : "—"}</td>
-                  <td className="right total-pkr">{formatMoney(entry.total_pkr)}</td>
-                  <td><span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span></td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        )}
+        <div className="ledger-section-title"><b>{isVendor ? "PURCHASE BOOKINGS" : "SALE BOOKINGS"} — PACKAGE / TICKET / HOTEL / VISA / TRANSPORT / MISC</b><div className="section-right"><strong>TOTAL: {formatMoney(bookingTotal)}</strong></div></div>
+        {bookings.length === 0 ? <div className="coming-data">No booking transactions for this account yet. Create them from the Bookings module.</div> : <div className="ledger-table-wrap"><table className="ledger-service-table"><thead><tr><th>SR</th><th>DATE</th><th>UB #</th><th>SERVICE</th><th>TYPE</th><th>TOTAL SAR</th><th>PENDING SAR</th><th>TOTAL PKR</th><th>STATUS</th></tr></thead><tbody>{bookings.map((entry, index) => <tr key={`${entry.service_type}-${entry.id}`} className={entry.status === "VOID" ? "void-row" : ""}><td className="centered">{index + 1}</td><td>{formatDate(entry.transaction_date)}</td><td><b>{entry.ub_number || "—"}</b></td><td><b>{entry.service_type}</b></td><td className="centered">{entry.transaction_type}</td><td className="right">{entry.total_sar ? `SAR ${formatNumber(entry.total_sar)}` : "—"}</td><td className="right">{entry.unconverted_sar ? `SAR ${formatNumber(entry.unconverted_sar)}` : "—"}</td><td className="right total-pkr">{formatMoney(entry.total_pkr)}</td><td><span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span></td></tr>)}</tbody></table></div>}
       </div>
 
       <div className="ledger-section purple-section payments-ledger-section">
-        <div className="ledger-section-title">
-          <b>PAYMENTS</b>
-          <div className="section-right">
-            <strong>TOTAL: {formatMoney(paymentTotal)}</strong>
-            <button className="section-add-btn payment-section-add" onClick={onOpenPayments}>Manage in Payments</button>
-          </div>
-        </div>
-        {payments.length === 0 ? (
-          <div className="coming-data">No payment entries yet. Use the Payments module to record {isVendor ? "a Vendor payment" : "a Party receipt"}.</div>
-        ) : (
-          <div className="ledger-table-wrap">
-            <table className="ledger-payment-table">
-              <thead><tr><th>SR</th><th>DATE</th><th>RECEIPT / VOUCHER #</th><th>FROM ACCOUNT</th><th>TO ACCOUNT</th><th>DESCRIPTION</th><th>METHOD</th><th>SAR</th><th>ROE</th><th>PKR AMOUNT</th><th>MANAGE</th></tr></thead>
-              <tbody>{payments.map((entry, index) => (
-                <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
-                  <td className="centered">{index + 1}</td>
-                  <td>{formatDate(entry.transaction_date)}</td>
-                  <td>{entry.receipt_no || "—"}</td>
-                  <td>{entry.from_account}</td>
-                  <td>{entry.to_account}</td>
-                  <td className="payment-description-cell">{entry.description || "—"}{entry.status === "VOID" && <small className="void-label">VOID</small>}</td>
-                  <td className="centered">{entry.payment_type}</td>
-                  <td className="right">{entry.currency === "SAR" ? formatNumber(entry.sar) : "—"}</td>
-                  <td className="right">{entry.currency === "SAR" ? formatNumber(entry.roe) : "—"}</td>
-                  <td className="right payment-paid-amount">{formatMoney(entry.paid_amount)}</td>
-                  <td><button className="secondary" onClick={onOpenPayments}>Open Payments</button></td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        )}
+        <div className="ledger-section-title"><b>PAYMENTS</b><div className="section-right"><strong>TOTAL: {formatMoney(paymentTotal)}</strong>{onOpenPayments ? <button className="section-add-btn payment-section-add" onClick={onOpenPayments}>Manage in Payments</button> : <span className="booking-foundation-badge">Manage from Payments tab</span>}</div></div>
+        {payments.length === 0 ? <div className="coming-data">No payment entries yet. Use the Payments module to record {isVendor ? "a Vendor payment" : "a Party receipt"}.</div> : <div className="ledger-table-wrap"><table className="ledger-payment-table"><thead><tr><th>SR</th><th>DATE</th><th>RECEIPT / VOUCHER #</th><th>FROM ACCOUNT</th><th>TO ACCOUNT</th><th>DESCRIPTION</th><th>METHOD</th><th>SAR</th><th>ROE</th><th>PKR AMOUNT</th></tr></thead><tbody>{payments.map((entry, index) => <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}><td className="centered">{index + 1}</td><td>{formatDate(entry.transaction_date)}</td><td>{entry.receipt_no || "—"}</td><td>{entry.from_account}</td><td>{entry.to_account}</td><td className="payment-description-cell">{entry.description || "—"}{entry.status === "VOID" && <small className="void-label">VOID</small>}</td><td className="centered">{entry.payment_type}</td><td className="right">{entry.currency === "SAR" ? formatNumber(entry.sar) : "—"}</td><td className="right">{entry.currency === "SAR" ? formatNumber(entry.roe) : "—"}</td><td className="right payment-paid-amount">{formatMoney(entry.paid_amount)}</td></tr>)}</tbody></table></div>}
       </div>
 
       <div className="bf-note"><b>Accounting source:</b> bookings remain the commercial source and Payments is the only settlement-entry workspace. Payment records are account-based and are not allocated to individual UBs.</div>
