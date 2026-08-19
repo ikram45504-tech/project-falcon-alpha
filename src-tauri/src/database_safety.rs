@@ -14,6 +14,38 @@ const RETIRED_DESTRUCTIVE_MIGRATIONS: [&str; 4] = [
     "phase_8d_consolidated_account_fresh_start_v1",
 ];
 
+// Keep safety SQL as raw multiline strings. Rust's escaped-newline string syntax removes
+// both the newline and following indentation, which can accidentally join SQL tokens
+// (for example `payment_entriesWHERE`). These constants are also covered by a regression test.
+const DUPLICATE_PAYMENT_DOCUMENTS_SQL: &str = r#"
+SELECT COUNT(*)
+FROM (
+  SELECT company_id, UPPER(TRIM(receipt_no)) AS document_no
+  FROM payment_entries
+  WHERE TRIM(receipt_no) <> ''
+  GROUP BY company_id, UPPER(TRIM(receipt_no))
+  HAVING COUNT(*) > 1
+)
+"#;
+
+const CREATE_PAYMENT_DOCUMENT_LOOKUP_INDEX_SQL: &str = r#"
+CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number
+ON payment_entries(company_id, receipt_no COLLATE NOCASE)
+"#;
+
+const CREATE_PAYMENT_DOCUMENT_UNIQUE_INDEX_SQL: &str = r#"
+CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_receipt_company_number
+ON payment_entries(company_id, receipt_no COLLATE NOCASE)
+WHERE TRIM(receipt_no) <> ''
+"#;
+
+const CREATE_APP_MIGRATIONS_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS app_migrations (
+  migration_key TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL
+)
+"#;
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum DbParam {
@@ -136,18 +168,10 @@ async fn enforce_payment_document_uniqueness_inner(
         return Ok((false, 0));
     }
 
-    let duplicate_groups: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM (\
-           SELECT company_id, UPPER(TRIM(receipt_no)) AS document_no\
-           FROM payment_entries\
-           WHERE TRIM(receipt_no) <> ''\
-           GROUP BY company_id, UPPER(TRIM(receipt_no))\
-           HAVING COUNT(*) > 1\
-         )",
-    )
-    .fetch_one(&mut *connection)
-    .await
-    .map_err(|error| format!("Could not validate payment document numbers: {error}"))?;
+    let duplicate_groups: i64 = sqlx::query_scalar(DUPLICATE_PAYMENT_DOCUMENTS_SQL)
+        .fetch_one(&mut *connection)
+        .await
+        .map_err(|error| format!("Could not validate payment document numbers: {error}"))?;
 
     sqlx::query("DROP INDEX IF EXISTS idx_payment_receipt_company_number")
         .execute(&mut *connection)
@@ -155,24 +179,17 @@ async fn enforce_payment_document_uniqueness_inner(
         .map_err(|error| format!("Could not refresh the payment document index: {error}"))?;
 
     if duplicate_groups > 0 {
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number \
-             ON payment_entries(company_id, receipt_no COLLATE NOCASE)",
-        )
-        .execute(&mut *connection)
-        .await
-        .map_err(|error| format!("Could not restore the payment document lookup index: {error}"))?;
+        sqlx::query(CREATE_PAYMENT_DOCUMENT_LOOKUP_INDEX_SQL)
+            .execute(&mut *connection)
+            .await
+            .map_err(|error| format!("Could not restore the payment document lookup index: {error}"))?;
         return Ok((false, duplicate_groups));
     }
 
-    sqlx::query(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_receipt_company_number \
-         ON payment_entries(company_id, receipt_no COLLATE NOCASE) \
-         WHERE TRIM(receipt_no) <> ''",
-    )
-    .execute(&mut *connection)
-    .await
-    .map_err(|error| format!("Could not protect payment document numbers: {error}"))?;
+    sqlx::query(CREATE_PAYMENT_DOCUMENT_UNIQUE_INDEX_SQL)
+        .execute(&mut *connection)
+        .await
+        .map_err(|error| format!("Could not protect payment document numbers: {error}"))?;
     Ok((true, 0))
 }
 
@@ -281,15 +298,10 @@ pub async fn initialize_database_safety(
             .unwrap_or(false);
     let mut connection = open_connection(&app).await?;
 
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS app_migrations (\
-           migration_key TEXT PRIMARY KEY,\
-           applied_at TEXT NOT NULL\
-         )",
-    )
-    .execute(&mut connection)
-    .await
-    .map_err(|error| format!("Could not prepare database safety markers: {error}"))?;
+    sqlx::query(CREATE_APP_MIGRATIONS_SQL)
+        .execute(&mut connection)
+        .await
+        .map_err(|error| format!("Could not prepare database safety markers: {error}"))?;
 
     let already_applied: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM app_migrations WHERE migration_key=?1",
@@ -355,4 +367,23 @@ pub async fn initialize_database_safety(
         payment_document_unique_index: unique,
         duplicate_payment_documents: duplicate_groups,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        CREATE_APP_MIGRATIONS_SQL, CREATE_PAYMENT_DOCUMENT_LOOKUP_INDEX_SQL,
+        CREATE_PAYMENT_DOCUMENT_UNIQUE_INDEX_SQL, DUPLICATE_PAYMENT_DOCUMENTS_SQL,
+    };
+
+    #[test]
+    fn safety_sql_keeps_required_token_boundaries() {
+        assert!(DUPLICATE_PAYMENT_DOCUMENTS_SQL.contains("FROM payment_entries\n"));
+        assert!(DUPLICATE_PAYMENT_DOCUMENTS_SQL.contains("WHERE TRIM(receipt_no)"));
+        assert!(!DUPLICATE_PAYMENT_DOCUMENTS_SQL.contains("payment_entriesWHERE"));
+
+        assert!(CREATE_PAYMENT_DOCUMENT_LOOKUP_INDEX_SQL.contains("\nON payment_entries"));
+        assert!(CREATE_PAYMENT_DOCUMENT_UNIQUE_INDEX_SQL.contains("\nWHERE TRIM(receipt_no)"));
+        assert!(CREATE_APP_MIGRATIONS_SQL.contains("app_migrations (\n"));
+    }
 }
