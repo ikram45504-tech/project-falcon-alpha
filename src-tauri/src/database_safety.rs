@@ -14,6 +14,34 @@ const RETIRED_DESTRUCTIVE_MIGRATIONS: [&str; 4] = [
     "phase_8d_consolidated_account_fresh_start_v1",
 ];
 
+const DUPLICATE_PAYMENT_DOCUMENTS_SQL: &str = r#"
+SELECT COUNT(*) FROM (
+  SELECT company_id, UPPER(TRIM(receipt_no)) AS document_no
+  FROM payment_entries
+  WHERE TRIM(receipt_no) <> ''
+  GROUP BY company_id, UPPER(TRIM(receipt_no))
+  HAVING COUNT(*) > 1
+)
+"#;
+
+const CREATE_PAYMENT_DOCUMENT_LOOKUP_INDEX_SQL: &str = r#"
+CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number
+ON payment_entries(company_id, receipt_no COLLATE NOCASE)
+"#;
+
+const CREATE_PAYMENT_DOCUMENT_UNIQUE_INDEX_SQL: &str = r#"
+CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_receipt_company_number
+ON payment_entries(company_id, receipt_no COLLATE NOCASE)
+WHERE TRIM(receipt_no) <> ''
+"#;
+
+const CREATE_APP_MIGRATIONS_TABLE_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS app_migrations (
+  migration_key TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL
+)
+"#;
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum DbParam {
@@ -136,18 +164,10 @@ async fn enforce_payment_document_uniqueness_inner(
         return Ok((false, 0));
     }
 
-    let duplicate_groups: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM (\
-           SELECT company_id, UPPER(TRIM(receipt_no)) AS document_no\
-           FROM payment_entries\
-           WHERE TRIM(receipt_no) <> ''\
-           GROUP BY company_id, UPPER(TRIM(receipt_no))\
-           HAVING COUNT(*) > 1\
-         )",
-    )
-    .fetch_one(&mut *connection)
-    .await
-    .map_err(|error| format!("Could not validate payment document numbers: {error}"))?;
+    let duplicate_groups: i64 = sqlx::query_scalar(DUPLICATE_PAYMENT_DOCUMENTS_SQL)
+        .fetch_one(&mut *connection)
+        .await
+        .map_err(|error| format!("Could not validate payment document numbers: {error}"))?;
 
     sqlx::query("DROP INDEX IF EXISTS idx_payment_receipt_company_number")
         .execute(&mut *connection)
@@ -155,24 +175,17 @@ async fn enforce_payment_document_uniqueness_inner(
         .map_err(|error| format!("Could not refresh the payment document index: {error}"))?;
 
     if duplicate_groups > 0 {
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number \
-             ON payment_entries(company_id, receipt_no COLLATE NOCASE)",
-        )
-        .execute(&mut *connection)
-        .await
-        .map_err(|error| format!("Could not restore the payment document lookup index: {error}"))?;
+        sqlx::query(CREATE_PAYMENT_DOCUMENT_LOOKUP_INDEX_SQL)
+            .execute(&mut *connection)
+            .await
+            .map_err(|error| format!("Could not restore the payment document lookup index: {error}"))?;
         return Ok((false, duplicate_groups));
     }
 
-    sqlx::query(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_receipt_company_number \
-         ON payment_entries(company_id, receipt_no COLLATE NOCASE) \
-         WHERE TRIM(receipt_no) <> ''",
-    )
-    .execute(&mut *connection)
-    .await
-    .map_err(|error| format!("Could not protect payment document numbers: {error}"))?;
+    sqlx::query(CREATE_PAYMENT_DOCUMENT_UNIQUE_INDEX_SQL)
+        .execute(&mut *connection)
+        .await
+        .map_err(|error| format!("Could not protect payment document numbers: {error}"))?;
     Ok((true, 0))
 }
 
@@ -281,15 +294,10 @@ pub async fn initialize_database_safety(
             .unwrap_or(false);
     let mut connection = open_connection(&app).await?;
 
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS app_migrations (\
-           migration_key TEXT PRIMARY KEY,\
-           applied_at TEXT NOT NULL\
-         )",
-    )
-    .execute(&mut connection)
-    .await
-    .map_err(|error| format!("Could not prepare database safety markers: {error}"))?;
+    sqlx::query(CREATE_APP_MIGRATIONS_TABLE_SQL)
+        .execute(&mut connection)
+        .await
+        .map_err(|error| format!("Could not prepare database safety markers: {error}"))?;
 
     let already_applied: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM app_migrations WHERE migration_key=?1",
@@ -355,4 +363,67 @@ pub async fn initialize_database_safety(
         payment_document_unique_index: unique,
         duplicate_payment_documents: duplicate_groups,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn payment_document_safety_sql_executes_and_enforces_uniqueness() {
+        tauri::async_runtime::block_on(async {
+            let mut connection = SqliteConnection::connect("sqlite::memory:")
+                .await
+                .expect("open in-memory sqlite");
+
+            sqlx::query(
+                "CREATE TABLE payment_entries (id TEXT PRIMARY KEY, company_id TEXT NOT NULL, receipt_no TEXT NOT NULL DEFAULT '')",
+            )
+            .execute(&mut connection)
+            .await
+            .expect("create payment_entries");
+
+            let duplicate_groups: i64 = sqlx::query_scalar(DUPLICATE_PAYMENT_DOCUMENTS_SQL)
+                .fetch_one(&mut connection)
+                .await
+                .expect("duplicate document SQL should execute");
+            assert_eq!(duplicate_groups, 0);
+
+            sqlx::query(CREATE_PAYMENT_DOCUMENT_UNIQUE_INDEX_SQL)
+                .execute(&mut connection)
+                .await
+                .expect("create unique payment document index");
+
+            sqlx::query("INSERT INTO payment_entries (id,company_id,receipt_no) VALUES (?1,?2,?3)")
+                .bind("p1")
+                .bind("company-1")
+                .bind("RCPT-CSH-0001")
+                .execute(&mut connection)
+                .await
+                .expect("insert first payment document");
+
+            let duplicate = sqlx::query(
+                "INSERT INTO payment_entries (id,company_id,receipt_no) VALUES (?1,?2,?3)",
+            )
+            .bind("p2")
+            .bind("company-1")
+            .bind("rcpt-csh-0001")
+            .execute(&mut connection)
+            .await;
+            assert!(duplicate.is_err(), "case-insensitive duplicate document number must be rejected");
+        });
+    }
+
+    #[test]
+    fn app_migration_table_sql_executes() {
+        tauri::async_runtime::block_on(async {
+            let mut connection = SqliteConnection::connect("sqlite::memory:")
+                .await
+                .expect("open in-memory sqlite");
+            sqlx::query(CREATE_APP_MIGRATIONS_TABLE_SQL)
+                .execute(&mut connection)
+                .await
+                .expect("app migration table SQL should execute");
+        });
+    }
 }
