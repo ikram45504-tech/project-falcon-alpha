@@ -1,4 +1,9 @@
 import Database from "@tauri-apps/plugin-sql";
+import {
+  ensurePaymentDocumentUniqueness,
+  runAtomicTransaction,
+  type AtomicSqlStatement,
+} from "./DatabaseSafety";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -97,21 +102,6 @@ async function withBusyRetry<T>(operation: () => Promise<T>): Promise<T> {
   throw lastError;
 }
 
-async function audit(companyId: string, userId: string, action: string, recordId: string, details: string) {
-  if (!userId) return;
-  const database = await db();
-  const users = await database.select<Array<{ full_name: string }>>(
-    `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
-  );
-  await withBusyRetry(() => database.execute(
-    `INSERT INTO audit_logs
-     (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
-     VALUES ($1,$2,$3,$4,$5,'PAYMENTS',$6,$7,$8)`,
-    [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", action, recordId, details, new Date().toISOString()]
-  ));
-}
-
 export async function initPaymentV2Database() {
   if (initializationPromise) return initializationPromise;
   initializationPromise = (async () => {
@@ -141,7 +131,17 @@ export async function initPaymentV2Database() {
       ON payment_v2_meta(company_id, transaction_kind)`));
     await withBusyRetry(() => database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number
       ON payment_entries(company_id, receipt_no)`));
-  })();
+
+    const safety = await ensurePaymentDocumentUniqueness();
+    if (safety.duplicatePaymentDocuments > 0) {
+      throw new Error(
+        `${safety.duplicatePaymentDocuments} duplicate Receipt / Voucher number group(s) already exist. Resolve those duplicates before creating new payments.`
+      );
+    }
+  })().catch((error) => {
+    initializationPromise = null;
+    throw error;
+  });
   return initializationPromise;
 }
 
@@ -260,43 +260,61 @@ function movementAccounts(kind: PaymentTransactionKind, accountName: string, set
   return { from: accountName, to: settlementAccount };
 }
 
-async function upsertMeta(
-  database: Database,
+function metaStatement(
   companyId: string,
   paymentId: string,
   input: PaymentV2Input,
   userId: string,
   now: string
-) {
-  await withBusyRetry(() => database.execute(
-    `INSERT INTO payment_v2_meta
-     (payment_id,company_id,transaction_kind,settlement_account,reference,
-      bank_name,bank_transaction_reference,account_title,account_last_digits,
-      cheque_no,transfer_date,handled_by,location,internal_notes,
-      created_by_user_id,updated_by_user_id,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15,$16,$16)
-     ON CONFLICT(payment_id) DO UPDATE SET
-       transaction_kind=excluded.transaction_kind,
-       settlement_account=excluded.settlement_account,
-       reference=excluded.reference,
-       bank_name=excluded.bank_name,
-       bank_transaction_reference=excluded.bank_transaction_reference,
-       account_title=excluded.account_title,
-       account_last_digits=excluded.account_last_digits,
-       cheque_no=excluded.cheque_no,
-       transfer_date=excluded.transfer_date,
-       handled_by=excluded.handled_by,
-       location=excluded.location,
-       internal_notes=excluded.internal_notes,
-       updated_by_user_id=excluded.updated_by_user_id,
-       updated_at=excluded.updated_at`,
-    [
+): AtomicSqlStatement {
+  return {
+    sql: `INSERT INTO payment_v2_meta
+      (payment_id,company_id,transaction_kind,settlement_account,reference,
+       bank_name,bank_transaction_reference,account_title,account_last_digits,
+       cheque_no,transfer_date,handled_by,location,internal_notes,
+       created_by_user_id,updated_by_user_id,created_at,updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15,$16,$16)
+      ON CONFLICT(payment_id) DO UPDATE SET
+        transaction_kind=excluded.transaction_kind,
+        settlement_account=excluded.settlement_account,
+        reference=excluded.reference,
+        bank_name=excluded.bank_name,
+        bank_transaction_reference=excluded.bank_transaction_reference,
+        account_title=excluded.account_title,
+        account_last_digits=excluded.account_last_digits,
+        cheque_no=excluded.cheque_no,
+        transfer_date=excluded.transfer_date,
+        handled_by=excluded.handled_by,
+        location=excluded.location,
+        internal_notes=excluded.internal_notes,
+        updated_by_user_id=excluded.updated_by_user_id,
+        updated_at=excluded.updated_at`,
+    params: [
       paymentId, companyId, input.transactionKind, input.settlementAccount.trim(), input.reference.trim(),
       input.bankName.trim(), input.bankTransactionReference.trim(), input.accountTitle.trim(), input.accountLastDigits.trim(),
       input.chequeNo.trim(), input.transferDate, input.handledBy.trim(), input.location.trim(), input.internalNotes.trim(),
       userId, now,
-    ]
-  ));
+    ],
+  };
+}
+
+function auditStatement(
+  companyId: string,
+  userId: string,
+  action: string,
+  recordId: string,
+  details: string,
+  now: string
+): AtomicSqlStatement | null {
+  if (!userId) return null;
+  return {
+    sql: `INSERT INTO audit_logs
+      (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+      VALUES ($1,$2,$3,
+        COALESCE((SELECT full_name FROM users WHERE id=$3 AND company_id=$2 LIMIT 1),'Unknown User'),
+        $4,'PAYMENTS',$5,$6,$7)`,
+    params: [crypto.randomUUID(), companyId, userId, action, recordId, details, now],
+  };
 }
 
 export async function createPaymentV2(companyId: string, input: PaymentV2Input, userId = "") {
@@ -309,33 +327,40 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
   const now = new Date().toISOString();
 
   await ensureDocumentAvailable(database, companyId, documentNo);
-  await withBusyRetry(() => database.execute(
-    `INSERT INTO payment_entries
-     (id,company_id,party_id,transaction_date,receipt_no,from_account,to_account,
-      description,payment_type,currency,amount_entered,sar,roe,paid_amount,status,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15)`,
-    [
-      id, companyId, input.partyId, input.transactionDate, documentNo,
-      movement.from, movement.to, input.description.trim(), input.paymentType, input.currency,
-      amount, input.currency === "SAR" ? amount : 0, roe, paidAmount, now,
-    ]
-  ));
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `INSERT INTO payment_entries
+        (id,company_id,party_id,transaction_date,receipt_no,from_account,to_account,
+         description,payment_type,currency,amount_entered,sar,roe,paid_amount,status,created_at,updated_at,
+         created_by_user_id,updated_by_user_id)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15,$16,$16)`,
+      params: [
+        id, companyId, input.partyId, input.transactionDate, documentNo,
+        movement.from, movement.to, input.description.trim(), input.paymentType, input.currency,
+        amount, input.currency === "SAR" ? amount : 0, roe, paidAmount, now, userId,
+      ],
+    },
+    metaStatement(companyId, id, input, userId, now),
+  ];
+  const audit = auditStatement(
+    companyId,
+    userId,
+    "PAYMENT_CREATED",
+    id,
+    `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`,
+    now
+  );
+  if (audit) statements.push(audit);
 
   try {
-    await upsertMeta(database, companyId, id, input, userId, now);
+    await runAtomicTransaction(statements);
   } catch (error) {
-    try {
-      await withBusyRetry(() => database.execute(
-        `DELETE FROM payment_entries WHERE id=$1 AND company_id=$2`,
-        [id, companyId]
-      ));
-    } catch {
-      // Preserve the original metadata error. A later register load still exposes any orphaned core row.
+    const message = error instanceof Error ? error.message : String(error);
+    if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
+      throw new Error(`${documentNo} was just used by another payment. Return to Section 01 and generate the next Receipt / Voucher number.`);
     }
     throw error;
   }
-
-  await audit(companyId, userId, "PAYMENT_CREATED", id, `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`);
   return id;
 }
 
@@ -352,21 +377,40 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
   const now = new Date().toISOString();
 
   await ensureDocumentAvailable(database, companyId, documentNo, paymentId);
-  await withBusyRetry(() => database.execute(
-    `UPDATE payment_entries SET
-       party_id=$1,transaction_date=$2,receipt_no=$3,from_account=$4,to_account=$5,
-       description=$6,payment_type=$7,currency=$8,amount_entered=$9,sar=$10,roe=$11,
-       paid_amount=$12,updated_at=$13
-     WHERE id=$14 AND company_id=$15 AND status='ACTIVE'`,
-    [
-      input.partyId, input.transactionDate, documentNo, movement.from, movement.to,
-      input.description.trim(), input.paymentType, input.currency, amount,
-      input.currency === "SAR" ? amount : 0, roe, paidAmount, now, paymentId, companyId,
-    ]
-  ));
-  await upsertMeta(database, companyId, paymentId, input, userId, now);
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `UPDATE payment_entries SET
+        party_id=$1,transaction_date=$2,receipt_no=$3,from_account=$4,to_account=$5,
+        description=$6,payment_type=$7,currency=$8,amount_entered=$9,sar=$10,roe=$11,
+        paid_amount=$12,updated_at=$13,updated_by_user_id=$14
+        WHERE id=$15 AND company_id=$16 AND status='ACTIVE'`,
+      params: [
+        input.partyId, input.transactionDate, documentNo, movement.from, movement.to,
+        input.description.trim(), input.paymentType, input.currency, amount,
+        input.currency === "SAR" ? amount : 0, roe, paidAmount, now, userId, paymentId, companyId,
+      ],
+    },
+    metaStatement(companyId, paymentId, input, userId, now),
+  ];
+  const audit = auditStatement(
+    companyId,
+    userId,
+    "PAYMENT_UPDATED",
+    paymentId,
+    `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`,
+    now
+  );
+  if (audit) statements.push(audit);
 
-  await audit(companyId, userId, "PAYMENT_UPDATED", paymentId, `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`);
+  try {
+    await runAtomicTransaction(statements);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
+      throw new Error(`${documentNo} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`);
+    }
+    throw error;
+  }
 }
 
 export async function voidPaymentV2(companyId: string, paymentId: string, userId = "") {
@@ -376,12 +420,24 @@ export async function voidPaymentV2(companyId: string, paymentId: string, userId
     [companyId, paymentId]
   );
   const record = rows[0];
-  await withBusyRetry(() => database.execute(
-    `UPDATE payment_entries SET status='VOID',updated_at=$1
-     WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
-    [new Date().toISOString(), paymentId, companyId]
-  ));
+  const now = new Date().toISOString();
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `UPDATE payment_entries SET status='VOID',updated_at=$1,updated_by_user_id=$2
+        WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
+      params: [now, userId, paymentId, companyId],
+    },
+  ];
   if (record) {
-    await audit(companyId, userId, "PAYMENT_VOIDED", paymentId, `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)}`);
+    const audit = auditStatement(
+      companyId,
+      userId,
+      "PAYMENT_VOIDED",
+      paymentId,
+      `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)}`,
+      now
+    );
+    if (audit) statements.push(audit);
   }
+  await runAtomicTransaction(statements);
 }

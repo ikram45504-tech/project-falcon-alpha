@@ -1,4 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
+import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { hasPermission, UserRole } from "./permissions";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -194,28 +195,24 @@ async function validateBooking(companyId: string, input: MiscBookingInput, editi
   return calculateLines(input.lines);
 }
 
-async function audit(companyId: string, actorUserId: string, action: string, recordId: string, details: string) {
-  if (!actorUserId) return;
-  const database = await db();
-  const users = await database.select<Array<{ full_name: string }>>(`SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`, [actorUserId, companyId]);
-  await database.execute(
-    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
-     VALUES ($1,$2,$3,$4,$5,'MISC',$6,$7,$8)`,
-    [crypto.randomUUID(), companyId, actorUserId, users[0]?.full_name || "", action, recordId, details, new Date().toISOString()]
-  );
+function auditStatement(companyId: string, actorUserId: string, action: string, recordId: string, details: string, now: string): AtomicSqlStatement | null {
+  if (!actorUserId) return null;
+  return {
+    sql: `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+      VALUES ($1,$2,$3,
+        COALESCE((SELECT full_name FROM users WHERE id=$3 AND company_id=$2 LIMIT 1),''),
+        $4,'MISC',$5,$6,$7)`,
+    params: [crypto.randomUUID(), companyId, actorUserId, action, recordId, details, now],
+  };
 }
 
-async function replaceLines(bookingId: string, calculated: ReturnType<typeof calculateLines>["calculated"]) {
-  const database = await db();
-  await database.execute(`DELETE FROM misc_booking_lines WHERE booking_id=$1`, [bookingId]);
-  for (const line of calculated) {
-    await database.execute(
-      `INSERT INTO misc_booking_lines
-       (id,booking_id,service_name,pax_count,rate_per_person,roe,currency_mode,line_total_sar,line_total_pkr,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [crypto.randomUUID(), bookingId, line.serviceName, line.paxCount, line.ratePerPerson, line.roe, line.currencyMode, line.lineTotalSar, line.lineTotalPkr, line.sortOrder]
-    );
-  }
+function lineStatements(bookingId: string, calculated: ReturnType<typeof calculateLines>["calculated"]) {
+  return calculated.map<AtomicSqlStatement>((line) => ({
+    sql: `INSERT INTO misc_booking_lines
+      (id,booking_id,service_name,pax_count,rate_per_person,roe,currency_mode,line_total_sar,line_total_pkr,sort_order)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    params: [crypto.randomUUID(), bookingId, line.serviceName, line.paxCount, line.ratePerPerson, line.roe, line.currencyMode, line.lineTotalSar, line.lineTotalPkr, line.sortOrder],
+  }));
 }
 
 export async function getMiscBookings(companyId: string, search = "") {
@@ -254,17 +251,20 @@ export async function createMiscBooking(companyId: string, input: MiscBookingInp
   await initMiscDatabase();
   await requireBookingPermission(companyId, actorUserId, "create_bookings");
   const result = await validateBooking(companyId, input);
-  const database = await db();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  await database.execute(
-    `INSERT INTO misc_bookings
-     (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'ACTIVE',$10,$10,$11,$11)`,
-    [id, companyId, input.transactionType, input.counterpartyId, input.transactionDate, input.ubNumber.trim(), result.totalSar, result.totalPkr, result.unconvertedSar, now, actorUserId]
-  );
-  await replaceLines(id, result.calculated);
-  await audit(companyId, actorUserId, "BOOKING_CREATED", id, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${result.totalPkr}`);
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `INSERT INTO misc_bookings
+        (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'ACTIVE',$10,$10,$11,$11)`,
+      params: [id, companyId, input.transactionType, input.counterpartyId, input.transactionDate, input.ubNumber.trim(), result.totalSar, result.totalPkr, result.unconvertedSar, now, actorUserId],
+    },
+    ...lineStatements(id, result.calculated),
+  ];
+  const audit = auditStatement(companyId, actorUserId, "BOOKING_CREATED", id, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${result.totalPkr}`, now);
+  if (audit) statements.push(audit);
+  await runAtomicTransaction(statements);
   return id;
 }
 
@@ -272,15 +272,19 @@ export async function updateMiscBooking(companyId: string, bookingId: string, in
   await initMiscDatabase();
   await requireBookingPermission(companyId, actorUserId, "edit_bookings");
   const result = await validateBooking(companyId, input, bookingId);
-  const database = await db();
   const now = new Date().toISOString();
-  await database.execute(
-    `UPDATE misc_bookings SET transaction_type=$1,counterparty_id=$2,transaction_date=$3,ub_number=$4,total_sar=$5,total_pkr=$6,unconverted_sar=$7,updated_at=$8,updated_by_user_id=$9
-     WHERE id=$10 AND company_id=$11 AND status='ACTIVE'`,
-    [input.transactionType, input.counterpartyId, input.transactionDate, input.ubNumber.trim(), result.totalSar, result.totalPkr, result.unconvertedSar, now, actorUserId, bookingId, companyId]
-  );
-  await replaceLines(bookingId, result.calculated);
-  await audit(companyId, actorUserId, "BOOKING_UPDATED", bookingId, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${result.totalPkr}`);
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `UPDATE misc_bookings SET transaction_type=$1,counterparty_id=$2,transaction_date=$3,ub_number=$4,total_sar=$5,total_pkr=$6,unconverted_sar=$7,updated_at=$8,updated_by_user_id=$9
+        WHERE id=$10 AND company_id=$11 AND status='ACTIVE'`,
+      params: [input.transactionType, input.counterpartyId, input.transactionDate, input.ubNumber.trim(), result.totalSar, result.totalPkr, result.unconvertedSar, now, actorUserId, bookingId, companyId],
+    },
+    { sql: `DELETE FROM misc_booking_lines WHERE booking_id=$1`, params: [bookingId] },
+    ...lineStatements(bookingId, result.calculated),
+  ];
+  const audit = auditStatement(companyId, actorUserId, "BOOKING_UPDATED", bookingId, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${result.totalPkr}`, now);
+  if (audit) statements.push(audit);
+  await runAtomicTransaction(statements);
 }
 
 export async function voidMiscBooking(companyId: string, bookingId: string, actorUserId = "") {
@@ -288,6 +292,14 @@ export async function voidMiscBooking(companyId: string, bookingId: string, acto
   await requireBookingPermission(companyId, actorUserId, "void_bookings");
   const database = await db();
   const rows = await database.select<Array<{ ub_number: string }>>(`SELECT ub_number FROM misc_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`, [bookingId, companyId]);
-  await database.execute(`UPDATE misc_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`, [new Date().toISOString(), actorUserId, bookingId, companyId]);
-  await audit(companyId, actorUserId, "BOOKING_VOIDED", bookingId, `Misc booking ${rows[0]?.ub_number || bookingId} voided.`);
+  const now = new Date().toISOString();
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `UPDATE misc_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
+      params: [now, actorUserId, bookingId, companyId],
+    },
+  ];
+  const audit = auditStatement(companyId, actorUserId, "BOOKING_VOIDED", bookingId, `Misc booking ${rows[0]?.ub_number || bookingId} voided.`, now);
+  if (audit) statements.push(audit);
+  await runAtomicTransaction(statements);
 }

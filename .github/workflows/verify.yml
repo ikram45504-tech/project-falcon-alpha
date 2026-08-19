@@ -21,3 +21,9 @@ jobs:
         run: npx tsc --noEmit --noUnusedLocals false --noUnusedParameters false
       - name: Vite build
         run: npx vite build
+      - name: Install Tauri Linux prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Rust backend verification
+        run: cargo check --manifest-path src-tauri/Cargo.toml --lib

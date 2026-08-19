@@ -1,5 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { BookingTransactionType, TicketPassengerType } from "./db";
+import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { hasPermission, type Permission, type UserRole } from "./permissions";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -124,15 +125,15 @@ async function requirePermission(companyId: string, userId: string, permission: 
   }
 }
 
-async function audit(companyId: string, userId: string, action: string, bookingId: string, details: string) {
-  if (!userId) return;
-  const database = await db();
-  const users = await database.select<Array<{ full_name: string }>>(`SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`, [userId, companyId]);
-  await database.execute(
-    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
-     VALUES ($1,$2,$3,$4,$5,'TICKET',$6,$7,$8)`,
-    [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", action, bookingId, details, new Date().toISOString()]
-  );
+function auditStatement(companyId: string, userId: string, action: string, bookingId: string, details: string, now: string): AtomicSqlStatement | null {
+  if (!userId) return null;
+  return {
+    sql: `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+      VALUES ($1,$2,$3,
+        COALESCE((SELECT full_name FROM users WHERE id=$3 AND company_id=$2 LIMIT 1),'Unknown User'),
+        $4,'TICKET',$5,$6,$7)`,
+    params: [crypto.randomUUID(), companyId, userId, action, bookingId, details, now],
+  };
 }
 
 function normalizeUb(value: string) {
@@ -197,15 +198,13 @@ function calculateLines(lines: TicketCommercialLineInput[]) {
   return { calculated, totalPkr: calculated.reduce((sum, line) => sum + line.lineTotalPkr, 0) };
 }
 
-async function insertLines(database: Database, bookingId: string, lines: CalculatedLine[]) {
-  for (const line of lines) {
-    await database.execute(
-      `INSERT INTO ticket_booking_lines
-       (id,booking_id,passenger_type,passenger_name,airline_name,pnr,flight_type,ticket_route,eticket_reference,rate_per_ticket,ticket_count,qty_is_explicit,line_total_pkr,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,$12,$13)`,
-      [crypto.randomUUID(), bookingId, line.passengerType, line.passengerName, line.airlineName, line.pnr, line.flightType, line.ticketRoute, line.legacyEticketReference || "", line.ratePerTicket, line.ticketCount, line.lineTotalPkr, line.sortOrder]
-    );
-  }
+function lineStatements(bookingId: string, lines: CalculatedLine[]) {
+  return lines.map<AtomicSqlStatement>((line) => ({
+    sql: `INSERT INTO ticket_booking_lines
+      (id,booking_id,passenger_type,passenger_name,airline_name,pnr,flight_type,ticket_route,eticket_reference,rate_per_ticket,ticket_count,qty_is_explicit,line_total_pkr,sort_order)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,$12,$13)`,
+    params: [crypto.randomUUID(), bookingId, line.passengerType, line.passengerName, line.airlineName, line.pnr, line.flightType, line.ticketRoute, line.legacyEticketReference || "", line.ratePerTicket, line.ticketCount, line.lineTotalPkr, line.sortOrder],
+  }));
 }
 
 export async function getTicketCommercialBookings(companyId: string, search = "") {
@@ -257,17 +256,20 @@ export async function createTicketCommercialBooking(companyId: string, input: Ti
   await validateUbAvailability(companyId, input.transactionType, input.counterpartyId, input.ubNumber);
   const { calculated, totalPkr } = calculateLines(input.lines);
   const first = calculated[0];
-  const database = await db();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  await database.execute(
-    `INSERT INTO ticket_bookings
-     (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,airline_name,pnr,sector,departure_date,return_date,flight_no,departure_time,arrival_time,baggage,ticket_status,customer_contact,notes,total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'','','','','','','','','',$10,'ACTIVE',$11,$11,$12,$12)`,
-    [id, companyId, input.transactionType, input.counterpartyId, input.transactionDate, normalizeUb(input.ubNumber), first.airlineName, first.pnr, first.ticketRoute, totalPkr, now, actorUserId]
-  );
-  await insertLines(database, id, calculated);
-  await audit(companyId, actorUserId, "BOOKING_CREATED", id, `${input.transactionType} ${input.ubNumber} - PKR ${totalPkr}`);
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `INSERT INTO ticket_bookings
+        (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,airline_name,pnr,sector,departure_date,return_date,flight_no,departure_time,arrival_time,baggage,ticket_status,customer_contact,notes,total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'','','','','','','','','',$10,'ACTIVE',$11,$11,$12,$12)`,
+      params: [id, companyId, input.transactionType, input.counterpartyId, input.transactionDate, normalizeUb(input.ubNumber), first.airlineName, first.pnr, first.ticketRoute, totalPkr, now, actorUserId],
+    },
+    ...lineStatements(id, calculated),
+  ];
+  const audit = auditStatement(companyId, actorUserId, "BOOKING_CREATED", id, `${input.transactionType} ${input.ubNumber} - PKR ${totalPkr}`, now);
+  if (audit) statements.push(audit);
+  await runAtomicTransaction(statements);
   return id;
 }
 
@@ -280,13 +282,18 @@ export async function updateTicketCommercialBooking(companyId: string, bookingId
   const database = await db();
   const rows = await database.select<Array<{ ub_number: string; status: string }>>(`SELECT ub_number,status FROM ticket_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`, [bookingId, companyId]);
   if (!rows[0] || rows[0].status !== "ACTIVE") throw new Error("This Ticket booking is no longer active.");
-  await database.execute(
-    `UPDATE ticket_bookings SET transaction_date=$1,airline_name=$2,pnr=$3,sector=$4,total_pkr=$5,updated_at=$6,updated_by_user_id=$7 WHERE id=$8 AND company_id=$9 AND status='ACTIVE'`,
-    [input.transactionDate, first.airlineName, first.pnr, first.ticketRoute, totalPkr, new Date().toISOString(), actorUserId, bookingId, companyId]
-  );
-  await database.execute(`DELETE FROM ticket_booking_lines WHERE booking_id=$1`, [bookingId]);
-  await insertLines(database, bookingId, calculated);
-  await audit(companyId, actorUserId, "BOOKING_UPDATED", bookingId, `${rows[0].ub_number} Ticket commercial details updated - PKR ${totalPkr}`);
+  const now = new Date().toISOString();
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `UPDATE ticket_bookings SET transaction_date=$1,airline_name=$2,pnr=$3,sector=$4,total_pkr=$5,updated_at=$6,updated_by_user_id=$7 WHERE id=$8 AND company_id=$9 AND status='ACTIVE'`,
+      params: [input.transactionDate, first.airlineName, first.pnr, first.ticketRoute, totalPkr, now, actorUserId, bookingId, companyId],
+    },
+    { sql: `DELETE FROM ticket_booking_lines WHERE booking_id=$1`, params: [bookingId] },
+    ...lineStatements(bookingId, calculated),
+  ];
+  const audit = auditStatement(companyId, actorUserId, "BOOKING_UPDATED", bookingId, `${rows[0].ub_number} Ticket commercial details updated - PKR ${totalPkr}`, now);
+  if (audit) statements.push(audit);
+  await runAtomicTransaction(statements);
 }
 
 export async function voidTicketCommercialBooking(companyId: string, bookingId: string, actorUserId = "") {
@@ -294,6 +301,14 @@ export async function voidTicketCommercialBooking(companyId: string, bookingId: 
   await requirePermission(companyId, actorUserId, "void_bookings");
   const database = await db();
   const rows = await database.select<Array<{ ub_number: string }>>(`SELECT ub_number FROM ticket_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`, [bookingId, companyId]);
-  await database.execute(`UPDATE ticket_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`, [new Date().toISOString(), actorUserId, bookingId, companyId]);
-  await audit(companyId, actorUserId, "BOOKING_VOIDED", bookingId, `Ticket booking ${rows[0]?.ub_number || bookingId} voided.`);
+  const now = new Date().toISOString();
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `UPDATE ticket_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
+      params: [now, actorUserId, bookingId, companyId],
+    },
+  ];
+  const audit = auditStatement(companyId, actorUserId, "BOOKING_VOIDED", bookingId, `Ticket booking ${rows[0]?.ub_number || bookingId} voided.`, now);
+  if (audit) statements.push(audit);
+  await runAtomicTransaction(statements);
 }

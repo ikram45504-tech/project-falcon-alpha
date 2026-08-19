@@ -1,3 +1,5 @@
+mod database_safety;
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -11,7 +13,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            database_safety::execute_atomic_transaction,
+            database_safety::initialize_database_safety,
+            database_safety::ensure_payment_document_uniqueness,
+            database_safety::create_database_backup,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
