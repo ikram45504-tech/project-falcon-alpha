@@ -35,6 +35,7 @@ import {
   type MiscBooking,
 } from "./miscDb";
 import { bookingLifecycleConfigs, type BookingLifecycleStatus, type BookingServiceName } from "./BookingLifecycle";
+import BookingLifecycleActions from "./BookingLifecycleActions";
 import { getUniversalBookingAdjustmentSummaryMap, type UniversalAdjustmentSummary } from "./UniversalBookingAdjustmentDb";
 import UniversalBookingAdjustment, {
   type UniversalAdjustmentBooking,
@@ -54,6 +55,8 @@ type Props = {
   userId?: string;
   canEdit?: boolean;
   canVoid?: boolean;
+  onBack: () => void;
+  onOpenBooking?: (bookingId: string) => void | Promise<void>;
   onChanged?: () => void | Promise<void>;
 };
 
@@ -267,9 +270,18 @@ function normalizeBookings(service: SupportedService, bookings: RawBooking[]): B
   });
 }
 
-export default function BookingLifecycleCenter({ service, companyId, transactionType, userId = "", canEdit = true, canVoid = true, onChanged }: Props) {
+export default function BookingLifecycleCenter({
+  service,
+  companyId,
+  transactionType,
+  userId = "",
+  canEdit = true,
+  canVoid = true,
+  onBack,
+  onOpenBooking,
+  onChanged,
+}: Props) {
   const config = bookingLifecycleConfigs[service];
-  const [open, setOpen] = useState(false);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [summaries, setSummaries] = useState<Record<string, UniversalAdjustmentSummary>>({});
   const [filter, setFilter] = useState<Filter>(transactionType);
@@ -282,7 +294,7 @@ export default function BookingLifecycleCenter({ service, companyId, transaction
   const [previewBooking, setPreviewBooking] = useState<BookingRow | null>(null);
 
   useEffect(() => { setFilter(transactionType); }, [transactionType]);
-  useEffect(() => { if (open) void load(); }, [open, companyId, service]);
+  useEffect(() => { void load(); }, [companyId, service]);
 
   async function rawBookings() {
     if (service === "TICKET") return getTicketCommercialBookings(companyId) as Promise<RawBooking[]>;
@@ -457,32 +469,53 @@ export default function BookingLifecycleCenter({ service, companyId, transaction
     await onChanged?.();
   }
 
+  async function openBooking(booking: BookingRow, lifecycle: BookingLifecycleStatus) {
+    if (booking.status === "VOID" || lifecycle === "CANCELLED" || !onOpenBooking) {
+      setPreviewBooking(booking);
+      return;
+    }
+    try {
+      await onOpenBooking(booking.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   const selectedAdjustment = adjustmentBooking || historyBooking;
   const selectedRows = selectedAdjustment ? rowsFor(service, selectedAdjustment.raw) : [];
   const selectedColumns = columnsFor(service);
+  const activeCount = bookings.filter((booking) => booking.status === "ACTIVE" && summaries[booking.id]?.lifecycleStatus !== "CANCELLED").length;
+  const saleTotal = bookings.filter((booking) => booking.status === "ACTIVE" && booking.transaction_type === "SALE").reduce((sum, booking) => sum + Number(booking.total_pkr || 0), 0);
+  const purchaseTotal = bookings.filter((booking) => booking.status === "ACTIVE" && booking.transaction_type === "PURCHASE").reduce((sum, booking) => sum + Number(booking.total_pkr || 0), 0);
+  const adjustmentCount = Object.values(summaries).reduce((sum, item) => sum + Number(item.adjustmentCount || 0), 0);
 
   return <>
-    <section className="lifecycle-launcher">
-      <div><small>{service} BOOKING LIFECYCLE</small><b>Open Booking · Booking Adjustment · History · Void Booking</b><span>Available for both Sale to Party and Purchase from Vendor bookings.</span></div>
-      <button type="button" onClick={() => { setOpen(true); setFilter(transactionType); setMessage(""); setError(""); }}>Open {config.label} Adjustment Register</button>
-    </section>
-
-    {open && <div className="modal-backdrop lifecycle-center-backdrop" onMouseDown={(e) => e.currentTarget === e.target && setOpen(false)}><section className="lifecycle-center" onMouseDown={(e) => e.stopPropagation()}>
-      <div className="lifecycle-center-toolbar"><div><span className="eyebrow blue">{service} BOOKING REGISTER</span><h2>{config.label} Booking Lifecycle</h2><p>Correction, Amendment, Partial Cancellation and Full Cancellation remain tied to each genuine UB.</p></div><button type="button" className="lifecycle-close" onClick={() => setOpen(false)}>×</button></div>
-      {message && <div className="alert success lifecycle-alert">{message}</div>}{error && <div className="alert error lifecycle-alert">{error}</div>}
-      <div className="lifecycle-controls"><div className="package-register-filter-tabs">{(["ALL", "SALE", "PURCHASE"] as Filter[]).map((item) => <button type="button" key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item === "ALL" ? "All Bookings" : item === "SALE" ? "Party Sales" : "Vendor Purchases"}</button>)}</div><div className="search-box"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${config.label} UB, account or booking details...`} /></div></div>
-      <div className="party-table-wrap lifecycle-table-wrap"><table className="party-table lifecycle-table"><thead><tr><th>DATE</th><th>UB #</th><th>TYPE</th><th>PARTY / VENDOR</th><th>{service} DETAILS</th><th>TOTAL SAR</th><th>EFFECTIVE PKR</th><th>LIFECYCLE</th><th>ACTIONS</th></tr></thead><tbody>{visible.map((booking) => {
+    <section className="booking-entry-screen package14-page package14-register-page lifecycle-register-page">
+      <div className="booking-screen-toolbar package14-toolbar"><button type="button" className="booking-back-button" onClick={onBack}>← Back to {config.label} Booking</button><span className="booking-foundation-badge active-engine">{service} REGISTER</span></div>
+      <div className="package14-register-title"><div><span className="eyebrow blue">{service} BOOKING REGISTER</span><h2>{config.label} Booking Register</h2><p>Open Booking, Booking Adjustment, History and Void Booking stay in the same Actions column for every booking service.</p></div><div className="package14-register-stats"><div><small>LIVE BOOKINGS</small><b>{activeCount}</b></div><div><small>SALES</small><b>{money(saleTotal)}</b></div><div><small>PURCHASES</small><b>{money(purchaseTotal)}</b></div><div><small>ADJUSTMENTS</small><b>{adjustmentCount}</b></div></div></div>
+      {message && <div className="alert success">{message}</div>}{error && <div className="alert error">{error}</div>}
+      <div className="package14-register-controls"><div className="package-register-filter-tabs">{(["ALL", "SALE", "PURCHASE"] as Filter[]).map((item) => <button type="button" key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item === "ALL" ? `All ${config.label} Bookings` : item === "SALE" ? "Sales" : "Purchases"}</button>)}</div><div className="search-box package-search"><span>⌕</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${config.label} UB, Party/Vendor or booking details...`} /></div></div>
+      {!visible.length ? <div className="empty-state compact-empty"><div className="empty-icon">{service.slice(0, 3)}</div><h3>No {config.label} bookings found</h3><p>Create a booking or change the filter/search.</p></div> : <div className="party-table-wrap package14-register-wrap lifecycle-table-wrap"><table className="party-table package14-register-table lifecycle-table"><thead><tr><th>DATE</th><th>UB #</th><th>TYPE</th><th>PARTY / VENDOR</th><th>{service} DETAILS</th><th>TOTAL SAR</th><th>EFFECTIVE TOTAL PKR</th><th>LIFECYCLE</th><th>ACTIONS</th></tr></thead><tbody>{visible.map((booking) => {
         const summary = summaries[booking.id];
         const lifecycle: BookingLifecycleStatus = booking.status === "VOID" ? "VOID" : summary?.lifecycleStatus || "ACTIVE";
         const revision = summary?.revisionNo || 1;
         const cancelled = lifecycle === "CANCELLED";
         const lifecycleClass = lifecycle.toLowerCase().replace(/_/g, "-");
-        return <tr key={booking.id} className={booking.status === "VOID" ? "void-row" : ""}><td>{booking.transaction_date}</td><td><b>{booking.ub_number}</b></td><td><span className={`direction-badge ${booking.transaction_type === "SALE" ? "sale" : "purchase"}`}>{booking.transaction_type}</span></td><td><b>{booking.counterparty_name || "—"}</b></td><td><span className="lifecycle-summary">{cancelled ? "FULLY CANCELLED · " : ""}{booking.summary}</span></td><td>{booking.totalSar > 0 ? sar(booking.totalSar) : "—"}</td><td><b>{money(booking.total_pkr)}</b></td><td><span className={`status lifecycle-status ${lifecycleClass}`}>{lifecycle} · REV {revision}</span></td><td><div className="row-actions lifecycle-actions"><button type="button" onClick={() => setPreviewBooking(booking)}>Open Booking</button><button type="button" disabled={!canEdit || booking.status !== "ACTIVE" || cancelled || busy} onClick={() => setAdjustmentBooking(booking)}>Booking Adjustment</button><button type="button" disabled={booking.status === "VOID" && !summary} onClick={() => setHistoryBooking(booking)}>History</button><button type="button" disabled={!canVoid || booking.status !== "ACTIVE" || cancelled || busy} onClick={() => void voidBooking(booking)}>Void Booking</button></div></td></tr>;
-      })}</tbody></table></div>
-      {!visible.length && <div className="adj-empty-history">No {config.label} bookings found for this filter.</div>}
-    </section></div>}
+        return <tr key={booking.id} className={booking.status === "VOID" ? "void-row" : ""}><td>{booking.transaction_date}</td><td><b>{booking.ub_number}</b></td><td><span className={`direction-badge ${booking.transaction_type === "SALE" ? "sale" : "purchase"}`}>{booking.transaction_type}</span></td><td><b>{booking.counterparty_name || "—"}</b></td><td><span className="lifecycle-summary">{cancelled ? "FULLY CANCELLED · " : ""}{booking.summary}</span></td><td>{cancelled ? "—" : booking.totalSar > 0 ? sar(booking.totalSar) : "—"}</td><td className="amount"><b>{money(booking.total_pkr)}</b></td><td><span className={`status lifecycle-status ${lifecycleClass}`}>{lifecycle} · REV {revision}</span></td><td><BookingLifecycleActions
+          busy={busy}
+          canOpen={booking.status === "ACTIVE"}
+          canAdjust={canEdit && booking.status === "ACTIVE" && !cancelled}
+          canHistory={booking.status !== "VOID" || Boolean(summary)}
+          canVoid={canVoid && booking.status === "ACTIVE" && !cancelled}
+          onOpen={() => void openBooking(booking, lifecycle)}
+          onAdjustment={() => setAdjustmentBooking(booking)}
+          onHistory={() => setHistoryBooking(booking)}
+          onVoid={() => void voidBooking(booking)}
+        /></td></tr>;
+      })}</tbody></table></div>}
+    </section>
 
-    {previewBooking && <div className="modal-backdrop adj-backdrop" onMouseDown={(e) => e.currentTarget === e.target && setPreviewBooking(null)}><section className="adj-shell lifecycle-preview" onMouseDown={(e) => e.stopPropagation()}><div className="adj-toolbar"><div><span className="eyebrow blue">OPEN {service} BOOKING</span><h2>{previewBooking.ub_number}</h2><p>{previewBooking.counterparty_name} · {previewBooking.transaction_type} · Current Effective Value {money(previewBooking.total_pkr)}</p></div><button type="button" className="adj-close" onClick={() => setPreviewBooking(null)}>×</button></div><div className="adj-identity-strip"><div><small>UB</small><b>{previewBooking.ub_number}</b></div><div><small>ACCOUNT</small><b>{previewBooking.counterparty_name}</b></div><div><small>BOOKING DATE</small><b>{previewBooking.transaction_date}</b></div><div><small>TRANSACTION</small><b>{previewBooking.transaction_type}</b></div><div><small>CURRENT VALUE</small><b>{money(previewBooking.total_pkr)}</b></div></div><section className="adj-section"><div className="adj-section-title"><span>02</span><div><b>CURRENT EFFECTIVE {service} COMMERCIAL ROWS</b><small>Read-only. Use Booking Adjustment for any commercial change.</small></div></div><div className="adj-lines-table-wrap"><table className="adj-lines-table"><thead><tr>{columnsFor(service).map((column) => <th key={column.key}>{column.label}</th>)}<th>PKR VALUE</th></tr></thead><tbody>{rowsFor(service, previewBooking.raw).map((row) => <tr key={row.id}>{columnsFor(service).map((column) => <td key={column.key}>{inputValue(row, column.key) || "—"}</td>)}<td><b>{money(calculateLine(service, row))}</b></td></tr>)}</tbody></table></div></section></section></div>}
+    {previewBooking && <div className="modal-backdrop adj-backdrop" onMouseDown={(e) => e.currentTarget === e.target && setPreviewBooking(null)}><section className="adj-shell lifecycle-preview" onMouseDown={(e) => e.stopPropagation()}><div className="adj-toolbar"><div><span className="eyebrow blue">OPEN {service} BOOKING</span><h2>{previewBooking.ub_number}</h2><p>{previewBooking.counterparty_name} · {previewBooking.transaction_type} · Current Effective Value {money(previewBooking.total_pkr)}</p></div><button type="button" className="adj-close" onClick={() => setPreviewBooking(null)}>×</button></div><div className="adj-identity-strip"><div><small>UB</small><b>{previewBooking.ub_number}</b></div><div><small>ACCOUNT</small><b>{previewBooking.counterparty_name}</b></div><div><small>BOOKING DATE</small><b>{previewBooking.transaction_date}</b></div><div><small>TRANSACTION</small><b>{previewBooking.transaction_type}</b></div><div><small>CURRENT VALUE</small><b>{money(previewBooking.total_pkr)}</b></div></div><section className="adj-section"><div className="adj-section-title"><span>02</span><div><b>CURRENT {service} COMMERCIAL ROWS</b><small>Read-only. Use Booking Adjustment for any commercial change.</small></div></div><div className="adj-lines-table-wrap"><table className="adj-lines-table"><thead><tr>{columnsFor(service).map((column) => <th key={column.key}>{column.label}</th>)}<th>PKR VALUE</th></tr></thead><tbody>{rowsFor(service, previewBooking.raw).map((row) => <tr key={row.id}>{columnsFor(service).map((column) => <td key={column.key}>{inputValue(row, column.key) || "—"}</td>)}<td><b>{money(calculateLine(service, row))}</b></td></tr>)}</tbody></table></div></section></section></div>}
 
     {selectedAdjustment && <UniversalBookingAdjustment
       companyId={companyId}
