@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Party, PaymentEntry, getPayments, voidPayment } from "./db";
-import { PaymentFormModal } from "./Payments";
+import type { Party, PaymentEntry } from "./db";
+import { getPayments } from "./db";
 import {
-  BookingAccountingEntry,
+  type BookingAccountingEntry,
   accountDirectionLabel,
   getBookingAccountingEntries,
 } from "./BookingAccounting";
@@ -10,11 +10,10 @@ import {
 type Props = {
   companyId: string;
   party: Party;
-  parties: Party[];
   onBack: () => void;
   onEditParty: (party: Party) => void;
   onGenerateStatement: (party: Party) => void;
-  onChanged: () => void | Promise<void>;
+  onOpenPayments: () => void;
 };
 
 function formatDate(value: string) {
@@ -34,12 +33,9 @@ function formatNumber(value: number) {
   return Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 });
 }
 
-export default function PartyLedger({ companyId, party, parties, onBack, onEditParty, onGenerateStatement, onChanged }: Props) {
+export default function PartyLedger({ companyId, party, onBack, onEditParty, onGenerateStatement, onOpenPayments }: Props) {
   const [bookings, setBookings] = useState<BookingAccountingEntry[]>([]);
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [editingPayment, setEditingPayment] = useState<PaymentEntry | null>(null);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -72,27 +68,6 @@ export default function PartyLedger({ companyId, party, parties, onBack, onEditP
   const paymentTotal = useMemo(() => activePayments.reduce((sum, entry) => sum + Number(entry.paid_amount || 0), 0), [activePayments]);
   const balance = bookingTotal - paymentTotal;
 
-  async function paymentSaved() {
-    setMessage(editingPayment ? "Payment updated successfully." : "Payment saved successfully.");
-    setError("");
-    setEditingPayment(null);
-    await load();
-    await onChanged();
-  }
-
-  async function voidPaymentEntry(entry: PaymentEntry) {
-    if (!window.confirm(`Void payment of ${formatMoney(entry.paid_amount)}?`)) return;
-    try {
-      await voidPayment(companyId, entry.id);
-      setMessage("Payment marked VOID.");
-      setError("");
-      await load();
-      await onChanged();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }
-
   return (
     <section className="ledger-page">
       <div className="ledger-top">
@@ -109,7 +84,6 @@ export default function PartyLedger({ companyId, party, parties, onBack, onEditP
         </div>
       </div>
 
-      {message && <div className="alert success ledger-alert">{message}</div>}
       {error && <div className="alert error ledger-alert">{error}</div>}
       {loading && <div className="alert info ledger-alert">Loading booking ledger...</div>}
 
@@ -162,15 +136,15 @@ export default function PartyLedger({ companyId, party, parties, onBack, onEditP
           <b>PAYMENTS</b>
           <div className="section-right">
             <strong>TOTAL: {formatMoney(paymentTotal)}</strong>
-            <button className="section-add-btn payment-section-add" onClick={() => { setEditingPayment(null); setPaymentModalOpen(true); }} disabled={party.status !== "ACTIVE"}>+ Add</button>
+            <button className="section-add-btn payment-section-add" onClick={onOpenPayments}>Manage in Payments</button>
           </div>
         </div>
         {payments.length === 0 ? (
-          <div className="coming-data">No payment entries yet.</div>
+          <div className="coming-data">No payment entries yet. Use the Payments module to record {isVendor ? "a Vendor payment" : "a Party receipt"}.</div>
         ) : (
           <div className="ledger-table-wrap">
             <table className="ledger-payment-table">
-              <thead><tr><th>SR</th><th>DATE</th><th>RECEIPT #</th><th>FROM ACCOUNT</th><th>TO ACCOUNT</th><th>DESCRIPTION</th><th>TYPE</th><th>SAR</th><th>ROE</th><th>PAID AMOUNT</th><th>ACTION</th></tr></thead>
+              <thead><tr><th>SR</th><th>DATE</th><th>RECEIPT / VOUCHER #</th><th>FROM ACCOUNT</th><th>TO ACCOUNT</th><th>DESCRIPTION</th><th>METHOD</th><th>SAR</th><th>ROE</th><th>PKR AMOUNT</th><th>MANAGE</th></tr></thead>
               <tbody>{payments.map((entry, index) => (
                 <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
                   <td className="centered">{index + 1}</td>
@@ -183,7 +157,7 @@ export default function PartyLedger({ companyId, party, parties, onBack, onEditP
                   <td className="right">{entry.currency === "SAR" ? formatNumber(entry.sar) : "—"}</td>
                   <td className="right">{entry.currency === "SAR" ? formatNumber(entry.roe) : "—"}</td>
                   <td className="right payment-paid-amount">{formatMoney(entry.paid_amount)}</td>
-                  <td><div className="row-actions compact-actions"><button disabled={entry.status === "VOID"} onClick={() => { setEditingPayment(entry); setPaymentModalOpen(true); }}>Edit</button><button className="danger-action" disabled={entry.status === "VOID"} onClick={() => void voidPaymentEntry(entry)}>Void</button></div></td>
+                  <td><button className="secondary" onClick={onOpenPayments}>Open Payments</button></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -191,18 +165,7 @@ export default function PartyLedger({ companyId, party, parties, onBack, onEditP
         )}
       </div>
 
-      <div className="bf-note"><b>Booking source:</b> commercial entries are read directly from the six active booking modules. To change a booking, open it from its Booking Register; the account ledger is no longer a second manual accommodation/service entry system.</div>
-
-      {paymentModalOpen && (
-        <PaymentFormModal
-          companyId={companyId}
-          parties={parties}
-          initialPartyId={party.id}
-          editing={editingPayment}
-          onClose={() => { setPaymentModalOpen(false); setEditingPayment(null); }}
-          onSaved={paymentSaved}
-        />
-      )}
+      <div className="bf-note"><b>Accounting source:</b> bookings remain the commercial source and Payments is the only settlement-entry workspace. Payment records are account-based and are not allocated to individual UBs.</div>
     </section>
   );
 }
