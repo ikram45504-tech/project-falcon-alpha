@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::{Connection, Executor, SqliteConnection};
+use sqlx::{Connection, SqliteConnection};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
@@ -89,7 +89,11 @@ fn backup_name(label: &str) -> String {
     format!("travel-accounting-{}-{}.db", clean.trim_matches('-'), stamp)
 }
 
-async fn vacuum_backup(connection: &mut SqliteConnection, source_path: &Path, label: &str) -> Result<Option<String>, String> {
+async fn vacuum_backup(
+    connection: &mut SqliteConnection,
+    source_path: &Path,
+    label: &str,
+) -> Result<Option<String>, String> {
     if !source_path.exists() {
         return Ok(None);
     }
@@ -208,6 +212,7 @@ pub async fn execute_atomic_transaction(
         return Err("No database statements were supplied.".to_string());
     }
 
+    let statement_count = statements.len();
     let mut connection = open_connection(&app).await?;
     sqlx::query("BEGIN IMMEDIATE")
         .execute(&mut connection)
@@ -231,7 +236,7 @@ pub async fn execute_atomic_transaction(
         .map_err(|error| format!("Could not commit atomic database transaction: {error}"))?;
 
     Ok(AtomicExecutionResult {
-        statements_executed: statements.len(),
+        statements_executed: statement_count,
         rows_affected,
     })
 }
@@ -257,7 +262,12 @@ pub async fn create_database_backup(
 ) -> Result<Option<String>, String> {
     let path = app_database_path(&app)?;
     let mut connection = open_connection(&app).await?;
-    vacuum_backup(&mut connection, &path, if label.trim().is_empty() { "manual" } else { &label }).await
+    vacuum_backup(
+        &mut connection,
+        &path,
+        if label.trim().is_empty() { "manual" } else { &label },
+    )
+    .await
 }
 
 #[tauri::command]
@@ -265,7 +275,10 @@ pub async fn initialize_database_safety(
     app: AppHandle,
 ) -> Result<DatabaseSafetyReport, String> {
     let path = app_database_path(&app)?;
-    let existed_before = path.exists() && std::fs::metadata(&path).map(|meta| meta.len() > 0).unwrap_or(false);
+    let existed_before = path.exists()
+        && std::fs::metadata(&path)
+            .map(|meta| meta.len() > 0)
+            .unwrap_or(false);
     let mut connection = open_connection(&app).await?;
 
     sqlx::query(
