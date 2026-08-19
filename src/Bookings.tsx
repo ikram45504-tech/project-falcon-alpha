@@ -5,6 +5,7 @@ import HotelBookingModule from "./HotelBookingFlowV3";
 import VisaBookingModule from "./VisaBookingFlowV3";
 import TransportBookingModule from "./TransportBookingFlowV3";
 import MiscBookingModule from "./MiscBookingFlowV3";
+import BookingLifecycleCenter from "./BookingLifecycleCenter";
 import UbControl from "./UbControl";
 import type { BookingTransactionType, Party } from "./db";
 import "./BookingFinalization.css";
@@ -73,16 +74,17 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
   }
 
   const sharedProps = transactionType ? { companyId, parties, transactionType, userId, canCreate, canEdit, canVoid, onBack: backToServices, onChanged } : null;
+  const lifecycleProps = transactionType ? { companyId, transactionType, userId, canEdit, canVoid, onChanged } : null;
 
   return <section className="content-card bookings-page bookings-flow-v2">
     {screen === "DIRECTION" && renderDirectionScreen()}
     {screen === "SERVICES" && renderServicesScreen()}
     {screen === "UB_CONTROL" && <UbControl companyId={companyId} onBack={backToDirections} />}
     {screen === "SERVICE_FORM" && service === "PACKAGE" && sharedProps && <PackageBookingFlow {...sharedProps} />}
-    {screen === "SERVICE_FORM" && service === "TICKET" && sharedProps && <TicketBookingModule {...sharedProps} />}
-    {screen === "SERVICE_FORM" && service === "HOTEL" && sharedProps && <HotelBookingModule {...sharedProps} />}
-    {screen === "SERVICE_FORM" && service === "VISA" && sharedProps && <VisaBookingModule {...sharedProps} />}
-    {screen === "SERVICE_FORM" && service === "TRANSPORT" && sharedProps && <TransportBookingModule {...sharedProps} />}
-    {screen === "SERVICE_FORM" && service === "MISC" && sharedProps && <MiscBookingModule {...sharedProps} />}
+    {screen === "SERVICE_FORM" && service === "TICKET" && sharedProps && lifecycleProps && <><BookingLifecycleCenter service="TICKET" {...lifecycleProps} /><TicketBookingModule {...sharedProps} /></>}
+    {screen === "SERVICE_FORM" && service === "HOTEL" && sharedProps && lifecycleProps && <><BookingLifecycleCenter service="HOTEL" {...lifecycleProps} /><HotelBookingModule {...sharedProps} /></>}
+    {screen === "SERVICE_FORM" && service === "VISA" && sharedProps && lifecycleProps && <><BookingLifecycleCenter service="VISA" {...lifecycleProps} /><VisaBookingModule {...sharedProps} /></>}
+    {screen === "SERVICE_FORM" && service === "TRANSPORT" && sharedProps && lifecycleProps && <><BookingLifecycleCenter service="TRANSPORT" {...lifecycleProps} /><TransportBookingModule {...sharedProps} /></>}
+    {screen === "SERVICE_FORM" && service === "MISC" && sharedProps && lifecycleProps && <><BookingLifecycleCenter service="MISC" {...lifecycleProps} /><MiscBookingModule {...sharedProps} /></>}
   </section>;
 }
