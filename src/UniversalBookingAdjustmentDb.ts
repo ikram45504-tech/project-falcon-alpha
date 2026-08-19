@@ -1,4 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
+import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { hasPermission, type Permission, type UserRole } from "./permissions";
 import type { BookingAdjustmentKind, BookingLifecycleStatus, BookingServiceName } from "./BookingLifecycle";
 
@@ -116,22 +117,6 @@ async function requirePermission(companyId: string, userId: string, permission: 
   }
 }
 
-async function audit(companyId: string, userId: string, service: BookingServiceName, bookingId: string, details: string) {
-  if (!userId) return;
-  const database = await db();
-  const users = await select<Array<{ full_name: string }>>(
-    database,
-    `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
-  );
-  await execute(
-    database,
-    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
-     VALUES ($1,$2,$3,$4,'BOOKING_ADJUSTED',$5,$6,$7,$8)`,
-    [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", service, bookingId, details, new Date().toISOString()]
-  );
-}
-
 export async function initUniversalBookingAdjustmentDatabase() {
   if (initializationPromise) return initializationPromise;
   initializationPromise = (async () => {
@@ -237,6 +222,24 @@ export async function getUniversalBookingAdjustmentSummaryMap(companyId: string,
   return out;
 }
 
+function auditStatement(
+  companyId: string,
+  userId: string,
+  service: BookingServiceName,
+  bookingId: string,
+  details: string,
+  now: string
+): AtomicSqlStatement | null {
+  if (!userId) return null;
+  return {
+    sql: `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+      VALUES ($1,$2,$3,
+        COALESCE((SELECT full_name FROM users WHERE id=$3 AND company_id=$2 LIMIT 1),'Unknown User'),
+        'BOOKING_ADJUSTED',$4,$5,$6,$7)`,
+    params: [crypto.randomUUID(), companyId, userId, service, bookingId, details, now],
+  };
+}
+
 export async function recordUniversalBookingAdjustment(
   companyId: string,
   input: RecordUniversalAdjustmentInput,
@@ -265,37 +268,41 @@ export async function recordUniversalBookingAdjustment(
   const lifecycleStatus = nextLifecycle(state.lifecycleStatus, input.adjustmentType);
   const accountDelta = effectiveTotal - Number(input.previousTotalPkr || 0);
   const now = new Date().toISOString();
+  const adjustmentId = crypto.randomUUID();
 
-  await execute(
-    database,
-    `UPDATE ${table} SET total_pkr=$1,updated_at=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-    [effectiveTotal, now, input.bookingId, companyId]
-  );
+  const statements: AtomicSqlStatement[] = [
+    {
+      sql: `UPDATE ${table} SET total_pkr=$1,updated_at=$2,updated_by_user_id=$3
+        WHERE id=$4 AND company_id=$5 AND status='ACTIVE'`,
+      params: [effectiveTotal, now, actorUserId, input.bookingId, companyId],
+    },
+    {
+      sql: `INSERT INTO booking_adjustments
+        (id,company_id,service_type,booking_id,adjustment_type,adjustment_date,category,reason,reference,notes,
+         previous_total_pkr,previous_base_pkr,revised_base_pkr,charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,
+         before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
+      params: [
+        adjustmentId, companyId, input.service, input.bookingId, input.adjustmentType, input.adjustmentDate,
+        input.category.trim(), input.reason.trim(), input.reference.trim(), input.notes.trim(),
+        Number(input.previousTotalPkr || 0), Number(input.previousBasePkr || 0), Number(input.revisedBasePkr || 0),
+        Math.max(0, Number(input.chargePkr || 0)), Math.max(0, Number(input.creditPkr || 0)), accountDelta, effectiveTotal,
+        input.beforeSnapshotJson, input.afterSnapshotJson, input.cancelledLinesJson,
+        revisionNo, lifecycleStatus, actorUserId, now,
+      ],
+    },
+  ];
 
-  await execute(
-    database,
-    `INSERT INTO booking_adjustments
-     (id,company_id,service_type,booking_id,adjustment_type,adjustment_date,category,reason,reference,notes,
-      previous_total_pkr,previous_base_pkr,revised_base_pkr,charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,
-      before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
-    [
-      crypto.randomUUID(), companyId, input.service, input.bookingId, input.adjustmentType, input.adjustmentDate,
-      input.category.trim(), input.reason.trim(), input.reference.trim(), input.notes.trim(),
-      Number(input.previousTotalPkr || 0), Number(input.previousBasePkr || 0), Number(input.revisedBasePkr || 0),
-      Math.max(0, Number(input.chargePkr || 0)), Math.max(0, Number(input.creditPkr || 0)), accountDelta, effectiveTotal,
-      input.beforeSnapshotJson, input.afterSnapshotJson, input.cancelledLinesJson,
-      revisionNo, lifecycleStatus, actorUserId, now,
-    ]
-  );
-
-  await audit(
+  const audit = auditStatement(
     companyId,
     actorUserId,
     input.service,
     input.bookingId,
-    `${input.adjustmentType} ${booking.ub_number || input.bookingId} · PKR ${input.previousTotalPkr} → ${effectiveTotal}`
+    `${input.adjustmentType} ${booking.ub_number || input.bookingId} · PKR ${input.previousTotalPkr} → ${effectiveTotal}`,
+    now
   );
+  if (audit) statements.push(audit);
 
+  await runAtomicTransaction(statements);
   return { revisionNo, lifecycleStatus, accountDelta, effectiveTotal };
 }
