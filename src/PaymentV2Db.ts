@@ -4,6 +4,8 @@ const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
 let initializationPromise: Promise<void> | null = null;
 
+const BUSY_RETRY_DELAYS_MS = [120, 250, 500, 900];
+
 export type PaymentTransactionKind =
   | "PARTY_RECEIPT"
   | "VENDOR_PAYMENT"
@@ -72,6 +74,29 @@ async function db() {
   return databasePromise;
 }
 
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+}
+
+function isDatabaseBusy(error: unknown) {
+  const text = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return text.includes("database is locked") || text.includes("sqlite_busy") || text.includes("code: 5");
+}
+
+async function withBusyRetry<T>(operation: () => Promise<T>): Promise<T> {
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt <= BUSY_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!isDatabaseBusy(error) || attempt === BUSY_RETRY_DELAYS_MS.length) throw error;
+      await sleep(BUSY_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  throw lastError;
+}
+
 async function audit(companyId: string, userId: string, action: string, recordId: string, details: string) {
   if (!userId) return;
   const database = await db();
@@ -79,12 +104,12 @@ async function audit(companyId: string, userId: string, action: string, recordId
     `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
     [userId, companyId]
   );
-  await database.execute(
+  await withBusyRetry(() => database.execute(
     `INSERT INTO audit_logs
      (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
      VALUES ($1,$2,$3,$4,$5,'PAYMENTS',$6,$7,$8)`,
     [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", action, recordId, details, new Date().toISOString()]
-  );
+  ));
 }
 
 export async function initPaymentV2Database() {
@@ -92,7 +117,7 @@ export async function initPaymentV2Database() {
   initializationPromise = (async () => {
     const database = await db();
     await database.execute("PRAGMA busy_timeout = 5000");
-    await database.execute(`CREATE TABLE IF NOT EXISTS payment_v2_meta (
+    await withBusyRetry(() => database.execute(`CREATE TABLE IF NOT EXISTS payment_v2_meta (
       payment_id TEXT PRIMARY KEY,
       company_id TEXT NOT NULL,
       transaction_kind TEXT NOT NULL DEFAULT 'PARTY_RECEIPT',
@@ -111,11 +136,11 @@ export async function initPaymentV2Database() {
       updated_by_user_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    )`);
-    await database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_v2_meta_company_kind
-      ON payment_v2_meta(company_id, transaction_kind)`);
-    await database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number
-      ON payment_entries(company_id, receipt_no)`);
+    )`));
+    await withBusyRetry(() => database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_v2_meta_company_kind
+      ON payment_v2_meta(company_id, transaction_kind)`));
+    await withBusyRetry(() => database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number
+      ON payment_entries(company_id, receipt_no)`));
   })();
   return initializationPromise;
 }
@@ -243,7 +268,7 @@ async function upsertMeta(
   userId: string,
   now: string
 ) {
-  await database.execute(
+  await withBusyRetry(() => database.execute(
     `INSERT INTO payment_v2_meta
      (payment_id,company_id,transaction_kind,settlement_account,reference,
       bank_name,bank_transaction_reference,account_title,account_last_digits,
@@ -271,7 +296,7 @@ async function upsertMeta(
       input.chequeNo.trim(), input.transferDate, input.handledBy.trim(), input.location.trim(), input.internalNotes.trim(),
       userId, now,
     ]
-  );
+  ));
 }
 
 export async function createPaymentV2(companyId: string, input: PaymentV2Input, userId = "") {
@@ -283,24 +308,30 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  await database.execute("BEGIN IMMEDIATE");
+  await ensureDocumentAvailable(database, companyId, documentNo);
+  await withBusyRetry(() => database.execute(
+    `INSERT INTO payment_entries
+     (id,company_id,party_id,transaction_date,receipt_no,from_account,to_account,
+      description,payment_type,currency,amount_entered,sar,roe,paid_amount,status,created_at,updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15)`,
+    [
+      id, companyId, input.partyId, input.transactionDate, documentNo,
+      movement.from, movement.to, input.description.trim(), input.paymentType, input.currency,
+      amount, input.currency === "SAR" ? amount : 0, roe, paidAmount, now,
+    ]
+  ));
+
   try {
-    await ensureDocumentAvailable(database, companyId, documentNo);
-    await database.execute(
-      `INSERT INTO payment_entries
-       (id,company_id,party_id,transaction_date,receipt_no,from_account,to_account,
-        description,payment_type,currency,amount_entered,sar,roe,paid_amount,status,created_at,updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15)`,
-      [
-        id, companyId, input.partyId, input.transactionDate, documentNo,
-        movement.from, movement.to, input.description.trim(), input.paymentType, input.currency,
-        amount, input.currency === "SAR" ? amount : 0, roe, paidAmount, now,
-      ]
-    );
     await upsertMeta(database, companyId, id, input, userId, now);
-    await database.execute("COMMIT");
   } catch (error) {
-    try { await database.execute("ROLLBACK"); } catch { /* keep original error */ }
+    try {
+      await withBusyRetry(() => database.execute(
+        `DELETE FROM payment_entries WHERE id=$1 AND company_id=$2`,
+        [id, companyId]
+      ));
+    } catch {
+      // Preserve the original metadata error. A later register load still exposes any orphaned core row.
+    }
     throw error;
   }
 
@@ -320,27 +351,20 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
   const movement = movementAccounts(input.transactionKind, account.name, settlement);
   const now = new Date().toISOString();
 
-  await database.execute("BEGIN IMMEDIATE");
-  try {
-    await ensureDocumentAvailable(database, companyId, documentNo, paymentId);
-    await database.execute(
-      `UPDATE payment_entries SET
-         party_id=$1,transaction_date=$2,receipt_no=$3,from_account=$4,to_account=$5,
-         description=$6,payment_type=$7,currency=$8,amount_entered=$9,sar=$10,roe=$11,
-         paid_amount=$12,updated_at=$13
-       WHERE id=$14 AND company_id=$15 AND status='ACTIVE'`,
-      [
-        input.partyId, input.transactionDate, documentNo, movement.from, movement.to,
-        input.description.trim(), input.paymentType, input.currency, amount,
-        input.currency === "SAR" ? amount : 0, roe, paidAmount, now, paymentId, companyId,
-      ]
-    );
-    await upsertMeta(database, companyId, paymentId, input, userId, now);
-    await database.execute("COMMIT");
-  } catch (error) {
-    try { await database.execute("ROLLBACK"); } catch { /* keep original error */ }
-    throw error;
-  }
+  await ensureDocumentAvailable(database, companyId, documentNo, paymentId);
+  await withBusyRetry(() => database.execute(
+    `UPDATE payment_entries SET
+       party_id=$1,transaction_date=$2,receipt_no=$3,from_account=$4,to_account=$5,
+       description=$6,payment_type=$7,currency=$8,amount_entered=$9,sar=$10,roe=$11,
+       paid_amount=$12,updated_at=$13
+     WHERE id=$14 AND company_id=$15 AND status='ACTIVE'`,
+    [
+      input.partyId, input.transactionDate, documentNo, movement.from, movement.to,
+      input.description.trim(), input.paymentType, input.currency, amount,
+      input.currency === "SAR" ? amount : 0, roe, paidAmount, now, paymentId, companyId,
+    ]
+  ));
+  await upsertMeta(database, companyId, paymentId, input, userId, now);
 
   await audit(companyId, userId, "PAYMENT_UPDATED", paymentId, `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`);
 }
@@ -352,11 +376,11 @@ export async function voidPaymentV2(companyId: string, paymentId: string, userId
     [companyId, paymentId]
   );
   const record = rows[0];
-  await database.execute(
+  await withBusyRetry(() => database.execute(
     `UPDATE payment_entries SET status='VOID',updated_at=$1
      WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
     [new Date().toISOString(), paymentId, companyId]
-  );
+  ));
   if (record) {
     await audit(companyId, userId, "PAYMENT_VOIDED", paymentId, `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)}`);
   }
