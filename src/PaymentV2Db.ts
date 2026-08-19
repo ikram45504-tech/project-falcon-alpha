@@ -1,5 +1,4 @@
 import Database from "@tauri-apps/plugin-sql";
-import { createAuditLog } from "./db";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -71,6 +70,21 @@ type CountRow = { count: number };
 async function db() {
   if (!databasePromise) databasePromise = Database.load(DB_PATH);
   return databasePromise;
+}
+
+async function audit(companyId: string, userId: string, action: string, recordId: string, details: string) {
+  if (!userId) return;
+  const database = await db();
+  const users = await database.select<Array<{ full_name: string }>>(
+    `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
+    [userId, companyId]
+  );
+  await database.execute(
+    `INSERT INTO audit_logs
+     (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+     VALUES ($1,$2,$3,$4,$5,'PAYMENTS',$6,$7,$8)`,
+    [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", action, recordId, details, new Date().toISOString()]
+  );
 }
 
 export async function initPaymentV2Database() {
@@ -290,9 +304,7 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
     throw error;
   }
 
-  if (userId) {
-    await createAuditLog(companyId, userId, "PAYMENT_CREATED", "PAYMENTS", id, `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`);
-  }
+  await audit(companyId, userId, "PAYMENT_CREATED", id, `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`);
   return id;
 }
 
@@ -330,9 +342,7 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
     throw error;
   }
 
-  if (userId) {
-    await createAuditLog(companyId, userId, "PAYMENT_UPDATED", "PAYMENTS", paymentId, `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`);
-  }
+  await audit(companyId, userId, "PAYMENT_UPDATED", paymentId, `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`);
 }
 
 export async function voidPaymentV2(companyId: string, paymentId: string, userId = "") {
@@ -347,7 +357,7 @@ export async function voidPaymentV2(companyId: string, paymentId: string, userId
      WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
     [new Date().toISOString(), paymentId, companyId]
   );
-  if (userId && record) {
-    await createAuditLog(companyId, userId, "PAYMENT_VOIDED", "PAYMENTS", paymentId, `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)}`);
+  if (record) {
+    await audit(companyId, userId, "PAYMENT_VOIDED", paymentId, `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)}`);
   }
 }
