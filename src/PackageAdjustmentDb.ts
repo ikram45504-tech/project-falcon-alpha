@@ -1,5 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { PackageBookingLineInput, PackagePassengerType } from "./db";
+import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { hasPermission, type Permission, type UserRole } from "./permissions";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -111,6 +112,28 @@ type CalculatedLine = {
   sortOrder: number;
 };
 
+type AdjustmentInsert = {
+  adjustmentType: PackageAdjustmentType;
+  adjustmentDate: string;
+  requestedBy: PackageAdjustmentRequestedBy;
+  category: string;
+  reason: string;
+  reference: string;
+  notes: string;
+  previousTotal: number;
+  previousBase: number;
+  revisedBase: number;
+  charge: number;
+  credit: number;
+  delta: number;
+  effectiveTotal: number;
+  beforeSnapshot: string;
+  afterSnapshot: string;
+  cancelledLines: string;
+  revisionNo: number;
+  lifecycleStatus: PackageLifecycleStatus;
+};
+
 async function db() {
   if (!databasePromise) databasePromise = Database.load(DB_PATH);
   return databasePromise;
@@ -155,23 +178,6 @@ async function requirePermission(companyId: string, userId: string, permission: 
   if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, permission)) {
     throw new Error("You do not have permission to perform this action.");
   }
-}
-
-async function audit(companyId: string, userId: string, action: string, recordId: string, details: string) {
-  if (!userId) return;
-  const database = await db();
-  const users = await select<Array<{ full_name: string }>>(
-    database,
-    `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
-  );
-  await execute(
-    database,
-    `INSERT INTO audit_logs
-     (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
-     VALUES ($1,$2,$3,$4,$5,'PACKAGE',$6,$7,$8)`,
-    [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", action, recordId, details, new Date().toISOString()]
-  );
 }
 
 export async function initPackageAdjustmentDatabase() {
@@ -274,19 +280,6 @@ function calculateLines(lines: PackageAdjustmentLineInput[]) {
   return calculated;
 }
 
-async function replaceLines(database: Database, bookingId: string, lines: CalculatedLine[]) {
-  await execute(database, `DELETE FROM package_booking_lines WHERE booking_id=$1`, [bookingId]);
-  for (const line of lines) {
-    await execute(
-      database,
-      `INSERT INTO package_booking_lines
-       (id,booking_id,passenger_type,passenger_name,package_type,rate_per_person,person_count,qty_is_explicit,line_total_pkr,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [crypto.randomUUID(), bookingId, line.passengerType, line.passengerName, line.packageType, line.ratePerPerson, line.personCount, line.qtyIsExplicit, line.lineTotalPkr, line.sortOrder]
-    );
-  }
-}
-
 async function latestState(database: Database, companyId: string, bookingId: string) {
   const rows = await select<PackageAdjustmentRecord[]>(
     database,
@@ -309,49 +302,85 @@ function nextLifecycle(current: PackageLifecycleStatus, type: PackageAdjustmentT
   return current === "AMENDED" ? "AMENDED" : "ACTIVE";
 }
 
-async function insertAdjustment(
-  database: Database,
+function lineStatements(bookingId: string, lines: CalculatedLine[]): AtomicSqlStatement[] {
+  const statements: AtomicSqlStatement[] = [
+    { sql: `DELETE FROM package_booking_lines WHERE booking_id=$1`, params: [bookingId] },
+  ];
+  lines.forEach((line) => statements.push({
+    sql: `INSERT INTO package_booking_lines
+      (id,booking_id,passenger_type,passenger_name,package_type,rate_per_person,person_count,qty_is_explicit,line_total_pkr,sort_order)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    params: [
+      crypto.randomUUID(), bookingId, line.passengerType, line.passengerName, line.packageType,
+      line.ratePerPerson, line.personCount, line.qtyIsExplicit, line.lineTotalPkr, line.sortOrder,
+    ],
+  }));
+  return statements;
+}
+
+function adjustmentStatement(
   companyId: string,
   bookingId: string,
-  input: {
-    adjustmentType: PackageAdjustmentType;
-    adjustmentDate: string;
-    requestedBy: PackageAdjustmentRequestedBy;
-    category: string;
-    reason: string;
-    reference: string;
-    notes: string;
-    previousTotal: number;
-    previousBase: number;
-    revisedBase: number;
-    charge: number;
-    credit: number;
-    delta: number;
-    effectiveTotal: number;
-    beforeSnapshot: string;
-    afterSnapshot: string;
-    cancelledLines: string;
-    revisionNo: number;
-    lifecycleStatus: PackageLifecycleStatus;
-  },
-  actorUserId: string
-) {
-  const now = new Date().toISOString();
-  await execute(
-    database,
-    `INSERT INTO package_booking_adjustments
-     (id,company_id,booking_id,adjustment_type,adjustment_date,requested_by,category,reason,reference,notes,
-      previous_total_pkr,previous_base_pkr,revised_base_pkr,charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,
-      before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
-    [
+  input: AdjustmentInsert,
+  actorUserId: string,
+  now: string
+): AtomicSqlStatement {
+  return {
+    sql: `INSERT INTO package_booking_adjustments
+      (id,company_id,booking_id,adjustment_type,adjustment_date,requested_by,category,reason,reference,notes,
+       previous_total_pkr,previous_base_pkr,revised_base_pkr,charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,
+       before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
+    params: [
       crypto.randomUUID(), companyId, bookingId, input.adjustmentType, input.adjustmentDate,
       input.requestedBy, input.category.trim(), input.reason.trim(), input.reference.trim(), input.notes.trim(),
       input.previousTotal, input.previousBase, input.revisedBase, input.charge, input.credit, input.delta,
       input.effectiveTotal, input.beforeSnapshot, input.afterSnapshot, input.cancelledLines,
       input.revisionNo, input.lifecycleStatus, actorUserId, now,
-    ]
-  );
+    ],
+  };
+}
+
+function auditStatement(
+  companyId: string,
+  userId: string,
+  action: string,
+  recordId: string,
+  details: string,
+  now: string
+): AtomicSqlStatement | null {
+  if (!userId) return null;
+  return {
+    sql: `INSERT INTO audit_logs
+      (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+      VALUES ($1,$2,$3,
+        COALESCE((SELECT full_name FROM users WHERE id=$3 AND company_id=$2 LIMIT 1),'Unknown User'),
+        $4,'PACKAGE',$5,$6,$7)`,
+    params: [crypto.randomUUID(), companyId, userId, action, recordId, details, now],
+  };
+}
+
+async function writeAdjustment(
+  companyId: string,
+  bookingId: string,
+  lines: CalculatedLine[],
+  effectiveTotal: number,
+  adjustment: AdjustmentInsert,
+  actorUserId: string,
+  auditAction: string,
+  auditDetails: string
+) {
+  const now = new Date().toISOString();
+  const statements = lineStatements(bookingId, lines);
+  statements.push({
+    sql: `UPDATE package_bookings SET total_pkr=$1,updated_at=$2,updated_by_user_id=$3
+      WHERE company_id=$4 AND id=$5 AND status='ACTIVE'`,
+    params: [effectiveTotal, now, actorUserId, companyId, bookingId],
+  });
+  statements.push(adjustmentStatement(companyId, bookingId, adjustment, actorUserId, now));
+  const audit = auditStatement(companyId, actorUserId, auditAction, bookingId, auditDetails, now);
+  if (audit) statements.push(audit);
+  await runAtomicTransaction(statements);
 }
 
 export async function savePackageCorrectionOrAmendment(
@@ -380,41 +409,38 @@ export async function savePackageCorrectionOrAmendment(
   const lifecycleStatus = nextLifecycle(state.lifecycleStatus, input.adjustmentType);
   const revisionNo = state.revisionNo + 1;
 
-  await replaceLines(database, bookingId, revisedLines);
-  await execute(
-    database,
-    `UPDATE package_bookings SET total_pkr=$1,updated_at=$2,updated_by_user_id=$3
-     WHERE company_id=$4 AND id=$5 AND status='ACTIVE'`,
-    [effectiveTotal, new Date().toISOString(), actorUserId, companyId, bookingId]
-  );
-  await insertAdjustment(
-    database,
+  const adjustment: AdjustmentInsert = {
+    adjustmentType: input.adjustmentType,
+    adjustmentDate: input.adjustmentDate,
+    requestedBy: input.requestedBy,
+    category: input.category,
+    reason: input.reason,
+    reference: input.reference,
+    notes: input.notes,
+    previousTotal: Number(booking.total_pkr || 0),
+    previousBase,
+    revisedBase,
+    charge,
+    credit,
+    delta,
+    effectiveTotal,
+    beforeSnapshot: snapshot(currentLines, Number(booking.total_pkr || 0)),
+    afterSnapshot: snapshot(revisedLines, effectiveTotal),
+    cancelledLines: "",
+    revisionNo,
+    lifecycleStatus,
+  };
+
+  await writeAdjustment(
     companyId,
     bookingId,
-    {
-      adjustmentType: input.adjustmentType,
-      adjustmentDate: input.adjustmentDate,
-      requestedBy: input.requestedBy,
-      category: input.category,
-      reason: input.reason,
-      reference: input.reference,
-      notes: input.notes,
-      previousTotal: Number(booking.total_pkr || 0),
-      previousBase,
-      revisedBase,
-      charge,
-      credit,
-      delta,
-      effectiveTotal,
-      beforeSnapshot: snapshot(currentLines, Number(booking.total_pkr || 0)),
-      afterSnapshot: snapshot(revisedLines, effectiveTotal),
-      cancelledLines: "",
-      revisionNo,
-      lifecycleStatus,
-    },
-    actorUserId
+    revisedLines,
+    effectiveTotal,
+    adjustment,
+    actorUserId,
+    `BOOKING_${input.adjustmentType}`,
+    `${booking.ub_number} ${input.adjustmentType} ${delta >= 0 ? "+" : ""}${delta.toFixed(2)} PKR; effective ${effectiveTotal.toFixed(2)} PKR.`
   );
-  await audit(companyId, actorUserId, `BOOKING_${input.adjustmentType}`, bookingId, `${booking.ub_number} ${input.adjustmentType} ${delta >= 0 ? "+" : ""}${delta.toFixed(2)} PKR; effective ${effectiveTotal.toFixed(2)} PKR.`);
   return { effectiveTotal, delta, revisionNo, lifecycleStatus };
 }
 
@@ -481,41 +507,38 @@ export async function savePackageCancellation(
   const lifecycleStatus = nextLifecycle(state.lifecycleStatus, input.adjustmentType);
   const revisionNo = state.revisionNo + 1;
 
-  await replaceLines(database, bookingId, remaining);
-  await execute(
-    database,
-    `UPDATE package_bookings SET total_pkr=$1,updated_at=$2,updated_by_user_id=$3
-     WHERE company_id=$4 AND id=$5 AND status='ACTIVE'`,
-    [effectiveTotal, new Date().toISOString(), actorUserId, companyId, bookingId]
-  );
-  await insertAdjustment(
-    database,
+  const adjustment: AdjustmentInsert = {
+    adjustmentType: input.adjustmentType,
+    adjustmentDate: input.adjustmentDate,
+    requestedBy: input.requestedBy,
+    category: input.adjustmentType === "FULL_CANCELLATION" ? "Full Cancellation" : "Partial Cancellation",
+    reason: input.reason,
+    reference: input.reference,
+    notes: input.notes,
+    previousTotal: Number(booking.total_pkr || 0),
+    previousBase,
+    revisedBase,
+    charge,
+    credit: cancelledValue - charge,
+    delta,
+    effectiveTotal,
+    beforeSnapshot: snapshot(currentLines, Number(booking.total_pkr || 0)),
+    afterSnapshot: snapshot(remaining, effectiveTotal),
+    cancelledLines: JSON.stringify(cancelled),
+    revisionNo,
+    lifecycleStatus,
+  };
+
+  await writeAdjustment(
     companyId,
     bookingId,
-    {
-      adjustmentType: input.adjustmentType,
-      adjustmentDate: input.adjustmentDate,
-      requestedBy: input.requestedBy,
-      category: input.adjustmentType === "FULL_CANCELLATION" ? "Full Cancellation" : "Partial Cancellation",
-      reason: input.reason,
-      reference: input.reference,
-      notes: input.notes,
-      previousTotal: Number(booking.total_pkr || 0),
-      previousBase,
-      revisedBase,
-      charge,
-      credit: cancelledValue - charge,
-      delta,
-      effectiveTotal,
-      beforeSnapshot: snapshot(currentLines, Number(booking.total_pkr || 0)),
-      afterSnapshot: snapshot(remaining, effectiveTotal),
-      cancelledLines: JSON.stringify(cancelled),
-      revisionNo,
-      lifecycleStatus,
-    },
-    actorUserId
+    remaining,
+    effectiveTotal,
+    adjustment,
+    actorUserId,
+    `BOOKING_${input.adjustmentType}`,
+    `${booking.ub_number} ${input.adjustmentType}; cancelled ${cancelledValue.toFixed(2)} PKR, charge ${charge.toFixed(2)} PKR, effective ${effectiveTotal.toFixed(2)} PKR.`
   );
-  await audit(companyId, actorUserId, `BOOKING_${input.adjustmentType}`, bookingId, `${booking.ub_number} ${input.adjustmentType}; cancelled ${cancelledValue.toFixed(2)} PKR, charge ${charge.toFixed(2)} PKR, effective ${effectiveTotal.toFixed(2)} PKR.`);
   return { effectiveTotal, delta, revisionNo, lifecycleStatus, cancelledValue, cancellationCharge: charge, accountCredit: cancelledValue - charge };
 }
 
