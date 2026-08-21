@@ -1,0 +1,126 @@
+import { useState, useEffect } from "react";
+import type { BookingTransactionType } from "./db";
+import { normalizeBookingUb } from "./bookingUb";
+import { getGlobalUbSaleOwner } from "./LedgerEngine";
+import { getPartyById } from "./db";
+
+type CommonEntry = {
+  id: string;
+  transaction_type: string;
+  counterparty_id: string;
+  ub_number: string;
+};
+
+export type Mode = "FORM" | "REGISTER";
+
+export function localDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function useBookingFlowState<T extends CommonEntry>(
+  companyId: string,
+  transactionType: BookingTransactionType,
+  entries: T[],
+  serviceLabel: string
+) {
+  const [mode, setMode] = useState<Mode>("FORM");
+  const [tx, setTx] = useState<BookingTransactionType>(transactionType);
+  const [counterpartyId, setCounterpartyId] = useState("");
+  const [bookingDate, setBookingDate] = useState(localDate());
+  const [ubDigits, setUbDigits] = useState("");
+  const [ubNumber, setUbNumber] = useState("");
+  const [assigned, setAssigned] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!editingId) setTx(transactionType);
+  }, [transactionType, editingId]);
+
+  function resetState() {
+    setTx(transactionType);
+    setCounterpartyId("");
+    setBookingDate(localDate());
+    setUbDigits("");
+    setUbNumber("");
+    setAssigned(false);
+    setSaved(false);
+    setDetailsOpen(false);
+    setEditingId(null);
+    setError("");
+    setMessage("");
+  }
+
+  async function assignUb(formatted: string) {
+    setError("");
+    if (!counterpartyId) return setError(tx === "SALE" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");
+    if (!bookingDate) return setError("Date of Booking is required.");
+    if (!formatted) return setError("Enter a booking number using 1 to 4 digits.");
+    
+    // 1. Check local duplicates within this service
+    const duplicate = entries.find(
+      (entry) =>
+        normalizeBookingUb(entry.ub_number) === formatted &&
+        (tx === "SALE"
+          ? entry.transaction_type === "SALE"
+          : entry.transaction_type === "PURCHASE" && entry.counterparty_id === counterpartyId)
+    );
+    
+    if (duplicate) {
+      setError(
+        tx === "SALE"
+          ? `${formatted} already has a ${serviceLabel} Sale booking.`
+          : `This Vendor already has a ${serviceLabel} Purchase booking for ${formatted}.`
+      );
+      return false;
+    }
+
+    // 2. Global UB Ownership Check (Only for SALE)
+    try {
+      setBusy(true);
+      const owner = await getGlobalUbSaleOwner(companyId, formatted);
+      if (owner && tx === "SALE" && owner.partyId !== counterpartyId) {
+        const partyInfo = await getPartyById(companyId, owner.partyId);
+        const partyName = partyInfo?.name || "another customer";
+        setError(`This Unique Booking # (${formatted}) is designed for ${partyName} only. Please change unique number.`);
+        return false;
+      }
+    } catch (e) {
+      setError(`Failed to validate UB ownership: ${e instanceof Error ? e.message : String(e)}`);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+    
+    setUbNumber(formatted);
+    setAssigned(true);
+    let detailedMsg = `${formatted} is ready. Enter ${serviceLabel} Details & Rates below.`;
+    if (serviceLabel === "Misc") detailedMsg = `${formatted} is ready. Enter Misc Service Details & Rates below.`;
+    if (serviceLabel === "Visa") detailedMsg = `${formatted} is ready. Enter Visa Services & Rates below.`;
+    setMessage(detailedMsg);
+    return true;
+  }
+
+  return {
+    mode, setMode,
+    tx, setTx,
+    counterpartyId, setCounterpartyId,
+    bookingDate, setBookingDate,
+    ubDigits, setUbDigits,
+    ubNumber, setUbNumber,
+    assigned, setAssigned,
+    saved, setSaved,
+    detailsOpen, setDetailsOpen,
+    editingId, setEditingId,
+    busy, setBusy,
+    error, setError,
+    message, setMessage,
+    assignUb,
+    resetState,
+  };
+}

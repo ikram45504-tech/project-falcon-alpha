@@ -1,16 +1,15 @@
 import { useState } from "react";
-import PackageBookingFlow from "./PackageBookingFlowV2";
-import TicketBookingModule from "./TicketBookingFlowV2";
+import PackageBookingFlow from "./PackageBookingFlowV3";
+import TicketBookingModule from "./TicketBookingFlowV3";
 import HotelBookingModule from "./HotelBookingFlowV3";
 import VisaBookingModule from "./VisaBookingFlowV3";
 import TransportBookingModule from "./TransportBookingFlowV3";
 import MiscBookingModule from "./MiscBookingFlowV3";
-import UbControl from "./UbControl";
 import type { BookingTransactionType, Party } from "./db";
 import "./BookingFinalization.css";
 
 type BookingService = "PACKAGE" | "TICKET" | "HOTEL" | "VISA" | "TRANSPORT" | "MISC";
-type BookingScreen = "DIRECTION" | "SERVICES" | "SERVICE_FORM" | "UB_CONTROL";
+type BookingScreen = "DIRECTION" | "SERVICES" | "SERVICE_FORM";
 
 type Props = {
   companyId: string;
@@ -50,11 +49,10 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
   function chooseService(next: BookingService) { setService(next); setScreen("SERVICE_FORM"); }
   function backToDirections() { setTransactionType(null); setService(null); setScreen("DIRECTION"); }
   function backToServices() { setService(null); setScreen("SERVICES"); }
-  function openUbControl() { setService(null); setScreen("UB_CONTROL"); }
 
   function renderDirectionScreen() {
     return <section className="booking-entry-screen booking-direction-screen">
-      <div className="booking-screen-toolbar"><span></span><button type="button" className="booking-foundation-badge active-engine" onClick={openUbControl}>Open UB Control</button></div>
+      <div className="booking-screen-toolbar"><span></span></div>
       <div className="booking-screen-heading centered-heading"><span className="eyebrow blue">BOOKINGS</span><h2>What type of transaction are you entering?</h2><p>Choose the accounting direction first. The next screen will show the booking services.</p></div>
       <div className="booking-direction-grid">
         <button type="button" className="booking-direction-card sale" onClick={() => chooseDirection("SALE")}><span className="direction-card-icon" aria-hidden="true">↗</span><div><small>SALE</small><b>Sale to Party</b><p>Create a booking sold to a Party / customer account.</p></div><span className="direction-arrow">→</span></button>
@@ -66,7 +64,7 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
   function renderServicesScreen() {
     if (!transactionType) return renderDirectionScreen();
     return <section className="booking-entry-screen booking-services-screen">
-      <div className="booking-screen-toolbar"><button type="button" className="booking-back-button" onClick={backToDirections}>← Change Transaction Type</button><div className="bf-toolbar-actions"><span className={`direction-badge ${transactionType === "SALE" ? "sale" : "purchase"}`}>{transactionType === "SALE" ? "SALE TO PARTY" : "PURCHASE FROM VENDOR / SUPPLIER"}</span><button type="button" className="booking-foundation-badge active-engine" onClick={openUbControl}>UB Control</button></div></div>
+      <div className="booking-screen-toolbar"><button type="button" className="booking-back-button" onClick={backToDirections}>← Change Transaction Type</button><div className="bf-toolbar-actions"><span className={`direction-badge ${transactionType === "SALE" ? "sale" : "purchase"}`}>{transactionType === "SALE" ? "SALE TO PARTY" : "PURCHASE FROM VENDOR / SUPPLIER"}</span></div></div>
       <div className="booking-screen-heading"><span className="eyebrow blue">SELECT BOOKING SERVICE</span><h2>{transactionType === "SALE" ? "Sale to Party" : "Purchase from Vendor / Supplier"}</h2><p>Select the type of booking you want to enter.</p></div>
       <div className="booking-service-tile-grid">{serviceCards.map((item) => <button type="button" className={`booking-service-tile service-${item.key.toLowerCase()}`} key={item.key} onClick={() => chooseService(item.key)}><span className="booking-service-icon"><ServiceIcon service={item.key} /></span><b>{item.title}</b><small>{item.subtitle}</small><span className="booking-service-status live">LIVE</span></button>)}</div>
     </section>;
@@ -77,7 +75,6 @@ export default function BookingsModule({ companyId, parties, userId = "", canCre
   return <section className="content-card bookings-page bookings-flow-v2">
     {screen === "DIRECTION" && renderDirectionScreen()}
     {screen === "SERVICES" && renderServicesScreen()}
-    {screen === "UB_CONTROL" && <UbControl companyId={companyId} onBack={backToDirections} />}
     {screen === "SERVICE_FORM" && service === "PACKAGE" && sharedProps && <PackageBookingFlow {...sharedProps} />}
     {screen === "SERVICE_FORM" && service === "TICKET" && sharedProps && <TicketBookingModule {...sharedProps} />}
     {screen === "SERVICE_FORM" && service === "HOTEL" && sharedProps && <HotelBookingModule {...sharedProps} />}

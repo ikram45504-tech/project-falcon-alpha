@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BookingTransactionType, Party, TicketPassengerType } from "./db";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
-import { bookingDigitsFromUb, normalizeBookingUb } from "./bookingUb";
+import { bookingDigitsFromUb } from "./bookingUb";
+import { useBookingFlowState } from "./useBookingFlowState";
 import TicketOperationalDetails from "./TicketOperationalDetails";
 import BookingLifecycleCenter from "./BookingLifecycleCenter";
 import {
@@ -12,47 +13,26 @@ import {
   type TicketFareFlightType,
 } from "./TicketFlowDb";
 import "./TicketBookingFlow.css";
+import { ticketRowHasData, ticketRowTotal, calculateTicketSummary } from "./pricingEngines";
 
 type Props = { companyId: string; parties: Party[]; transactionType: BookingTransactionType; userId?: string; canCreate?: boolean; canEdit?: boolean; canVoid?: boolean; onBack: () => void; onChanged?: () => void | Promise<void> };
 type Row = { rowId: string; passengerType: TicketPassengerType; passengerName: string; airlineName: string; pnr: string; flightType: TicketFareFlightType; ticketRoute: string; rate: string; count: string; legacyEticketReference: string };
-type Mode = "FORM" | "REGISTER";
 
-function localDate() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function newRow(): Row { return { rowId: crypto.randomUUID(), passengerType: "ADULT", passengerName: "", airlineName: "", pnr: "", flightType: "RETURN", ticketRoute: "", rate: "", count: "1", legacyEticketReference: "" }; }
-function num(value: string) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
-function whole(value: string) { return Math.max(0, Math.trunc(num(value))); }
-function hasData(row: Row) { return Boolean(row.passengerName.trim() || row.airlineName.trim() || row.pnr.trim() || row.ticketRoute.trim() || row.rate.trim()); }
-function rowQty(row: Row) { return hasData(row) ? Math.max(1, whole(row.count || "1")) : 0; }
-function rowTotal(row: Row) { return hasData(row) ? Math.max(0, num(row.rate)) * Math.max(1, whole(row.count || "1")) : 0; }
 function money(value: number) { return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`; }
+function num(v: string) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+function whole(v: string) { return Math.max(0, Math.trunc(num(v))); }
 
 export default function TicketBookingFlowV2({ companyId, parties, transactionType, userId = "", canCreate = true, canEdit = true, canVoid = true, onBack, onChanged }: Props) {
-  const [mode, setMode] = useState<Mode>("FORM");
-  const [tx, setTx] = useState<BookingTransactionType>(transactionType);
-  const [counterpartyId, setCounterpartyId] = useState("");
-  const [bookingDate, setBookingDate] = useState(localDate());
-  const [ubDigits, setUbDigits] = useState("");
-  const [ubNumber, setUbNumber] = useState("");
-  const [assigned, setAssigned] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [rows, setRows] = useState<Row[]>([newRow()]);
   const [entries, setEntries] = useState<TicketCommercialBooking[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const { mode, setMode, tx, setTx, counterpartyId, setCounterpartyId, bookingDate, setBookingDate, ubDigits, setUbDigits, ubNumber, setUbNumber, assigned, setAssigned, saved, setSaved, detailsOpen, setDetailsOpen, editingId, setEditingId, busy, setBusy, error, setError, message, setMessage, assignUb: assign } = useBookingFlowState(companyId, transactionType, entries, "Ticket");
+  const [rows, setRows] = useState<Row[]>([newRow()]);
 
-  useEffect(() => { if (!editingId) setTx(transactionType); }, [transactionType, editingId]);
   useEffect(() => { void loadEntries(); }, [companyId]);
 
-  const totals = useMemo(() => {
-    const qty = { ADULT: 0, CHILD: 0, INFANT: 0 }, amount = { ADULT: 0, CHILD: 0, INFANT: 0 };
-    rows.forEach((row) => { qty[row.passengerType] += rowQty(row); amount[row.passengerType] += rowTotal(row); });
-    return { qty, amount, total: qty.ADULT + qty.CHILD + qty.INFANT, grand: amount.ADULT + amount.CHILD + amount.INFANT };
-  }, [rows]);
+  const totals = useMemo(() => calculateTicketSummary(rows), [rows]);
   const currentEntry = editingId ? entries.find((entry) => entry.id === editingId) || null : null;
-  const firstCommercialRow = rows.find(hasData) || rows[0];
+  const firstCommercialRow = rows.find(ticketRowHasData) || rows[0];
   const commercialLocked = Boolean(editingId);
 
   async function loadEntries() {
@@ -60,19 +40,6 @@ export default function TicketBookingFlowV2({ companyId, parties, transactionTyp
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   }
 
-  function reset() {
-    setTx(transactionType); setCounterpartyId(""); setBookingDate(localDate()); setUbDigits(""); setUbNumber(""); setAssigned(false); setSaved(false); setDetailsOpen(false); setRows([newRow()]); setEditingId(null); setError(""); setMessage("");
-  }
-
-  function assign(formatted: string) {
-    setError("");
-    if (!counterpartyId) return setError(tx === "SALE" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");
-    if (!bookingDate) return setError("Date of Booking is required.");
-    if (!formatted) return setError("Enter a booking number using 1 to 4 digits.");
-    const duplicate = entries.find((entry) => normalizeBookingUb(entry.ub_number) === formatted && (tx === "SALE" ? entry.transaction_type === "SALE" : entry.transaction_type === "PURCHASE" && entry.counterparty_id === counterpartyId));
-    if (duplicate) return setError(tx === "SALE" ? `${formatted} already has a Ticket Sale booking.` : `This Vendor already has a Ticket Purchase booking for ${formatted}.`);
-    setUbNumber(formatted); setAssigned(true); setMessage(`${formatted} is ready. Enter Ticket Details & Fares below.`);
-  }
 
   function updateRow(id: string, patch: Partial<Row>) {
     if (commercialLocked) return;
@@ -88,7 +55,7 @@ export default function TicketBookingFlowV2({ companyId, parties, transactionTyp
   }
 
   function lineInputs(): TicketCommercialLineInput[] {
-    return rows.filter(hasData).map((row) => ({
+    return rows.filter(ticketRowHasData).map((row) => ({
       passengerType: row.passengerType,
       passengerName: row.passengerName.trim(),
       airlineName: row.airlineName.trim(),
@@ -164,7 +131,7 @@ export default function TicketBookingFlowV2({ companyId, parties, transactionTyp
         <td><input disabled={commercialLocked} value={row.ticketRoute} onChange={(e) => updateRow(row.rowId, { ticketRoute: e.target.value.toUpperCase() })} placeholder="KHI - JED - KHI" /></td>
         <td><input disabled={commercialLocked} type="number" min="0" step="0.01" value={row.rate} onChange={(e) => updateRow(row.rowId, { rate: e.target.value })} placeholder="0" /></td>
         <td><input disabled={commercialLocked} type="number" min="1" step="1" value={row.count} onChange={(e) => updateRow(row.rowId, { count: e.target.value })} placeholder="1" /></td>
-        <td className="money-cell">{money(rowTotal(row))}</td>
+        <td className="money-cell">{money(ticketRowTotal(row))}</td>
         {!commercialLocked && <td><button type="button" className="ticket17-remove" onClick={() => removeRow(row.rowId)}>×</button></td>}
       </tr>)}</tbody></table></div>
 

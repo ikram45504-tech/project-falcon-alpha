@@ -263,7 +263,7 @@ function calculateLines(lines: PackageAdjustmentLineInput[]) {
     const qty = Math.max(0, Math.trunc(Number(line.personCount) || 0));
     if (!passengerName) throw new Error(`${label}: Passenger / Family Head is required.`);
     if (!packageType) throw new Error(`${label}: Package Type is required.`);
-    if (rate <= 0) throw new Error(`${label}: Rate must be greater than zero.`);
+    if (!Number.isFinite(rate)) throw new Error(`${label}: Rate must be a valid number.`);
     if (qty <= 0) throw new Error(`${label}: Qty must be greater than zero.`);
     return {
       passengerType: line.passengerType,

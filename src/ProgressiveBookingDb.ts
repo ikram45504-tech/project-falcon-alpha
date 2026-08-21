@@ -108,6 +108,13 @@ export async function updateVisaAdditionalDetails(companyId: string, bookingId: 
   await audit(companyId, userId, "VISA", bookingId, "Visa passenger/passport details updated without changing visa totals.");
 }
 
+// ---------------------------------------------------------------------------
+// DEPRECATED: The functions below target misc_booking_details, a legacy table
+// that was superseded by MiscOperationalDb.ts (misc_operational_meta +
+// misc_operational_services). New code should use MiscOperationalDb instead.
+// These functions are kept only to avoid breaking any legacy callers.
+// ---------------------------------------------------------------------------
+
 async function ensureMiscDetails() {
   const database = await db();
   await database.execute(`CREATE TABLE IF NOT EXISTS misc_booking_details (
@@ -119,6 +126,7 @@ async function ensureMiscDetails() {
   )`);
 }
 
+/** @deprecated Use getMiscOperationalDetails from MiscOperationalDb.ts instead. */
 export async function getMiscAdditionalDetails(companyId: string, bookingId: string) {
   await ensureMiscDetails();
   const database = await db();
@@ -126,6 +134,7 @@ export async function getMiscAdditionalDetails(companyId: string, bookingId: str
   return rows[0]?.notes || "";
 }
 
+/** @deprecated Use saveMiscOperationalDetails from MiscOperationalDb.ts instead. */
 export async function updateMiscAdditionalDetails(companyId: string, bookingId: string, notes: string, userId = "") {
   await requireEdit(companyId, userId);
   await ensureMiscDetails();

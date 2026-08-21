@@ -136,7 +136,7 @@ function calculateLines(lines: PackageBookingLineInput[]) {
     const qty = explicit ? Math.trunc(Number(line.personCount) || 0) : 1;
     if (!passengerName) throw new Error(`${label}: Passenger Name is required.`);
     if (!packageType) throw new Error(`${label}: Package Type is required.`);
-    if (rate <= 0) throw new Error(`${label}: Rate Per Person must be greater than zero.`);
+    if (!Number.isFinite(rate)) throw new Error(`${label}: Rate Per Person must be a valid number.`);
     if (explicit && qty <= 0) throw new Error(`${label}: Qty must be greater than zero or left blank.`);
     return {
       passengerType: line.passengerType,

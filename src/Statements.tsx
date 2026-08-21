@@ -13,6 +13,7 @@ import {
   type StatementBookingSections,
 } from "./StatementBookingData";
 import { buildStatementPdf, StatementPdfData } from "./StatementJsPdf";
+import { getChronologicalLedger, type LedgerRow } from "./LedgerEngine";
 
 type PeriodType = "FULL_LEDGER" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM";
 
@@ -21,6 +22,7 @@ type Props = {
   parties: Party[];
   initialPartyId?: string;
   onOpenLedger: (party: Party) => void;
+  onConsumed?: () => void;
 };
 
 function emptySections(): StatementBookingSections {
@@ -99,13 +101,27 @@ function sar(value: number) {
   return `SAR ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
 
-export default function StatementsModule({ company, parties, initialPartyId = "", onOpenLedger }: Props) {
-  const [partyId, setPartyId] = useState(initialPartyId || parties[0]?.id || "");
+export default function StatementsModule({ company, parties, initialPartyId = "", onOpenLedger, onConsumed }: Props) {
+  const initialParty = parties.find(p => p.id === initialPartyId);
+  const [statementDirection, setStatementDirection] = useState<"PARTY" | "VENDOR" | null>(
+    (initialParty?.account_type as "PARTY" | "VENDOR") || null
+  );
+  const [partyId, setPartyId] = useState(initialPartyId || "");
+
+  // Once we've consumed the initialPartyId, clear it in the parent so
+  // subsequent visits to Statements start with the direction-selection screen.
+  useEffect(() => {
+    if (initialPartyId && onConsumed) {
+      onConsumed();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [periodType, setPeriodType] = useState<PeriodType>("FULL_LEDGER");
   const [fromDate, setFromDate] = useState(todayIso());
   const [toDate, setToDate] = useState(todayIso());
   const [sections, setSections] = useState<StatementBookingSections>(() => emptySections());
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
+  const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
   const [statementRef, setStatementRef] = useState(makeStatementRef());
   const [generatedOn, setGeneratedOn] = useState(generatedDate());
   const [previewUrl, setPreviewUrl] = useState("");
@@ -123,10 +139,8 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   useEffect(() => {
     if (initialPartyId && parties.some((party) => party.id === initialPartyId)) {
       setPartyId(initialPartyId);
-    } else if (!partyId && parties[0]) {
-      setPartyId(parties[0].id);
     }
-  }, [initialPartyId, parties, partyId]);
+  }, [initialPartyId, parties]);
 
   useEffect(() => {
     if (!partyId || !selectedParty) {
@@ -134,23 +148,25 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       setPayments([]);
       return;
     }
-    void loadPartyTransactions(partyId, selectedParty.account_type);
+    void loadPartyTransactions(partyId, selectedParty.account_type, selectedParty);
   }, [company.id, partyId, selectedParty?.account_type]);
 
-  async function loadPartyTransactions(selectedPartyId: string, accountType: Party["account_type"]) {
+  async function loadPartyTransactions(selectedPartyId: string, accountType: Party["account_type"], party: Party) {
     setLoading(true);
     setError("");
     setMessage("");
     try {
-      const [bookingSections, paymentRows] = await Promise.all([
+      const [bookingSections, paymentRows, fullLedger] = await Promise.all([
         getStatementBookingSections(company.id, selectedPartyId, accountType),
         getPayments(company.id, "", selectedPartyId),
+        getChronologicalLedger(company.id, party),
       ]);
 
       const activePayments = paymentRows.filter((row) => row.status === "ACTIVE");
       const headers = statementBookingHeaders(bookingSections);
       setSections(bookingSections);
       setPayments(activePayments);
+      setLedgerRows(fullLedger);
       applyAutomaticPeriod(periodType, headers, activePayments);
       refreshStatementIdentity();
     } catch (e) {
@@ -260,8 +276,9 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       pendingSarBalance,
       sections: periodSections,
       payments: periodPayments,
+      ledgerRows: ledgerRows.filter((row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate)),
     };
-  }, [company, selectedParty, accountDirection, fromDate, toDate, generatedOn, statementRef, openingBalance, bookingsDuringPeriod, paymentsDuringPeriod, closingBalance, pendingSarBalance, periodSections, periodPayments]);
+  }, [company, selectedParty, accountDirection, fromDate, toDate, generatedOn, statementRef, openingBalance, bookingsDuringPeriod, paymentsDuringPeriod, closingBalance, pendingSarBalance, periodSections, periodPayments, ledgerRows]);
 
   useEffect(() => {
     let cancelled = false;
@@ -315,17 +332,63 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     }
   }
 
-  const accountLabel = selectedParty?.account_type === "VENDOR" ? "Vendor / Supplier" : "Party / Customer";
-  const bookedLabel = selectedParty?.account_type === "VENDOR" ? "PURCHASE BOOKINGS" : "SALE BOOKINGS";
-  const balanceLabel = selectedParty?.account_type === "VENDOR" ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE";
+  const accountLabel = statementDirection === "VENDOR" ? "Vendor / Supplier" : "Party / Customer";
+  const bookedLabel = statementDirection === "VENDOR" ? "PURCHASE BOOKINGS" : "SALE BOOKINGS";
+  const balanceLabel = statementDirection === "VENDOR" ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE";
   const periodBookingCount = countStatementBookings(periodSections);
 
+  if (!statementDirection) {
+    return (
+      <section className="content-card bookings-page bookings-flow-v2">
+        <section className="booking-entry-screen booking-direction-screen">
+          <div className="booking-screen-toolbar"><span></span></div>
+          <div className="booking-screen-heading centered-heading">
+            <span className="eyebrow blue">STATEMENT OF ACCOUNT</span>
+            <h2>Which statement do you need?</h2>
+            <p>Select whether you want to generate a statement for a Party (Customer) or a Vendor (Supplier).</p>
+          </div>
+          <div className="booking-direction-grid">
+            <button type="button" className="booking-direction-card sale" onClick={() => setStatementDirection("PARTY")}>
+              <span className="direction-card-icon" aria-hidden="true">↗</span>
+              <div>
+                <small>PARTY / CUSTOMER</small>
+                <b>Customer Statement</b>
+                <p>Generate a statement showing receivable balances and sale bookings.</p>
+              </div>
+              <span className="direction-arrow">→</span>
+            </button>
+            <button type="button" className="booking-direction-card purchase" onClick={() => setStatementDirection("VENDOR")}>
+              <span className="direction-card-icon" aria-hidden="true">↙</span>
+              <div>
+                <small>VENDOR / SUPPLIER</small>
+                <b>Supplier Statement</b>
+                <p>Generate a statement showing payable balances and purchase bookings.</p>
+              </div>
+              <span className="direction-arrow">→</span>
+            </button>
+          </div>
+        </section>
+      </section>
+    );
+  }
+
   return (
-    <section className="content-card statements-page">
-      <div className="page-title">
+    <section className="content-card statements-page bookings-flow-v2">
+      <div className="booking-screen-toolbar" style={{ marginBottom: "16px", padding: "0 24px" }}>
+        <button type="button" className="booking-back-button" onClick={() => { setStatementDirection(null); setPartyId(""); }}>
+          ← Change Statement Type
+        </button>
+        <div className="bf-toolbar-actions">
+          <span className={`direction-badge ${statementDirection === "PARTY" ? "sale" : "purchase"}`}>
+            {statementDirection === "PARTY" ? "CUSTOMER STATEMENT" : "SUPPLIER STATEMENT"}
+          </span>
+        </div>
+      </div>
+      
+      <div className="page-title" style={{ marginTop: 0 }}>
         <div>
           <span className="eyebrow blue">SERVICE-WISE BOOKING STATEMENT</span>
-          <h2>Statements</h2>
+          <h2>{statementDirection === "PARTY" ? "Party Statement" : "Vendor Statement"}</h2>
           <p>Package, Ticket, Hotel, Visa, Transport and Misc are shown as separate statement sections with service-specific fields.</p>
         </div>
         {selectedParty && <button className="secondary" onClick={() => onOpenLedger(selectedParty)}>Open Account Ledger</button>}
@@ -338,7 +401,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
         <label>{accountLabel}
           <select value={partyId} onChange={(e) => setPartyId(e.target.value)}>
             <option value="">Select account...</option>
-            {parties.filter((party) => party.account_type !== "UNASSIGNED").map((party) => <option key={party.id} value={party.id}>{party.name} · {party.account_type}</option>)}
+            {parties.filter((party) => party.account_type === statementDirection).map((party) => <option key={party.id} value={party.id}>{party.name} · {party.account_type}</option>)}
           </select>
         </label>
         <div className="statement-period-tabs">

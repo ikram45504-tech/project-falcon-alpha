@@ -15,14 +15,16 @@ import {
   updateCompanyUser,
 } from "./db";
 import { EMPLOYEE_ROLES, ROLE_LABELS, UserRole, hasPermission, roleDescription } from "./permissions";
+import DiagnosticPanel from "./DiagnosticPanel";
 
 type Props = {
   company: Company;
   session: UserSession;
   onCompanyUpdated: (company: Company) => void;
+  category: "ACCOUNT" | "SECURITY";
 };
 
-type SecurityTab = "MY_ACCOUNT" | "USERS" | "COMPANY" | "AUDIT";
+type SecurityTab = "MY_ACCOUNT" | "USERS" | "COMPANY" | "AUDIT" | "DIAGNOSTICS";
 
 type UserForm = {
   fullName: string;
@@ -51,12 +53,12 @@ function formatDateTime(value: string) {
   return date.toLocaleString("en-PK");
 }
 
-export default function SecurityCenter({ company, session, onCompanyUpdated }: Props) {
+export default function SecurityCenter({ company, session, onCompanyUpdated, category }: Props) {
   const canManageUsers = hasPermission(session.role, "manage_users");
   const canManageCompany = hasPermission(session.role, "manage_company");
   const canViewAudit = hasPermission(session.role, "view_audit");
 
-  const defaultTab: SecurityTab = canManageUsers ? "USERS" : "MY_ACCOUNT";
+  const defaultTab: SecurityTab = category === "ACCOUNT" ? "MY_ACCOUNT" : (canManageUsers ? "USERS" : "AUDIT");
   const [tab, setTab] = useState<SecurityTab>(defaultTab);
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [audit, setAudit] = useState<AuditLog[]>([]);
@@ -286,12 +288,12 @@ export default function SecurityCenter({ company, session, onCompanyUpdated }: P
   }
 
   return (
-    <section className="content-card security-page">
+    <section className="content-card security-page" style={{ margin: 0 }}>
       <div className="page-title security-title">
         <div>
-          <span className="eyebrow blue">ACCOUNT & SECURITY</span>
-          <h2>Company access control</h2>
-          <p>Manage company access, team permissions, profile details and security activity from one place.</p>
+          <span className="eyebrow blue">{category === "ACCOUNT" ? "ACCOUNT & PROFILE" : "SECURITY & ACCESS"}</span>
+          <h2>{category === "ACCOUNT" ? "Personal & Company Settings" : "Company access control"}</h2>
+          <p>{category === "ACCOUNT" ? "Manage your login credentials and the global agency branding." : "Manage team permissions and review security audit activity."}</p>
         </div>
         <div className="company-code-card">
           <small>COMPANY CODE / AGENCY ID</small>
@@ -301,10 +303,19 @@ export default function SecurityCenter({ company, session, onCompanyUpdated }: P
       </div>
 
       <div className="security-tabs">
-        <button className={tab === "MY_ACCOUNT" ? "active" : ""} onClick={() => { clearAlerts(); setTab("MY_ACCOUNT"); }}>My Account</button>
-        {canManageUsers && <button className={tab === "USERS" ? "active" : ""} onClick={() => { clearAlerts(); setTab("USERS"); }}>Users & Permissions</button>}
-        {canManageCompany && <button className={tab === "COMPANY" ? "active" : ""} onClick={() => { clearAlerts(); setTab("COMPANY"); }}>Company Profile</button>}
-        {canViewAudit && <button className={tab === "AUDIT" ? "active" : ""} onClick={() => { clearAlerts(); setTab("AUDIT"); void loadAudit(); }}>Audit Log</button>}
+        {category === "ACCOUNT" && (
+          <>
+            <button className={tab === "MY_ACCOUNT" ? "active" : ""} onClick={() => { clearAlerts(); setTab("MY_ACCOUNT"); }}>My Account</button>
+            {canManageCompany && <button className={tab === "COMPANY" ? "active" : ""} onClick={() => { clearAlerts(); setTab("COMPANY"); }}>Company Profile</button>}
+          </>
+        )}
+        {category === "SECURITY" && (
+          <>
+            {canManageUsers && <button className={tab === "USERS" ? "active" : ""} onClick={() => { clearAlerts(); setTab("USERS"); }}>Users & Permissions</button>}
+            {canViewAudit && <button className={tab === "AUDIT" ? "active" : ""} onClick={() => { clearAlerts(); setTab("AUDIT"); void loadAudit(); }}>Audit Log</button>}
+            {canManageCompany && <button className={tab === "DIAGNOSTICS" ? "active warning" : "warning"} onClick={() => { clearAlerts(); setTab("DIAGNOSTICS"); }}>Diagnostics</button>}
+          </>
+        )}
       </div>
 
       {message && <div className="alert success">{message}</div>}
@@ -443,6 +454,10 @@ export default function SecurityCenter({ company, session, onCompanyUpdated }: P
             <div className="modal-buttons"><button className="secondary" type="button" onClick={() => setResetUser(null)}>Cancel</button><button className="primary" type="button" disabled={busy} onClick={saveResetPassword}>Reset Password</button></div>
           </section>
         </div>
+      )}
+
+      {tab === "DIAGNOSTICS" && canManageCompany && (
+        <DiagnosticPanel companyId={company.id} />
       )}
     </section>
   );

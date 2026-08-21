@@ -4,7 +4,9 @@ import { createParty, getPackageBookings, voidPackageBooking } from "./db";
 import { createPackageCommercialBooking } from "./PackageFlowDb";
 import PackageOperationalDetails from "./PackageOperationalDetails";
 import PackageBookingAdjustment from "./PackageBookingAdjustment";
+import { useBookingFlowState } from "./useBookingFlowState";
 import { getPackageAdjustmentSummaryMap, type PackageAdjustmentSummary } from "./PackageAdjustmentDb";
+import { packageEffectiveCount, packageRowHasData, packageRowTotal, calculatePackageSummary } from "./pricingEngines";
 import "./PackageBookingFlow.css";
 
 type Props = {
@@ -19,7 +21,7 @@ type Props = {
   onChanged?: () => void | Promise<void>;
 };
 
-type Mode = "FORM" | "REGISTER";
+
 type RegisterFilter = "ALL" | BookingTransactionType;
 type PackageRowState = { rowId: string; passengerType: PackagePassengerType; passengerName: string; packageType: string; rate: string; count: string };
 type QuickAccountState = { name: string; phone: string; whatsapp: string; address: string; notes: string };
@@ -30,16 +32,7 @@ const blankQuickAccount: QuickAccountState = { name: "", phone: "", whatsapp: ""
 function newRow(passengerType: PackagePassengerType): PackageRowState {
   return { rowId: crypto.randomUUID(), passengerType, passengerName: "", packageType: "", rate: "", count: "" };
 }
-function localDate() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-function numberValue(value: string) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : 0; }
-function explicitCount(value: string) { return Math.max(0, Math.trunc(numberValue(value))); }
-function effectiveCount(value: string) { return value.trim() === "" ? 1 : explicitCount(value); }
-function rowHasData(row: PackageRowState) { return Boolean(row.passengerName.trim() || row.packageType.trim() || row.rate.trim() || row.count.trim()); }
-function rowPax(row: PackageRowState) { return rowHasData(row) ? effectiveCount(row.count) : 0; }
-function rowTotal(row: PackageRowState) { return Math.max(0, numberValue(row.rate)) * effectiveCount(row.count); }
+
 function money(value: number) { return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`; }
 function cleanDigits(value: string) { return value.replace(/\D/g, "").slice(0, 4); }
 function ubFromDigits(value: string) { const digits = cleanDigits(value); return digits ? `UB-${digits.padStart(4, "0")}` : ""; }
@@ -47,23 +40,12 @@ function normalized(value: string) { return value.trim().toUpperCase(); }
 function digitsFromUb(value: string) { const match = normalized(value).match(/^UB-(\d{1,4})$/); return match ? String(Number(match[1])) : ""; }
 
 export default function PackageBookingFlowV2({ companyId, parties, transactionType, userId = "", canCreate = true, canEdit = true, canVoid = true, onBack, onChanged }: Props) {
-  const [mode, setMode] = useState<Mode>("FORM");
-  const [activeTransactionType, setActiveTransactionType] = useState<BookingTransactionType>(transactionType);
-  const [counterpartyId, setCounterpartyId] = useState("");
-  const [bookingDate, setBookingDate] = useState(localDate());
-  const [ubDigits, setUbDigits] = useState("");
-  const [ubNumber, setUbNumber] = useState("");
-  const [ubAssigned, setUbAssigned] = useState(false);
-  const [commercialSaved, setCommercialSaved] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [rows, setRows] = useState<PackageRowState[]>([newRow("ADULT")]);
   const [entries, setEntries] = useState<PackageBooking[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const { mode, setMode, tx: activeTransactionType, setTx: setActiveTransactionType, counterpartyId, setCounterpartyId, bookingDate, setBookingDate, ubDigits, setUbDigits, ubNumber, setUbNumber, assigned: ubAssigned, setAssigned: setUbAssigned, saved: commercialSaved, setSaved: setCommercialSaved, detailsOpen, setDetailsOpen, editingId, setEditingId, busy, setBusy, error, setError, message, setMessage, assignUb: hookAssign, resetState } = useBookingFlowState(companyId, transactionType, entries, "Package");
+
+  const [rows, setRows] = useState<PackageRowState[]>([newRow("ADULT")]);
   const [registerFilter, setRegisterFilter] = useState<RegisterFilter>("ALL");
   const [search, setSearch] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [quickAccountOpen, setQuickAccountOpen] = useState(false);
   const [quickAccount, setQuickAccount] = useState<QuickAccountState>(blankQuickAccount);
   const [quickAccountBusy, setQuickAccountBusy] = useState(false);
@@ -71,7 +53,7 @@ export default function PackageBookingFlowV2({ companyId, parties, transactionTy
   const [adjustmentBooking, setAdjustmentBooking] = useState<PackageBooking | null>(null);
   const [historyBooking, setHistoryBooking] = useState<PackageBooking | null>(null);
 
-  useEffect(() => { if (!editingId) setActiveTransactionType(transactionType); }, [transactionType, editingId]);
+
   useEffect(() => { void loadEntries(""); }, [companyId]);
 
   const eligibleAccounts = useMemo(() => {
@@ -84,12 +66,7 @@ export default function PackageBookingFlowV2({ companyId, parties, transactionTy
     entries.forEach((entry) => entry.lines.forEach((line) => line.package_type.trim() && values.add(line.package_type.trim())));
     return Array.from(values).sort((a, b) => a.localeCompare(b));
   }, [entries]);
-  const totals = useMemo(() => {
-    const qty = { ADULT: 0, CHILD: 0, INFANT: 0 };
-    const amount = { ADULT: 0, CHILD: 0, INFANT: 0 };
-    rows.forEach((row) => { qty[row.passengerType] += rowPax(row); amount[row.passengerType] += rowTotal(row); });
-    return { qty, amount, totalPax: qty.ADULT + qty.CHILD + qty.INFANT, grandTotal: amount.ADULT + amount.CHILD + amount.INFANT };
-  }, [rows]);
+  const totals = useMemo(() => calculatePackageSummary(rows), [rows]);
 
   const accountingEntries = entries.filter((entry) => entry.status === "ACTIVE");
   const liveBookings = accountingEntries.filter((entry) => (adjustmentSummaries[entry.id]?.lifecycleStatus || "ACTIVE") !== "CANCELLED");
@@ -112,45 +89,23 @@ export default function PackageBookingFlowV2({ companyId, parties, transactionTy
   }
 
   function resetForm() {
-    setActiveTransactionType(transactionType);
-    setCounterpartyId("");
-    setBookingDate(localDate());
-    setUbDigits("");
-    setUbNumber("");
-    setUbAssigned(false);
-    setCommercialSaved(false);
-    setDetailsOpen(false);
+    resetState();
     setRows([newRow("ADULT")]);
-    setEditingId(null);
-    setError("");
-    setMessage("");
   }
 
-  function assignUb() {
-    setError("");
-    setMessage("");
-    if (!counterpartyId) return setError(activeTransactionType === "SALE" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");
-    if (!bookingDate) return setError("Date of Booking is required.");
+  async function assignUb() {
     if (!ubDigits) return setError("Enter a booking number using 1 to 4 digits.");
     const formatted = ubFromDigits(ubDigits);
-    const duplicate = entries.find((entry) => {
-      if (normalized(entry.ub_number) !== formatted) return false;
-      if (activeTransactionType === "SALE") return entry.transaction_type === "SALE";
-      return entry.transaction_type === "PURCHASE" && entry.counterparty_id === counterpartyId;
-    });
-    if (duplicate) return setError(activeTransactionType === "SALE" ? `${formatted} already has a Package Sale booking. Open it from Package Booking Register.` : `This Vendor already has a Package Purchase booking for ${formatted}. Open it from Package Booking Register.`);
-    setUbNumber(formatted);
-    setUbAssigned(true);
-    setMessage(`${formatted} is ready. Enter Package Details & Rates below and save the booking.`);
+    hookAssign(formatted);
   }
 
   function buildLines(): PackageBookingLineInput[] {
-    return rows.filter(rowHasData).map((row) => ({
+    return rows.filter(packageRowHasData).map((row) => ({
       passengerType: row.passengerType,
       passengerName: row.passengerName,
       packageType: row.packageType,
-      ratePerPerson: numberValue(row.rate),
-      personCount: row.count.trim() === "" ? null : explicitCount(row.count),
+      ratePerPerson: Math.max(0, Number(row.rate)||0),
+      personCount: packageEffectiveCount(row.count),
       qtyIsExplicit: row.count.trim() !== "",
     }));
   }
@@ -195,7 +150,8 @@ export default function PackageBookingFlowV2({ companyId, parties, transactionTy
     if (editingId) return;
     const target = rows.find((row) => row.rowId === rowId);
     if (!target) return;
-    if (target.passengerType === "ADULT" && rows.filter((row) => row.passengerType === "ADULT").length === 1) return setError("At least one Adult package row is required.");
+    const filtered = rows.filter(packageRowHasData);
+    if (filtered.length <= 1 && target.passengerType === "ADULT") return setError("At least one adult passenger row is required.");
     setRows((current) => current.filter((row) => row.rowId !== rowId));
   }
 
@@ -271,19 +227,19 @@ export default function PackageBookingFlowV2({ companyId, parties, transactionTy
     const items = rows.filter((row) => row.passengerType === type);
     const label = type === "ADULT" ? "ADULTS" : type === "CHILD" ? "CHILDREN" : "INFANTS";
     const button = type === "ADULT" ? "+ Add Adult" : type === "CHILD" ? "+ Add Child" : "+ Add Infant";
-    const locked = Boolean(editingId);
+    const commercialLocked = Boolean(editingId);
     return <section className={`package14-passenger-group ${type.toLowerCase()}`}>
-      <div className="package14-passenger-head"><div><b>{label}</b><small>{locked ? "Locked — use Booking Adjustment" : type === "ADULT" ? "Required" : "Optional"}</small></div>{!locked && <button type="button" onClick={() => addPassengerRow(type)}>{button}</button>}</div>
+      <div className="package14-passenger-head"><div><b>{label}</b><small>{commercialLocked ? "Locked — use Booking Adjustment" : type === "ADULT" ? "Required" : "Optional"}</small></div>{!commercialLocked && <button type="button" onClick={() => addPassengerRow(type)}>{button}</button>}</div>
       {items.length ? items.map((row, index) => {
         const passengerLabel = type === "ADULT" ? "Adult" : type === "CHILD" ? "Child" : "Infant";
         return <div className="package14-rate-row" key={row.rowId}>
           <span className="package14-sr">{index + 1}</span>
-          <label>Passenger / Family Head *<input disabled={locked} value={row.passengerName} onChange={(e) => updateRow(row.rowId, { passengerName: e.target.value })} /></label>
-          <label>Package Type *<input disabled={locked} list="package14-type-options" value={row.packageType} onChange={(e) => updateRow(row.rowId, { packageType: e.target.value })} /></label>
-          <label>Rate / {passengerLabel} (PKR) *<input disabled={locked} type="number" min="0" step="0.01" value={row.rate} onChange={(e) => updateRow(row.rowId, { rate: e.target.value })} /></label>
-          <label>Qty<input disabled={locked} type="number" min="1" step="1" value={row.count} onChange={(e) => updateRow(row.rowId, { count: e.target.value })} /></label>
-          <div className="package14-subtotal"><small>SUB TOTAL</small><b>{money(rowTotal(row))}</b></div>
-          {!locked && <button type="button" className="package14-remove" onClick={() => removeRow(row.rowId)}>×</button>}
+          <label>Passenger / Family Head *<input disabled={commercialLocked} value={row.passengerName} onChange={(e) => updateRow(row.rowId, { passengerName: e.target.value })} /></label>
+          <label>Package Type *<input disabled={commercialLocked} list="package14-type-options" value={row.packageType} onChange={(e) => updateRow(row.rowId, { packageType: e.target.value })} /></label>
+          <label>Rate / {passengerLabel} (PKR) *<input disabled={commercialLocked} type="number" min="0" step="0.01" value={row.rate} onChange={(e) => updateRow(row.rowId, { rate: e.target.value })} /></label>
+          <label>Qty<input disabled={commercialLocked} type="number" min="1" step="1" value={row.count} onChange={(e) => updateRow(row.rowId, { count: e.target.value })} /></label>
+          <td className="money-cell">{money(packageRowTotal(row))}</td>
+          {!commercialLocked && <td><button type="button" className="package14-remove" onClick={() => removeRow(row.rowId)}>×</button></td>}
         </div>;
       }) : <div className="package14-empty-row">No active {label.toLowerCase()} rows.</div>}
     </section>;

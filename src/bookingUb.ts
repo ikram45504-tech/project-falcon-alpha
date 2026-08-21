@@ -13,5 +13,5 @@ export function bookingDigitsFromUb(value: string) {
 }
 
 export function normalizeBookingUb(value: string) {
-  return value.trim().toUpperCase();
+  return value.trim().replace(/\s+/g, " ").toUpperCase();
 }

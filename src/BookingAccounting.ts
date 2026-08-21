@@ -123,10 +123,17 @@ export async function getPartyBookingTotals(companyId: string) {
 }
 
 export async function getCompanyBookingSummary(companyId: string): Promise<CompanyBookingSummary> {
-  const rows = await getPartyBookingTotals(companyId);
-  const saleTotal = rows.reduce((sum, row) => sum + Number(row.sale_total || 0), 0);
-  const purchaseTotal = rows.reduce((sum, row) => sum + Number(row.purchase_total || 0), 0);
-  const activeBookings = (await getActiveBookingAccountingEntries(companyId)).length;
+  // Load all entries once — avoids running the 6-table UNION twice.
+  const rows = await getBookingAccountingEntries(companyId);
+  let saleTotal = 0;
+  let purchaseTotal = 0;
+  let activeBookings = 0;
+  for (const row of rows) {
+    if (row.status !== "ACTIVE") continue;
+    activeBookings += 1;
+    if (row.transaction_type === "SALE") saleTotal += Number(row.total_pkr || 0);
+    else purchaseTotal += Number(row.total_pkr || 0);
+  }
   return { saleTotal, purchaseTotal, grossMargin: saleTotal - purchaseTotal, activeBookings };
 }
 

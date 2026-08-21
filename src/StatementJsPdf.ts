@@ -7,6 +7,7 @@ import {
   type StatementBookingSections,
 } from "./StatementBookingData";
 import type { BookingServiceName } from "./BookingLifecycle";
+import type { LedgerRow } from "./LedgerEngine";
 
 export type StatementPdfData = {
   company: Company;
@@ -23,6 +24,7 @@ export type StatementPdfData = {
   pendingSarBalance: number;
   sections: StatementBookingSections;
   payments: PaymentEntry[];
+  ledgerRows?: LedgerRow[];
 };
 
 type Align = "left" | "center" | "right";
@@ -111,7 +113,6 @@ function imageFormat(dataUrl: string) {
   const type = (/^data:image\/([^;]+);/i.exec(dataUrl)?.[1] || "png").toLowerCase();
   return type.includes("jpeg") || type.includes("jpg") ? "JPEG" : type.includes("webp") ? "WEBP" : "PNG";
 }
-function sum<T>(rows: T[], selector: (row: T) => number) { return rows.reduce((total, row) => total + Number(selector(row) || 0), 0); }
 function titleCase(value: string) { return value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase()); }
 function flightTypeLabel(value: string) { return value === "ONE_WAY" ? "One Way" : value === "MULTI_CITY" ? "Multi-City" : "Return"; }
 function visaTypeLabel(value: VisaType | string) {
@@ -808,6 +809,46 @@ export function buildStatementPdf(data: StatementPdfData) {
   y = renderSection(doc, data, "PAYMENTS", paymentColumns, paymentRows, { label: "PAYMENTS SUBTOTAL", pkr: data.paymentsDuringPeriod }, PAYMENT_THEME, y);
 
   drawReconciliation(doc, data, y);
+
+  // Append Chronological Ledger Summary Page
+  if (data.ledgerRows && data.ledgerRows.length > 0) {
+    doc.addPage();
+    y = drawHeader(doc, data);
+    
+    y = drawSectionTitle(doc, "FINANCIAL LEDGER SUMMARY", { dark: COLORS.navy, header: COLORS.blueHeader, alt: COLORS.blueAlt, subtotal: COLORS.blueSubtotal }, y);
+    
+    const ledgerCols: Column[] = [
+      { width: 25, header: "DATE", align: "center" },
+      { width: 35, header: "REF NO." },
+      { width: 45, header: "DESCRIPTION" },
+      { width: 25, header: "DEBIT", align: "right" },
+      { width: 25, header: "CREDIT", align: "right" },
+      { width: 35, header: "BALANCE", align: "right" },
+    ];
+    
+    y = drawColumns(doc, ledgerCols, { dark: COLORS.navy, header: COLORS.blueHeader, alt: COLORS.blueAlt, subtotal: COLORS.blueSubtotal }, y);
+    
+    data.ledgerRows.forEach((row, idx) => {
+      if (y > PAGE_BOTTOM - 15) {
+        doc.addPage();
+        y = drawHeader(doc, data);
+        y = drawSectionTitle(doc, "FINANCIAL LEDGER SUMMARY (CONT.)", { dark: COLORS.navy, header: COLORS.blueHeader, alt: COLORS.blueAlt, subtotal: COLORS.blueSubtotal }, y);
+        y = drawColumns(doc, ledgerCols, { dark: COLORS.navy, header: COLORS.blueHeader, alt: COLORS.blueAlt, subtotal: COLORS.blueSubtotal }, y);
+      }
+      
+      const lCells: Cell[] = [
+        { text: shortDate(row.transaction_date), align: "center" },
+        { text: safeText(row.ref_no) },
+        { text: safeText(row.description) },
+        { text: money(row.debit), align: "right" },
+        { text: money(row.credit), align: "right" },
+        { text: money(row.running_balance), align: "right", bold: true },
+      ];
+      
+      y = drawRow(doc, { cells: lCells }, ledgerCols, y, rowHeight(doc, lCells, ledgerCols), idx % 2 === 1 ? COLORS.blueAlt : undefined);
+    });
+  }
+
   drawFooters(doc, data);
   return doc;
 }

@@ -1,6 +1,7 @@
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { initializeDatabaseSafety } from "./DatabaseSafety";
+import { ThemeProvider } from "./ThemeContext";
 
 function renderSafetyFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -22,7 +23,11 @@ async function bootstrap() {
     if (report.duplicatePaymentDocuments > 0) {
       console.warn(`Database Safety: ${report.duplicatePaymentDocuments} duplicate payment document group(s) need cleanup before uniqueness can be enforced.`);
     }
-    ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<App />);
+    ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    );
   } catch (error) {
     console.error("Database safety bootstrap failed:", error);
     renderSafetyFailure(error);

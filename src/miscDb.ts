@@ -168,7 +168,7 @@ function calculateLines(lines: MiscBookingLineInput[]) {
     const roe = line.roe == null ? 0 : Number(line.roe);
     if (!serviceName) throw new Error(`Misc row ${index + 1}: Service Name is required.`);
     if (!Number.isFinite(paxCount) || paxCount < 1 || paxCount > 9999) throw new Error(`Misc row ${index + 1}: No. of Pax must be at least 1.`);
-    if (!Number.isFinite(ratePerPerson) || ratePerPerson <= 0) throw new Error(`Misc row ${index + 1}: Rate / Person must be greater than zero.`);
+    if (!Number.isFinite(ratePerPerson)) throw new Error(`Misc row ${index + 1}: Rate / Person must be a valid number.`);
     if (!Number.isFinite(roe) || roe < 0) throw new Error(`Misc row ${index + 1}: ROE cannot be negative.`);
 
     const currencyMode: "PKR" | "SAR" = roe > 0 ? "SAR" : "PKR";

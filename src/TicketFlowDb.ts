@@ -179,7 +179,7 @@ function calculateLines(lines: TicketCommercialLineInput[]) {
     if (!airlineName) throw new Error(`Ticket row ${index + 1}: Airline is required.`);
     if (!allowedFlightTypes.includes(line.flightType)) throw new Error(`Ticket row ${index + 1}: select a Flight Type.`);
     if (!ticketRoute) throw new Error(`Ticket row ${index + 1}: Ticket Route is required.`);
-    if (!Number.isFinite(ratePerTicket) || ratePerTicket <= 0) throw new Error(`Ticket row ${index + 1}: Rate / Ticket must be greater than zero.`);
+    if (!Number.isFinite(ratePerTicket)) throw new Error(`Ticket row ${index + 1}: Rate / Ticket must be a valid number.`);
     if (!Number.isFinite(ticketCount) || ticketCount < 1) throw new Error(`Ticket row ${index + 1}: Qty must be at least 1.`);
     return {
       passengerType: line.passengerType,

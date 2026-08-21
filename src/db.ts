@@ -643,7 +643,6 @@ type UserRow = {
 };
 
 type CountRow = { count: number | string };
-type ColumnRow = { name: string };
 
 export type CreateCompanyAccountInput = {
   companyName: string;
@@ -752,16 +751,6 @@ function companyCodePrefixes(name: string) {
 
   if (prefixes.length === 0) prefixes.push("ABC");
   return prefixes;
-}
-
-function randomDigit() {
-  const bytes = crypto.getRandomValues(new Uint8Array(1));
-  return String(bytes[0] % 10);
-}
-
-function randomDigits(length = 4) {
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
-  return Array.from(bytes, (byte) => String(byte % 10)).join("");
 }
 
 function randomLetters(length = 3) {
@@ -1555,21 +1544,9 @@ async function generateUniqueCompanyCode(companyName: string) {
   const database = await db();
   const prefixes = companyCodePrefixes(companyName);
 
-  // Human-friendly, SaaS-ready code: 3 letters + 4 digits.
-  // The format is intentionally hidden from the signup form.
+  // Human-friendly, SaaS-ready code: Exactly 3 letters.
   for (const prefix of prefixes) {
-    for (let attempt = 0; attempt < 250; attempt += 1) {
-      const candidate = `${prefix}${randomDigits(4)}`;
-      const rows = await database.select<CountRow[]>(
-        `SELECT COUNT(*) AS count FROM companies WHERE company_code=$1 COLLATE NOCASE`,
-        [candidate]
-      );
-      if (Number(rows[0]?.count ?? 0) === 0) return candidate;
-    }
-  }
-
-  for (let attempt = 0; attempt < 500; attempt += 1) {
-    const candidate = `${randomLetters(3)}${randomDigits(4)}`;
+    const candidate = prefix;
     const rows = await database.select<CountRow[]>(
       `SELECT COUNT(*) AS count FROM companies WHERE company_code=$1 COLLATE NOCASE`,
       [candidate]
@@ -1577,7 +1554,16 @@ async function generateUniqueCompanyCode(companyName: string) {
     if (Number(rows[0]?.count ?? 0) === 0) return candidate;
   }
 
-  throw new Error("Could not generate a unique Company Code. Please try again.");
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    const candidate = randomLetters(3);
+    const rows = await database.select<CountRow[]>(
+      `SELECT COUNT(*) AS count FROM companies WHERE company_code=$1 COLLATE NOCASE`,
+      [candidate]
+    );
+    if (Number(rows[0]?.count ?? 0) === 0) return candidate;
+  }
+
+  throw new Error("Could not generate a unique 3-letter Company Code.");
 }
 
 function validateOwnerUsername(value: string) {
@@ -4033,4 +4019,44 @@ export async function voidTransportBooking(companyId: string, bookingId: string,
   const rows = await database.select<Array<{ ub_number: string }>>(`SELECT ub_number FROM transport_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,[bookingId,companyId]);
   await database.execute(`UPDATE transport_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,[new Date().toISOString(),actorUserId,bookingId,companyId]);
   if (actorUserId) await createAuditLog(companyId,actorUserId,"BOOKING_VOIDED","TRANSPORT",bookingId,`Transport booking ${rows[0]?.ub_number || bookingId} voided.`);
+}
+
+export async function dangerouslyEraseAllData(companyId: string) {
+  const database = await db();
+  
+  const tables = [
+    "package_bookings", "package_booking_lines", "package_booking_lines_v2", 
+    "package_operational_meta", "package_operational_passengers", "package_operational_hotels", 
+    "package_operational_flights", "package_operational_flight_stopovers", "package_movement_events", "package_booking_adjustments",
+    
+    "ticket_bookings", "ticket_booking_lines", "ticket_operational_meta", "ticket_operational_passengers", "ticket_operational_flights",
+    
+    "hotel_bookings", "hotel_booking_lines", "hotel_commercial_guest_refs", "hotel_operational_reservations", "hotel_operational_guests", "hotel_operational_meta",
+    
+    "visa_bookings", "visa_booking_lines", "visa_transport_fleet", "visa_passport_details", "visa_operational_meta", "visa_operational_passengers",
+    
+    "transport_bookings", "transport_booking_lines", "transport_operational_sectors", "transport_operational_meta",
+    
+    "misc_bookings", "misc_booking_lines", "misc_commercial_family_refs", "misc_operational_services", "misc_operational_meta",
+    
+    "booking_adjustments",
+    
+    "payments", "payment_entries", "payment_v2_meta",
+    
+    "parties", "accommodation_entries", "service_entries",
+    
+    "audit_logs", "remembered_sessions", "users", "companies"
+  ];
+
+  for (const table of tables) {
+    try {
+      if (table === "users" || table === "companies" || table === "remembered_sessions") {
+        await database.execute(`DELETE FROM ${table}`);
+      } else {
+        await database.execute(`DELETE FROM ${table} WHERE company_id = $1`, [companyId]);
+      }
+    } catch (e) {
+      console.warn(`Could not erase table ${table}`, e);
+    }
+  }
 }
