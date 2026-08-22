@@ -108,7 +108,13 @@ async fn open_connection(app: &AppHandle) -> Result<SqliteConnection, String> {
 fn backup_name(label: &str) -> String {
     let clean: String = label
         .chars()
-        .map(|ch| if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' { ch } else { '-' })
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '-'
+            }
+        })
         .collect();
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -125,8 +131,9 @@ async fn vacuum_backup(
     if !source_path.exists() {
         return Ok(None);
     }
-    let metadata = std::fs::metadata(source_path)
-        .map_err(|error| format!("Could not inspect the accounting database before backup: {error}"))?;
+    let metadata = std::fs::metadata(source_path).map_err(|error| {
+        format!("Could not inspect the accounting database before backup: {error}")
+    })?;
     if metadata.len() == 0 {
         return Ok(None);
     }
@@ -147,13 +154,12 @@ async fn vacuum_backup(
 }
 
 async fn table_exists(connection: &mut SqliteConnection, table: &str) -> Result<bool, String> {
-    let count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
-    )
-    .bind(table)
-    .fetch_one(&mut *connection)
-    .await
-    .map_err(|error| format!("Could not inspect SQLite schema: {error}"))?;
+    let count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1")
+            .bind(table)
+            .fetch_one(&mut *connection)
+            .await
+            .map_err(|error| format!("Could not inspect SQLite schema: {error}"))?;
     Ok(count > 0)
 }
 
@@ -178,7 +184,9 @@ async fn enforce_payment_document_uniqueness_inner(
         sqlx::query(CREATE_PAYMENT_DOCUMENT_LOOKUP_INDEX_SQL)
             .execute(&mut *connection)
             .await
-            .map_err(|error| format!("Could not restore the payment document lookup index: {error}"))?;
+            .map_err(|error| {
+                format!("Could not restore the payment document lookup index: {error}")
+            })?;
         return Ok((false, duplicate_groups));
     }
 
@@ -259,7 +267,8 @@ pub async fn ensure_payment_document_uniqueness(
     app: AppHandle,
 ) -> Result<DatabaseSafetyReport, String> {
     let mut connection = open_connection(&app).await?;
-    let (unique, duplicate_groups) = enforce_payment_document_uniqueness_inner(&mut connection).await?;
+    let (unique, duplicate_groups) =
+        enforce_payment_document_uniqueness_inner(&mut connection).await?;
     Ok(DatabaseSafetyReport {
         backup_path: None,
         destructive_migrations_retired: true,
@@ -278,15 +287,17 @@ pub async fn create_database_backup(
     vacuum_backup(
         &mut connection,
         &path,
-        if label.trim().is_empty() { "manual" } else { &label },
+        if label.trim().is_empty() {
+            "manual"
+        } else {
+            &label
+        },
     )
     .await
 }
 
 #[tauri::command]
-pub async fn initialize_database_safety(
-    app: AppHandle,
-) -> Result<DatabaseSafetyReport, String> {
+pub async fn initialize_database_safety(app: AppHandle) -> Result<DatabaseSafetyReport, String> {
     let path = app_database_path(&app)?;
     let existed_before = path.exists()
         && std::fs::metadata(&path)
@@ -299,13 +310,12 @@ pub async fn initialize_database_safety(
         .await
         .map_err(|error| format!("Could not prepare database safety markers: {error}"))?;
 
-    let already_applied: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM app_migrations WHERE migration_key=?1",
-    )
-    .bind(SAFETY_MIGRATION)
-    .fetch_one(&mut connection)
-    .await
-    .map_err(|error| format!("Could not inspect database safety state: {error}"))?;
+    let already_applied: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM app_migrations WHERE migration_key=?1")
+            .bind(SAFETY_MIGRATION)
+            .fetch_one(&mut connection)
+            .await
+            .map_err(|error| format!("Could not inspect database safety state: {error}"))?;
 
     let backup_path = if already_applied == 0 && existed_before {
         vacuum_backup(&mut connection, &path, "pre-safety-pack").await?
@@ -334,7 +344,9 @@ pub async fn initialize_database_safety(
         .await
         {
             let _ = sqlx::query("ROLLBACK").execute(&mut connection).await;
-            return Err(format!("Could not retire an old destructive migration: {error}"));
+            return Err(format!(
+                "Could not retire an old destructive migration: {error}"
+            ));
         }
     }
 
@@ -347,7 +359,9 @@ pub async fn initialize_database_safety(
     .await
     {
         let _ = sqlx::query("ROLLBACK").execute(&mut connection).await;
-        return Err(format!("Could not record database safety migration: {error}"));
+        return Err(format!(
+            "Could not record database safety migration: {error}"
+        ));
     }
 
     sqlx::query("COMMIT")
@@ -355,7 +369,8 @@ pub async fn initialize_database_safety(
         .await
         .map_err(|error| format!("Could not commit database safety migration: {error}"))?;
 
-    let (unique, duplicate_groups) = enforce_payment_document_uniqueness_inner(&mut connection).await?;
+    let (unique, duplicate_groups) =
+        enforce_payment_document_uniqueness_inner(&mut connection).await?;
 
     Ok(DatabaseSafetyReport {
         backup_path,
@@ -410,7 +425,10 @@ mod tests {
             .bind("rcpt-csh-0001")
             .execute(&mut connection)
             .await;
-            assert!(duplicate.is_err(), "case-insensitive duplicate document number must be rejected");
+            assert!(
+                duplicate.is_err(),
+                "case-insensitive duplicate document number must be rejected"
+            );
         });
     }
 
