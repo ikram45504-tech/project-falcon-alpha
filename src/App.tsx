@@ -4,6 +4,9 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocati
 import { AuthProvider, useAuth } from "./AuthContext";
 import { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
 import { ROLE_LABELS, hasPermission } from "./permissions";
+import { check } from "@tauri-apps/plugin-updater";
+import { ask, message } from "@tauri-apps/plugin-dialog";
+import { useEffect } from "react";
 
 // Screens
 import LoginScreen from "./screens/LoginScreen";
@@ -29,6 +32,34 @@ function AppLayout() {
   const [statementPartyId, setStatementPartyId] = useState("");
   const [bookingReset, setBookingReset] = useState(0);
   const [paymentReset, setPaymentReset] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const runCheck = async () => {
+      try {
+        const update = await check();
+        if (active && update) {
+          const yes = await ask(`Update to ${update.version} is available!\n\nRelease notes: ${update.body}`, {
+            title: "Update Available",
+            kind: "info",
+          });
+          if (yes) {
+            await update.downloadAndInstall();
+            await message("Update installed successfully! Please restart the application to apply changes.", {
+              title: "Update Complete",
+              kind: "info",
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Auto update check failed:", err);
+      }
+    };
+    runCheck();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const initials = useMemo(() => {
     const text = company?.name || "TA";
