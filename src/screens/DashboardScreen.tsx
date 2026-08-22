@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { getDashboardMetrics, getRecentActivity, DashboardMetrics, RecentActivity } from "../DashboardDb";
 import { useNavigate } from "react-router-dom";
+import { check } from "@tauri-apps/plugin-updater";
+import { ask, message } from "@tauri-apps/plugin-dialog";
 
 // Helper to format currency
 const pkr = (val: number) =>
@@ -19,6 +21,29 @@ export default function DashboardScreen() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [recent, setRecent] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const checkForUpdates = async () => {
+    try {
+      const update = await check();
+      if (update) {
+        const yes = await ask(`Update to ${update.version} is available!\n\nRelease notes: ${update.body}`, {
+          title: "Update Available",
+          kind: "info",
+        });
+        if (yes) {
+          await update.downloadAndInstall();
+          await message("Update installed successfully! Please restart the application to apply changes.", {
+            title: "Update Complete",
+            kind: "info",
+          });
+        }
+      } else {
+        await message("You are already on the latest version!", { title: "No Update Available", kind: "info" });
+      }
+    } catch (error) {
+      await message(`Error checking for updates: ${error}`, { title: "Update Error", kind: "error" });
+    }
+  };
 
   useEffect(() => {
     if (!company) return;
@@ -65,19 +90,34 @@ export default function DashboardScreen() {
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
           <button
-            onClick={() => navigate("/payments")}
+            onClick={checkForUpdates}
             style={{
               padding: "10px 20px",
               borderRadius: "8px",
               border: "1px solid var(--border-glass)",
-              background: "var(--bg-card)",
-              color: "var(--text-main)",
+              background: "var(--bg-app)",
+              color: "var(--brand-primary)",
               fontWeight: 600,
               cursor: "pointer",
               boxShadow: "var(--shadow-sm)",
             }}
           >
-            Receive Payment
+            🔄 Check for Updates
+          </button>
+          <button
+            onClick={() => navigate("/payments")}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "8px",
+              border: "1px solid var(--border-glass)",
+              background: "var(--brand-primary)",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            Add Payment
           </button>
         </div>
       </header>
