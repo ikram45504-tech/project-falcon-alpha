@@ -29,7 +29,9 @@ export function formatDate(value: string) {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(date).replace(/ /g, "-");
+  })
+    .format(date)
+    .replace(/ /g, "-");
 }
 
 export function formatMoney(value: number) {
@@ -58,10 +60,14 @@ export function AccommodationModule(_props: ModuleProps) {
         <div>
           <span className="eyebrow blue">LEGACY MODULE RETIRED</span>
           <h2>Accommodation moved to Hotel Bookings</h2>
-          <p>Use Bookings → Sale/Purchase → Hotel. Hotel bookings now feed account ledgers and Statements automatically.</p>
+          <p>
+            Use Bookings → Sale/Purchase → Hotel. Hotel bookings now feed account ledgers and Statements automatically.
+          </p>
         </div>
       </div>
-      <div className="alert info">Manual Accommodation entries are disabled to prevent duplicate accounting records.</div>
+      <div className="alert info">
+        Manual Accommodation entries are disabled to prevent duplicate accounting records.
+      </div>
     </section>
   );
 }
@@ -72,11 +78,20 @@ export function AccommodationFormModal({ onClose }: ModalProps) {
     <div className="modal-backdrop" onMouseDown={onClose}>
       <section className="modal-card" onMouseDown={(event) => event.stopPropagation()}>
         <div className="modal-head">
-          <div><span className="eyebrow blue">LEGACY MODULE RETIRED</span><h3>Use Hotel Bookings</h3></div>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <div>
+            <span className="eyebrow blue">LEGACY MODULE RETIRED</span>
+            <h3>Use Hotel Bookings</h3>
+          </div>
+          <button className="close-btn" onClick={onClose}>
+            ×
+          </button>
         </div>
         <div className="alert info">Accommodation transactions must now be created from Bookings → Hotel.</div>
-        <div className="modal-buttons"><button className="primary" onClick={onClose}>Close</button></div>
+        <div className="modal-buttons">
+          <button className="primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </section>
     </div>
   );

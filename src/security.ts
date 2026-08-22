@@ -13,19 +13,9 @@ function base64ToBytes(value: string) {
 
 async function derivePassword(password: string, salt: Uint8Array, iterations: number) {
   const encoder = new TextEncoder();
-  const material = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
+  const material = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
 
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
-    material,
-    256
-  );
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, material, 256);
 
   return new Uint8Array(bits);
 }
@@ -45,7 +35,7 @@ export async function verifyPassword(
   password: string,
   saltBase64: string,
   expectedHashBase64: string,
-  iterations: number
+  iterations: number,
 ) {
   const salt = base64ToBytes(saltBase64);
   const actual = await derivePassword(password, salt, iterations);

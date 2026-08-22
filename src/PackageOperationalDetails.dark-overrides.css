@@ -1,0 +1,441 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR PackageOperationalDetails.css */
+
+:root[data-theme="midnight"] .package15-body {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-pax-strip {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-pax-strip > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-pax-strip > div:first-child {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package15-pax-strip b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-pax-strip .adult {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-pax-strip .child {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-pax-strip .infant {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-pax-strip button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-panel {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-panel-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-panel-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-panel-head > button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-table input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-type,
+:root[data-theme="midnight"] .package15-journey {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-type.child {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-type.infant {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-journey {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-remove {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-empty.movement {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package16-flight-panel {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package16-flight-journeys {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-flight-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-flight-card-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-flight-card.indirect .package16-flight-card-head {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-flight-card-head select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-flight-grid label,
+:root[data-theme="midnight"] .package16-stopover-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-flight-grid input,
+:root[data-theme="midnight"] .package16-stopover-row input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-stopover-zone {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-stopover-title b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-stopover-title button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-no-stopover {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-no-stopover button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-stopover-row {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-via-badge {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-minus {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-movement-panel {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package15-movement-panel .package15-panel-head {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-movement-event b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-movement-event strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-movement-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-movement-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-notes {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-additional.package15-shell .package14-additional-toggle {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-additional.package15-shell.open {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package16-flight-panel.compact {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package16-flight-panel.compact .package15-panel-head {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-compact-wrap {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-compact-flight-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-compact-flight-table td {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-compact-flight-table tr.indirect td {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-compact-flight-table input,
+:root[data-theme="midnight"] .package16-compact-flight-table select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-flight-type {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-dash {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-stopover-airport {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-flight-help {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package16-flight-help b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package16-compact-flight-table tr.indirect .package15-journey {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .package15-body {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-pax-strip {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-pax-strip > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-pax-strip > div:first-child {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package15-pax-strip b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-pax-strip .adult {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-pax-strip .child {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-pax-strip .infant {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-pax-strip button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-panel {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-panel-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-panel-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-panel-head > button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-table input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-type,
+:root[data-theme="ocean"] .package15-journey {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-type.child {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-type.infant {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-journey {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-remove {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-empty.movement {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package16-flight-panel {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package16-flight-journeys {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-flight-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-flight-card-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-flight-card.indirect .package16-flight-card-head {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-flight-card-head select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-flight-grid label,
+:root[data-theme="ocean"] .package16-stopover-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-flight-grid input,
+:root[data-theme="ocean"] .package16-stopover-row input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-stopover-zone {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-stopover-title b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-stopover-title button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-no-stopover {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-no-stopover button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-stopover-row {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-via-badge {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-minus {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-movement-panel {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package15-movement-panel .package15-panel-head {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-movement-event b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-movement-event strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-movement-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-movement-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-notes {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-additional.package15-shell .package14-additional-toggle {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-additional.package15-shell.open {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package16-flight-panel.compact {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package16-flight-panel.compact .package15-panel-head {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-compact-wrap {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-compact-flight-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-compact-flight-table td {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-compact-flight-table tr.indirect td {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-compact-flight-table input,
+:root[data-theme="ocean"] .package16-compact-flight-table select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-flight-type {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-dash {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-stopover-airport {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-flight-help {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package16-flight-help b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package16-compact-flight-table tr.indirect .package15-journey {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}

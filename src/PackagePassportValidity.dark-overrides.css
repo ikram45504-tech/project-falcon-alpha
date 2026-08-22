@@ -1,0 +1,53 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR PackagePassportValidity.css */
+
+:root[data-theme="midnight"] .package15-passport-validity.pending {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.valid {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.amber {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.strong_amber {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.red {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-passport-note b {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .package15-passport-validity.pending {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.valid {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.amber {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.strong_amber {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.red {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-passport-note b {
+  color: var(--text-main) !important;
+}

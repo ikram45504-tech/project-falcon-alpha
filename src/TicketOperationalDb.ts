@@ -98,8 +98,12 @@ async function ensureTables() {
         destination_arrival TEXT NOT NULL DEFAULT '',
         sort_order INTEGER NOT NULL DEFAULT 0
       )`);
-      await database.execute(`CREATE INDEX IF NOT EXISTS idx_ticket_operational_passengers_booking ON ticket_operational_passengers(company_id,booking_id,sort_order)`);
-      await database.execute(`CREATE INDEX IF NOT EXISTS idx_ticket_operational_flights_booking ON ticket_operational_flights(company_id,booking_id,sort_order)`);
+      await database.execute(
+        `CREATE INDEX IF NOT EXISTS idx_ticket_operational_passengers_booking ON ticket_operational_passengers(company_id,booking_id,sort_order)`,
+      );
+      await database.execute(
+        `CREATE INDEX IF NOT EXISTS idx_ticket_operational_flights_booking ON ticket_operational_flights(company_id,booking_id,sort_order)`,
+      );
     })().catch((error) => {
       tablesPromise = null;
       throw error;
@@ -111,64 +115,181 @@ async function ensureTables() {
 async function requireEdit(companyId: string, userId: string) {
   if (!userId) return;
   const database = await db();
-  const rows = await database.select<Array<{ role: UserRole; status: string }>>(`SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`, [userId, companyId]);
+  const rows = await database.select<Array<{ role: UserRole; status: string }>>(
+    `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
+    [userId, companyId],
+  );
   const actor = rows[0];
-  if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, "edit_bookings")) throw new Error("You do not have permission to edit booking details.");
+  if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, "edit_bookings"))
+    throw new Error("You do not have permission to edit booking details.");
 }
 
 async function audit(companyId: string, userId: string, bookingId: string) {
   if (!userId) return;
   const database = await db();
-  const users = await database.select<Array<{ full_name: string }>>(`SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`, [userId, companyId]);
+  const users = await database.select<Array<{ full_name: string }>>(
+    `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
+    [userId, companyId],
+  );
   await database.execute(
     `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
      VALUES ($1,$2,$3,$4,'BOOKING_DETAILS_UPDATED','TICKET',$5,$6,$7)`,
-    [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", bookingId, "Ticket passenger and flight details updated without changing fare totals.", new Date().toISOString()]
+    [
+      crypto.randomUUID(),
+      companyId,
+      userId,
+      users[0]?.full_name || "Unknown User",
+      bookingId,
+      "Ticket passenger and flight details updated without changing fare totals.",
+      new Date().toISOString(),
+    ],
   );
 }
 
-export async function getTicketOperationalDetails(companyId: string, bookingId: string): Promise<TicketOperationalDetails> {
+export async function getTicketOperationalDetails(
+  companyId: string,
+  bookingId: string,
+): Promise<TicketOperationalDetails> {
   await ensureTables();
   const database = await db();
-  const passengers = await database.select<Array<{
-    id: string; passenger_type: TicketPassengerType; given_name: string; surname: string; passport_number: string; eticket_number: string; passport_expiry: string; sort_order: number;
-  }>>(`SELECT id,passenger_type,given_name,surname,passport_number,eticket_number,passport_expiry,sort_order FROM ticket_operational_passengers WHERE company_id=$1 AND booking_id=$2 ORDER BY sort_order`, [companyId, bookingId]);
-  const flights = await database.select<Array<{
-    id: string; journey: TicketJourney; flight_type: TicketJourneyFlightType; departure_date: string; airline_name: string; pnr: string; flight_no: string; from_airport: string; stopover_airport: string; to_airport: string; origin_departure: string; stopover_departure_date: string; stopover_departure_time: string; destination_arrival: string; sort_order: number;
-  }>>(`SELECT id,journey,flight_type,departure_date,airline_name,pnr,flight_no,from_airport,stopover_airport,to_airport,origin_departure,stopover_departure_date,stopover_departure_time,destination_arrival,sort_order FROM ticket_operational_flights WHERE company_id=$1 AND booking_id=$2 ORDER BY sort_order`, [companyId, bookingId]);
-  const meta = await database.select<Array<{ notes: string }>>(`SELECT notes FROM ticket_operational_meta WHERE company_id=$1 AND booking_id=$2 LIMIT 1`, [companyId, bookingId]);
+  const passengers = await database.select<
+    Array<{
+      id: string;
+      passenger_type: TicketPassengerType;
+      given_name: string;
+      surname: string;
+      passport_number: string;
+      eticket_number: string;
+      passport_expiry: string;
+      sort_order: number;
+    }>
+  >(
+    `SELECT id,passenger_type,given_name,surname,passport_number,eticket_number,passport_expiry,sort_order FROM ticket_operational_passengers WHERE company_id=$1 AND booking_id=$2 ORDER BY sort_order`,
+    [companyId, bookingId],
+  );
+  const flights = await database.select<
+    Array<{
+      id: string;
+      journey: TicketJourney;
+      flight_type: TicketJourneyFlightType;
+      departure_date: string;
+      airline_name: string;
+      pnr: string;
+      flight_no: string;
+      from_airport: string;
+      stopover_airport: string;
+      to_airport: string;
+      origin_departure: string;
+      stopover_departure_date: string;
+      stopover_departure_time: string;
+      destination_arrival: string;
+      sort_order: number;
+    }>
+  >(
+    `SELECT id,journey,flight_type,departure_date,airline_name,pnr,flight_no,from_airport,stopover_airport,to_airport,origin_departure,stopover_departure_date,stopover_departure_time,destination_arrival,sort_order FROM ticket_operational_flights WHERE company_id=$1 AND booking_id=$2 ORDER BY sort_order`,
+    [companyId, bookingId],
+  );
+  const meta = await database.select<Array<{ notes: string }>>(
+    `SELECT notes FROM ticket_operational_meta WHERE company_id=$1 AND booking_id=$2 LIMIT 1`,
+    [companyId, bookingId],
+  );
   return {
-    passengers: passengers.map((row) => ({ id: row.id, passengerType: row.passenger_type, givenName: row.given_name, surname: row.surname, passportNumber: row.passport_number, eticketNumber: row.eticket_number, passportExpiry: row.passport_expiry, sortOrder: row.sort_order })),
-    flights: flights.map((row) => ({ id: row.id, journey: row.journey, flightType: row.flight_type === "INDIRECT" ? "INDIRECT" : "DIRECT", departureDate: row.departure_date, airlineName: row.airline_name, pnr: row.pnr, flightNo: row.flight_no, fromAirport: row.from_airport, stopoverAirport: row.stopover_airport, toAirport: row.to_airport, originDeparture: row.origin_departure, stopoverDepartureDate: row.stopover_departure_date, stopoverDepartureTime: row.stopover_departure_time, destinationArrival: row.destination_arrival, sortOrder: row.sort_order })),
+    passengers: passengers.map((row) => ({
+      id: row.id,
+      passengerType: row.passenger_type,
+      givenName: row.given_name,
+      surname: row.surname,
+      passportNumber: row.passport_number,
+      eticketNumber: row.eticket_number,
+      passportExpiry: row.passport_expiry,
+      sortOrder: row.sort_order,
+    })),
+    flights: flights.map((row) => ({
+      id: row.id,
+      journey: row.journey,
+      flightType: row.flight_type === "INDIRECT" ? "INDIRECT" : "DIRECT",
+      departureDate: row.departure_date,
+      airlineName: row.airline_name,
+      pnr: row.pnr,
+      flightNo: row.flight_no,
+      fromAirport: row.from_airport,
+      stopoverAirport: row.stopover_airport,
+      toAirport: row.to_airport,
+      originDeparture: row.origin_departure,
+      stopoverDepartureDate: row.stopover_departure_date,
+      stopoverDepartureTime: row.stopover_departure_time,
+      destinationArrival: row.destination_arrival,
+      sortOrder: row.sort_order,
+    })),
     notes: meta[0]?.notes || "",
   };
 }
 
-export async function saveTicketOperationalDetails(companyId: string, bookingId: string, input: SaveTicketOperationalInput, userId = "") {
+export async function saveTicketOperationalDetails(
+  companyId: string,
+  bookingId: string,
+  input: SaveTicketOperationalInput,
+  userId = "",
+) {
   await requireEdit(companyId, userId);
   await ensureTables();
   const database = await db();
   const now = new Date().toISOString();
-  await database.execute(`DELETE FROM ticket_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
-  await database.execute(`DELETE FROM ticket_operational_flights WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
+  await database.execute(`DELETE FROM ticket_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [
+    companyId,
+    bookingId,
+  ]);
+  await database.execute(`DELETE FROM ticket_operational_flights WHERE company_id=$1 AND booking_id=$2`, [
+    companyId,
+    bookingId,
+  ]);
   for (const [index, passenger] of input.passengers.entries()) {
     await database.execute(
       `INSERT INTO ticket_operational_passengers (id,company_id,booking_id,passenger_type,given_name,surname,passport_number,eticket_number,passport_expiry,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [crypto.randomUUID(), companyId, bookingId, passenger.passengerType, passenger.givenName.trim(), passenger.surname.trim(), passenger.passportNumber.trim().toUpperCase(), passenger.eticketNumber.trim().toUpperCase(), passenger.passportExpiry, index]
+      [
+        crypto.randomUUID(),
+        companyId,
+        bookingId,
+        passenger.passengerType,
+        passenger.givenName.trim(),
+        passenger.surname.trim(),
+        passenger.passportNumber.trim().toUpperCase(),
+        passenger.eticketNumber.trim().toUpperCase(),
+        passenger.passportExpiry,
+        index,
+      ],
     );
   }
   for (const [index, flight] of input.flights.entries()) {
     await database.execute(
       `INSERT INTO ticket_operational_flights (id,company_id,booking_id,journey,flight_type,departure_date,airline_name,pnr,flight_no,from_airport,stopover_airport,to_airport,origin_departure,stopover_departure_date,stopover_departure_time,destination_arrival,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-      [crypto.randomUUID(), companyId, bookingId, flight.journey, flight.flightType, flight.departureDate, flight.airlineName.trim(), flight.pnr.trim().toUpperCase(), flight.flightNo.trim().toUpperCase(), flight.fromAirport.trim().toUpperCase(), flight.flightType === "INDIRECT" ? flight.stopoverAirport.trim().toUpperCase() : "", flight.toAirport.trim().toUpperCase(), flight.originDeparture, flight.flightType === "INDIRECT" ? flight.stopoverDepartureDate : "", flight.flightType === "INDIRECT" ? flight.stopoverDepartureTime : "", flight.destinationArrival, index]
+      [
+        crypto.randomUUID(),
+        companyId,
+        bookingId,
+        flight.journey,
+        flight.flightType,
+        flight.departureDate,
+        flight.airlineName.trim(),
+        flight.pnr.trim().toUpperCase(),
+        flight.flightNo.trim().toUpperCase(),
+        flight.fromAirport.trim().toUpperCase(),
+        flight.flightType === "INDIRECT" ? flight.stopoverAirport.trim().toUpperCase() : "",
+        flight.toAirport.trim().toUpperCase(),
+        flight.originDeparture,
+        flight.flightType === "INDIRECT" ? flight.stopoverDepartureDate : "",
+        flight.flightType === "INDIRECT" ? flight.stopoverDepartureTime : "",
+        flight.destinationArrival,
+        index,
+      ],
     );
   }
   await database.execute(
     `INSERT INTO ticket_operational_meta (booking_id,company_id,notes,created_at,updated_at) VALUES ($1,$2,$3,$4,$4)
      ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,notes=excluded.notes,updated_at=excluded.updated_at`,
-    [bookingId, companyId, input.notes.trim(), now]
+    [bookingId, companyId, input.notes.trim(), now],
   );
   await audit(companyId, userId, bookingId);
 }

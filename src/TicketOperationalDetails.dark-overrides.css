@@ -1,0 +1,253 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR TicketOperationalDetails.css */
+
+:root[data-theme="midnight"] .ticket17-body {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-pax-strip > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-pax-strip b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-pax-strip button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-panel {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-panel-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-panel-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-table input,
+:root[data-theme="midnight"] .ticket17-table select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-type,
+:root[data-theme="midnight"] .ticket17-journey {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-type.child {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-type.infant {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-journey {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passport-validity.pending {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .passport-validity.valid {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passport-validity.amber {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passport-validity.strong_amber {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passport-validity.red {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-passport-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-passport-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-notes {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-notes label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-notes textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.pending {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.valid {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.amber {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.strong_amber {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-validity.red {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package15-passport-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package15-passport-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-pax-strip > div {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-panel-head {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-notes {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+:root[data-theme="ocean"] .ticket17-body {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-pax-strip > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-pax-strip b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-pax-strip button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-panel {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-panel-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-panel-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-table input,
+:root[data-theme="ocean"] .ticket17-table select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-type,
+:root[data-theme="ocean"] .ticket17-journey {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-type.child {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-type.infant {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-journey {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passport-validity.pending {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .passport-validity.valid {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passport-validity.amber {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passport-validity.strong_amber {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passport-validity.red {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-passport-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-passport-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-notes {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-notes label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-notes textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.pending {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.valid {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.amber {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.strong_amber {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-validity.red {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package15-passport-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package15-passport-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-pax-strip > div {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-panel-head {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-notes {
+  background: rgba(255, 255, 255, 0.4) !important;
+}

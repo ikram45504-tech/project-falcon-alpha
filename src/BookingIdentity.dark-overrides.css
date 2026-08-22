@@ -1,0 +1,248 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR BookingIdentity.css */
+
+:root[data-theme="midnight"] .booking-identity-card,
+:root[data-theme="midnight"] .ticket9-card:has(.ticket9-header-grid),
+:root[data-theme="midnight"] .hotel10-card:has(.hotel10-header-grid),
+:root[data-theme="midnight"] .visa11-card:has(.visa11-header-grid),
+:root[data-theme="midnight"] .transport12a-section:has(.transport12a-header-grid),
+:root[data-theme="midnight"] .package7d-form-card > .package7d-header-fields {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-form-card > .package7d-header-fields::before {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-card:has(.ticket9-header-grid) .ticket9-section-head,
+:root[data-theme="midnight"] .hotel10-card:has(.hotel10-header-grid) .hotel10-section-head,
+:root[data-theme="midnight"] .visa11-card:has(.visa11-header-grid) .visa11-section-head,
+:root[data-theme="midnight"] .transport12a-section:has(.transport12a-header-grid) .transport12a-section-title,
+:root[data-theme="midnight"] .booking-identity-head {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-card:has(.ticket9-header-grid) .ticket9-section-head b,
+:root[data-theme="midnight"] .hotel10-card:has(.hotel10-header-grid) .hotel10-section-head b,
+:root[data-theme="midnight"] .visa11-card:has(.visa11-header-grid) .visa11-section-head b,
+:root[data-theme="midnight"] .transport12a-section:has(.transport12a-header-grid) .transport12a-section-title b,
+:root[data-theme="midnight"] .booking-identity-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-identity-grid label,
+:root[data-theme="midnight"] .ticket9-card:has(.ticket9-header-grid) label,
+:root[data-theme="midnight"] .hotel10-card:has(.hotel10-header-grid) label,
+:root[data-theme="midnight"] .visa11-card:has(.visa11-header-grid) label,
+:root[data-theme="midnight"] .transport12a-section:has(.transport12a-header-grid) label,
+:root[data-theme="midnight"] .package7d-form-card > .package7d-header-fields label {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-identity-grid label::before,
+:root[data-theme="midnight"] .ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label::before,
+:root[data-theme="midnight"] .hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label::before,
+:root[data-theme="midnight"] .visa11-card:has(.visa11-header-grid) .visa11-header-grid label::before,
+:root[data-theme="midnight"]
+  .transport12a-section:has(.transport12a-header-grid)
+  .transport12a-header-grid
+  label::before,
+:root[data-theme="midnight"] .package7d-form-card > .package7d-header-fields label::before {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-identity-grid input,
+:root[data-theme="midnight"] .booking-identity-grid select,
+:root[data-theme="midnight"] .ticket9-card:has(.ticket9-header-grid) input,
+:root[data-theme="midnight"] .ticket9-card:has(.ticket9-header-grid) select,
+:root[data-theme="midnight"] .hotel10-card:has(.hotel10-header-grid) input,
+:root[data-theme="midnight"] .hotel10-card:has(.hotel10-header-grid) select,
+:root[data-theme="midnight"] .visa11-card:has(.visa11-header-grid) input,
+:root[data-theme="midnight"] .visa11-card:has(.visa11-header-grid) select,
+:root[data-theme="midnight"] .transport12a-section:has(.transport12a-header-grid) input,
+:root[data-theme="midnight"] .transport12a-section:has(.transport12a-header-grid) select,
+:root[data-theme="midnight"] .package7d-form-card > .package7d-header-fields input,
+:root[data-theme="midnight"] .package7d-form-card > .package7d-header-fields select {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-identity-grid label:last-child input,
+:root[data-theme="midnight"] .ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label:last-child input,
+:root[data-theme="midnight"] .hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label:last-child input,
+:root[data-theme="midnight"] .visa11-card:has(.visa11-header-grid) .visa11-header-grid label:last-child input,
+:root[data-theme="midnight"]
+  .transport12a-section:has(.transport12a-header-grid)
+  .transport12a-header-grid
+  label:last-child
+  input,
+:root[data-theme="midnight"] .package7d-form-card > .package7d-header-fields label:last-child input {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .misc13-section-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .misc13-currency-chip {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-currency-chip.sar {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-total b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-remove {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-summary > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .misc13-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .misc13-summary .grand {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .misc13-register-controls button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .booking-identity-card,
+:root[data-theme="ocean"] .ticket9-card:has(.ticket9-header-grid),
+:root[data-theme="ocean"] .hotel10-card:has(.hotel10-header-grid),
+:root[data-theme="ocean"] .visa11-card:has(.visa11-header-grid),
+:root[data-theme="ocean"] .transport12a-section:has(.transport12a-header-grid),
+:root[data-theme="ocean"] .package7d-form-card > .package7d-header-fields {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-form-card > .package7d-header-fields::before {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-card:has(.ticket9-header-grid) .ticket9-section-head,
+:root[data-theme="ocean"] .hotel10-card:has(.hotel10-header-grid) .hotel10-section-head,
+:root[data-theme="ocean"] .visa11-card:has(.visa11-header-grid) .visa11-section-head,
+:root[data-theme="ocean"] .transport12a-section:has(.transport12a-header-grid) .transport12a-section-title,
+:root[data-theme="ocean"] .booking-identity-head {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-card:has(.ticket9-header-grid) .ticket9-section-head b,
+:root[data-theme="ocean"] .hotel10-card:has(.hotel10-header-grid) .hotel10-section-head b,
+:root[data-theme="ocean"] .visa11-card:has(.visa11-header-grid) .visa11-section-head b,
+:root[data-theme="ocean"] .transport12a-section:has(.transport12a-header-grid) .transport12a-section-title b,
+:root[data-theme="ocean"] .booking-identity-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-identity-grid label,
+:root[data-theme="ocean"] .ticket9-card:has(.ticket9-header-grid) label,
+:root[data-theme="ocean"] .hotel10-card:has(.hotel10-header-grid) label,
+:root[data-theme="ocean"] .visa11-card:has(.visa11-header-grid) label,
+:root[data-theme="ocean"] .transport12a-section:has(.transport12a-header-grid) label,
+:root[data-theme="ocean"] .package7d-form-card > .package7d-header-fields label {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-identity-grid label::before,
+:root[data-theme="ocean"] .ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label::before,
+:root[data-theme="ocean"] .hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label::before,
+:root[data-theme="ocean"] .visa11-card:has(.visa11-header-grid) .visa11-header-grid label::before,
+:root[data-theme="ocean"] .transport12a-section:has(.transport12a-header-grid) .transport12a-header-grid label::before,
+:root[data-theme="ocean"] .package7d-form-card > .package7d-header-fields label::before {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-identity-grid input,
+:root[data-theme="ocean"] .booking-identity-grid select,
+:root[data-theme="ocean"] .ticket9-card:has(.ticket9-header-grid) input,
+:root[data-theme="ocean"] .ticket9-card:has(.ticket9-header-grid) select,
+:root[data-theme="ocean"] .hotel10-card:has(.hotel10-header-grid) input,
+:root[data-theme="ocean"] .hotel10-card:has(.hotel10-header-grid) select,
+:root[data-theme="ocean"] .visa11-card:has(.visa11-header-grid) input,
+:root[data-theme="ocean"] .visa11-card:has(.visa11-header-grid) select,
+:root[data-theme="ocean"] .transport12a-section:has(.transport12a-header-grid) input,
+:root[data-theme="ocean"] .transport12a-section:has(.transport12a-header-grid) select,
+:root[data-theme="ocean"] .package7d-form-card > .package7d-header-fields input,
+:root[data-theme="ocean"] .package7d-form-card > .package7d-header-fields select {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-identity-grid label:last-child input,
+:root[data-theme="ocean"] .ticket9-card:has(.ticket9-header-grid) .ticket9-header-grid label:last-child input,
+:root[data-theme="ocean"] .hotel10-card:has(.hotel10-header-grid) .hotel10-header-grid label:last-child input,
+:root[data-theme="ocean"] .visa11-card:has(.visa11-header-grid) .visa11-header-grid label:last-child input,
+:root[data-theme="ocean"]
+  .transport12a-section:has(.transport12a-header-grid)
+  .transport12a-header-grid
+  label:last-child
+  input,
+:root[data-theme="ocean"] .package7d-form-card > .package7d-header-fields label:last-child input {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .misc13-section-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .misc13-currency-chip {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-currency-chip.sar {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-total b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-remove {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-summary > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .misc13-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .misc13-summary .grand {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .misc13-register-controls button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}

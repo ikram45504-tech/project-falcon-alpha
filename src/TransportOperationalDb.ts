@@ -66,7 +66,9 @@ async function ensureSchema() {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )`);
-      await database.execute(`CREATE INDEX IF NOT EXISTS idx_transport_operational_sector ON transport_operational_sectors(company_id,booking_id,sort_order)`);
+      await database.execute(
+        `CREATE INDEX IF NOT EXISTS idx_transport_operational_sector ON transport_operational_sectors(company_id,booking_id,sort_order)`,
+      );
     })().catch((error) => {
       schemaPromise = null;
       throw error;
@@ -78,35 +80,77 @@ async function ensureSchema() {
 async function requireEdit(companyId: string, userId: string) {
   if (!userId) return;
   const database = await db();
-  const rows = await database.select<Array<{ role: UserRole; status: string }>>(`SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`, [userId, companyId]);
+  const rows = await database.select<Array<{ role: UserRole; status: string }>>(
+    `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
+    [userId, companyId],
+  );
   const actor = rows[0];
-  if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, "edit_bookings")) throw new Error("You do not have permission to edit Transport booking details.");
+  if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, "edit_bookings"))
+    throw new Error("You do not have permission to edit Transport booking details.");
 }
 
 async function audit(companyId: string, userId: string, bookingId: string) {
   if (!userId) return;
   const database = await db();
-  const users = await database.select<Array<{ full_name: string }>>(`SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`, [userId, companyId]);
+  const users = await database.select<Array<{ full_name: string }>>(
+    `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
+    [userId, companyId],
+  );
   await database.execute(
     `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
      VALUES ($1,$2,$3,$4,'BOOKING_DETAILS_UPDATED','TRANSPORT',$5,$6,$7)`,
-    [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", bookingId, "Transport pickup, driver and vehicle operational details updated without changing Transport totals.", new Date().toISOString()]
+    [
+      crypto.randomUUID(),
+      companyId,
+      userId,
+      users[0]?.full_name || "Unknown User",
+      bookingId,
+      "Transport pickup, driver and vehicle operational details updated without changing Transport totals.",
+      new Date().toISOString(),
+    ],
   );
 }
 
-export async function getTransportOperationalDetails(companyId: string, bookingId: string): Promise<TransportOperationalDetails> {
+export async function getTransportOperationalDetails(
+  companyId: string,
+  bookingId: string,
+): Promise<TransportOperationalDetails> {
   await ensureSchema();
   const database = await db();
-  const sectors = await database.select<Array<{ id: string; sector_sort_order: number; pickup_time: string; pickup_point: string; driver_name: string; driver_mobile: string; vehicle_plate: string; confirmation_reference: string; sort_order: number }>>(
+  const sectors = await database.select<
+    Array<{
+      id: string;
+      sector_sort_order: number;
+      pickup_time: string;
+      pickup_point: string;
+      driver_name: string;
+      driver_mobile: string;
+      vehicle_plate: string;
+      confirmation_reference: string;
+      sort_order: number;
+    }>
+  >(
     `SELECT id,sector_sort_order,pickup_time,pickup_point,driver_name,driver_mobile,vehicle_plate,confirmation_reference,sort_order FROM transport_operational_sectors WHERE company_id=$1 AND booking_id=$2 ORDER BY sort_order`,
-    [companyId, bookingId]
+    [companyId, bookingId],
   );
-  const meta = await database.select<Array<{ passenger_saudi_contact: string; group_family_head: string; transport_instructions: string; notes: string }>>(
+  const meta = await database.select<
+    Array<{ passenger_saudi_contact: string; group_family_head: string; transport_instructions: string; notes: string }>
+  >(
     `SELECT passenger_saudi_contact,group_family_head,transport_instructions,notes FROM transport_operational_meta WHERE company_id=$1 AND booking_id=$2 LIMIT 1`,
-    [companyId, bookingId]
+    [companyId, bookingId],
   );
   return {
-    sectors: sectors.map((item) => ({ id: item.id, sectorSortOrder: item.sector_sort_order, pickupTime: item.pickup_time, pickupPoint: item.pickup_point, driverName: item.driver_name, driverMobile: item.driver_mobile, vehiclePlate: item.vehicle_plate, confirmationReference: item.confirmation_reference, sortOrder: item.sort_order })),
+    sectors: sectors.map((item) => ({
+      id: item.id,
+      sectorSortOrder: item.sector_sort_order,
+      pickupTime: item.pickup_time,
+      pickupPoint: item.pickup_point,
+      driverName: item.driver_name,
+      driverMobile: item.driver_mobile,
+      vehiclePlate: item.vehicle_plate,
+      confirmationReference: item.confirmation_reference,
+      sortOrder: item.sort_order,
+    })),
     passengerSaudiContact: meta[0]?.passenger_saudi_contact || "",
     groupFamilyHead: meta[0]?.group_family_head || "",
     transportInstructions: meta[0]?.transport_instructions || "",
@@ -114,24 +158,52 @@ export async function getTransportOperationalDetails(companyId: string, bookingI
   };
 }
 
-export async function saveTransportOperationalDetails(companyId: string, bookingId: string, input: SaveTransportOperationalInput, userId = "") {
+export async function saveTransportOperationalDetails(
+  companyId: string,
+  bookingId: string,
+  input: SaveTransportOperationalInput,
+  userId = "",
+) {
   await requireEdit(companyId, userId);
   await ensureSchema();
   const database = await db();
   const now = new Date().toISOString();
-  await database.execute(`DELETE FROM transport_operational_sectors WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
+  await database.execute(`DELETE FROM transport_operational_sectors WHERE company_id=$1 AND booking_id=$2`, [
+    companyId,
+    bookingId,
+  ]);
   for (const [index, sector] of input.sectors.entries()) {
     await database.execute(
       `INSERT INTO transport_operational_sectors (id,company_id,booking_id,sector_sort_order,pickup_time,pickup_point,driver_name,driver_mobile,vehicle_plate,confirmation_reference,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-      [crypto.randomUUID(), companyId, bookingId, sector.sectorSortOrder, sector.pickupTime, sector.pickupPoint.trim(), sector.driverName.trim(), sector.driverMobile.trim(), sector.vehiclePlate.trim().toUpperCase(), sector.confirmationReference.trim().toUpperCase(), index]
+      [
+        crypto.randomUUID(),
+        companyId,
+        bookingId,
+        sector.sectorSortOrder,
+        sector.pickupTime,
+        sector.pickupPoint.trim(),
+        sector.driverName.trim(),
+        sector.driverMobile.trim(),
+        sector.vehiclePlate.trim().toUpperCase(),
+        sector.confirmationReference.trim().toUpperCase(),
+        index,
+      ],
     );
   }
   await database.execute(
     `INSERT INTO transport_operational_meta (booking_id,company_id,passenger_saudi_contact,group_family_head,transport_instructions,notes,created_at,updated_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$7)
      ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,passenger_saudi_contact=excluded.passenger_saudi_contact,group_family_head=excluded.group_family_head,transport_instructions=excluded.transport_instructions,notes=excluded.notes,updated_at=excluded.updated_at`,
-    [bookingId, companyId, input.passengerSaudiContact.trim(), input.groupFamilyHead.trim(), input.transportInstructions.trim(), input.notes.trim(), now]
+    [
+      bookingId,
+      companyId,
+      input.passengerSaudiContact.trim(),
+      input.groupFamilyHead.trim(),
+      input.transportInstructions.trim(),
+      input.notes.trim(),
+      now,
+    ],
   );
   await audit(companyId, userId, bookingId);
 }

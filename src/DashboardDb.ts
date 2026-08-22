@@ -40,11 +40,12 @@ const bookingUnion = `
 
 export async function getDashboardMetrics(companyId: string): Promise<DashboardMetrics> {
   const database = await db();
-  
+
   const currentMonthStr = new Date().toISOString().substring(0, 7); // YYYY-MM
 
   // Aggregate Sales and Purchases for current month
-  const results = await database.select<{ sales: number, purchases: number, bookings: number }[]>(`
+  const results = await database.select<{ sales: number; purchases: number; bookings: number }[]>(
+    `
     SELECT 
       SUM(CASE WHEN transaction_type = 'SALE' THEN total_pkr ELSE 0 END) as sales,
       SUM(CASE WHEN transaction_type = 'PURCHASE' THEN total_pkr ELSE 0 END) as purchases,
@@ -53,7 +54,9 @@ export async function getDashboardMetrics(companyId: string): Promise<DashboardM
     WHERE company_id = $1 
       AND status = 'ACTIVE' 
       AND transaction_date LIKE $2
-  `, [companyId, `${currentMonthStr}%`]);
+  `,
+    [companyId, `${currentMonthStr}%`],
+  );
 
   const sales = results[0]?.sales || 0;
   const purchases = results[0]?.purchases || 0;
@@ -63,15 +66,16 @@ export async function getDashboardMetrics(companyId: string): Promise<DashboardM
     monthlySales: sales,
     monthlyPurchases: purchases,
     monthlyProfit: sales - purchases,
-    activeBookingsCount: bookings
+    activeBookingsCount: bookings,
   };
 }
 
 export async function getRecentActivity(companyId: string, limit: number = 5): Promise<RecentActivity[]> {
   const database = await db();
-  
+
   // Get latest 5 bookings
-  const activities = await database.select<RecentActivity[]>(`
+  const activities = await database.select<RecentActivity[]>(
+    `
     SELECT 
       id,
       transaction_date as date,
@@ -83,7 +87,9 @@ export async function getRecentActivity(companyId: string, limit: number = 5): P
     WHERE company_id = $1
     ORDER BY created_at DESC
     LIMIT $2
-  `, [companyId, limit]);
+  `,
+    [companyId, limit],
+  );
 
   return activities;
 }

@@ -28,22 +28,24 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefin
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { company } = useAuth();
-  
+
   const [parties, setParties] = useState<Party[]>([]);
   const [partySearch, setPartySearch] = useState("");
   const [partyBookingTotals, setPartyBookingTotals] = useState<Record<string, AccountBookingTotals>>({});
   const [partyPaymentTotals, setPartyPaymentTotals] = useState<Record<string, number>>({});
   const [error, setError] = useState("");
 
-
-  const loadParties = useCallback(async (search = "") => {
-    if (!company) return;
-    try {
-      setParties(await getParties(company.id, search));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, [company]);
+  const loadParties = useCallback(
+    async (search = "") => {
+      if (!company) return;
+      try {
+        setParties(await getParties(company.id, search));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [company],
+  );
 
   const loadFinancialTotals = useCallback(async () => {
     if (!company) return;
@@ -73,10 +75,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [company]);
 
-  const searchParties = useCallback(async (value: string) => {
-    setPartySearch(value);
-    await loadParties(value);
-  }, [loadParties]);
+  const searchParties = useCallback(
+    async (value: string) => {
+      setPartySearch(value);
+      await loadParties(value);
+    },
+    [loadParties],
+  );
 
   useEffect(() => {
     if (!company) return;
@@ -84,13 +89,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void loadFinancialTotals();
   }, [company, loadParties, loadFinancialTotals]);
 
-
   const partyAccounts = parties.filter((item) => item.account_type === "PARTY");
   const vendorAccounts = parties.filter((item) => item.account_type === "VENDOR");
   const unassignedAccounts = parties.filter((item) => item.account_type === "UNASSIGNED");
 
-  const companySaleTotal = Object.values(partyBookingTotals).reduce<number>((sum, value) => sum + Number(value.sale_total || 0), 0);
-  const companyPurchaseTotal = Object.values(partyBookingTotals).reduce<number>((sum, value) => sum + Number(value.purchase_total || 0), 0);
+  const companySaleTotal = Object.values(partyBookingTotals).reduce<number>(
+    (sum, value) => sum + Number(value.sale_total || 0),
+    0,
+  );
+  const companyPurchaseTotal = Object.values(partyBookingTotals).reduce<number>(
+    (sum, value) => sum + Number(value.purchase_total || 0),
+    0,
+  );
   const companyGrossMargin = companySaleTotal - companyPurchaseTotal;
 
   return (

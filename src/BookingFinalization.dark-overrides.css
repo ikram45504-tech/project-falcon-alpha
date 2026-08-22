@@ -1,0 +1,265 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR BookingFinalization.css */
+
+:root[data-theme="midnight"] .bf-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .bf-section-head {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .bf-section-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .bf-table input,
+:root[data-theme="midnight"] .bf-table select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-money {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-remove {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-summary > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .bf-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-subsection {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .bf-subsection-head {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .bf-subsection-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-details-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-details-grid input,
+:root[data-theme="midnight"] .bf-details-grid textarea,
+:root[data-theme="midnight"] .bf-details-grid select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-capacity.ok {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-capacity.bad {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-passport-badge.pending {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .bf-passport-badge.valid {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-passport-badge.amber {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-passport-badge.strong_amber {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-passport-badge.red {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .bf-inline-toolbar {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .bf-transport-component {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .bf-transport-component > .bf-subsection-head {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .bf-register-ub {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-ub-search label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-ub-search input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .bf-ub-side {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .bf-ub-side h3 {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-ub-side.purchase h3 {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-ub-position > div {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .bf-ub-position b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .bf-ub-position .margin {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+:root[data-theme="ocean"] .bf-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .bf-section-head {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .bf-section-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .bf-table input,
+:root[data-theme="ocean"] .bf-table select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-money {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-remove {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-summary > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .bf-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-subsection {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .bf-subsection-head {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .bf-subsection-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-details-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-details-grid input,
+:root[data-theme="ocean"] .bf-details-grid textarea,
+:root[data-theme="ocean"] .bf-details-grid select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-capacity.ok {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-capacity.bad {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-passport-badge.pending {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .bf-passport-badge.valid {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-passport-badge.amber {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-passport-badge.strong_amber {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-passport-badge.red {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .bf-inline-toolbar {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .bf-transport-component {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .bf-transport-component > .bf-subsection-head {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .bf-register-ub {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-ub-search label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-ub-search input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .bf-ub-side {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .bf-ub-side h3 {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-ub-side.purchase h3 {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-ub-position > div {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .bf-ub-position b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .bf-ub-position .margin {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}

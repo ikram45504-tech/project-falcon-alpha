@@ -1,9 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
-import {
-  ensurePaymentDocumentUniqueness,
-  runAtomicTransaction,
-  type AtomicSqlStatement,
-} from "./DatabaseSafety";
+import { ensurePaymentDocumentUniqueness, runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -11,11 +7,7 @@ let initializationPromise: Promise<void> | null = null;
 
 const BUSY_RETRY_DELAYS_MS = [120, 250, 500, 900];
 
-export type PaymentTransactionKind =
-  | "PARTY_RECEIPT"
-  | "VENDOR_PAYMENT"
-  | "PARTY_REFUND"
-  | "VENDOR_REFUND";
+export type PaymentTransactionKind = "PARTY_RECEIPT" | "VENDOR_PAYMENT" | "PARTY_REFUND" | "VENDOR_REFUND";
 
 export type PaymentMethod = "BANK" | "CASH";
 export type PaymentCurrency = "PKR" | "SAR";
@@ -107,7 +99,8 @@ export async function initPaymentV2Database() {
   initializationPromise = (async () => {
     const database = await db();
     await database.execute("PRAGMA busy_timeout = 5000");
-    await withBusyRetry(() => database.execute(`CREATE TABLE IF NOT EXISTS payment_v2_meta (
+    await withBusyRetry(() =>
+      database.execute(`CREATE TABLE IF NOT EXISTS payment_v2_meta (
       payment_id TEXT PRIMARY KEY,
       company_id TEXT NOT NULL,
       transaction_kind TEXT NOT NULL DEFAULT 'PARTY_RECEIPT',
@@ -126,16 +119,21 @@ export async function initPaymentV2Database() {
       updated_by_user_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    )`));
-    await withBusyRetry(() => database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_v2_meta_company_kind
-      ON payment_v2_meta(company_id, transaction_kind)`));
-    await withBusyRetry(() => database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number
-      ON payment_entries(company_id, receipt_no)`));
+    )`),
+    );
+    await withBusyRetry(() =>
+      database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_v2_meta_company_kind
+      ON payment_v2_meta(company_id, transaction_kind)`),
+    );
+    await withBusyRetry(() =>
+      database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number
+      ON payment_entries(company_id, receipt_no)`),
+    );
 
     const safety = await ensurePaymentDocumentUniqueness();
     if (safety.duplicatePaymentDocuments > 0) {
       throw new Error(
-        `${safety.duplicatePaymentDocuments} duplicate Receipt / Voucher number group(s) already exist. Resolve those duplicates before creating new payments.`
+        `${safety.duplicatePaymentDocuments} duplicate Receipt / Voucher number group(s) already exist. Resolve those duplicates before creating new payments.`,
       );
     }
   })().catch((error) => {
@@ -152,9 +150,13 @@ async function ready() {
 
 export function paymentDocumentPrefix(kind: PaymentTransactionKind, method: PaymentMethod) {
   const kindPrefix =
-    kind === "PARTY_RECEIPT" ? "RCPT" :
-    kind === "VENDOR_PAYMENT" ? "PV" :
-    kind === "PARTY_REFUND" ? "RF-CUST" : "RF-VEND";
+    kind === "PARTY_RECEIPT"
+      ? "RCPT"
+      : kind === "VENDOR_PAYMENT"
+        ? "PV"
+        : kind === "PARTY_REFUND"
+          ? "RF-CUST"
+          : "RF-VEND";
   const methodPrefix = method === "BANK" ? "BNK" : "CSH";
   return `${kindPrefix}-${methodPrefix}-`;
 }
@@ -166,14 +168,14 @@ function escapeRegex(value: string) {
 export async function getNextPaymentDocumentNumber(
   companyId: string,
   kind: PaymentTransactionKind,
-  method: PaymentMethod
+  method: PaymentMethod,
 ) {
   const database = await ready();
   const prefix = paymentDocumentPrefix(kind, method);
   const rows = await database.select<ReceiptRow[]>(
     `SELECT id,receipt_no FROM payment_entries
      WHERE company_id=$1 AND receipt_no LIKE $2 COLLATE NOCASE`,
-    [companyId, `${prefix}%`]
+    [companyId, `${prefix}%`],
   );
   const matcher = new RegExp(`^${escapeRegex(prefix)}(\\d+)$`, "i");
   let max = 0;
@@ -195,7 +197,7 @@ export async function getPaymentV2Meta(companyId: string, paymentId: string) {
      FROM payment_v2_meta
      WHERE company_id=$1 AND payment_id=$2
      LIMIT 1`,
-    [companyId, paymentId]
+    [companyId, paymentId],
   );
   return rows[0] ?? null;
 }
@@ -209,7 +211,7 @@ export async function getPaymentV2MetaMap(companyId: string) {
             created_by_user_id,updated_by_user_id,created_at,updated_at
      FROM payment_v2_meta
      WHERE company_id=$1`,
-    [companyId]
+    [companyId],
   );
   return new Map(rows.map((row) => [row.payment_id, row]));
 }
@@ -222,7 +224,10 @@ async function validateAndResolveAccount(database: Database, companyId: string, 
   if (!input.partyId) throw new Error("Select a Party / Vendor account.");
   if (!input.transactionDate) throw new Error("Payment date is required.");
   if (!input.documentNo.trim()) throw new Error("Receipt / Voucher number is required.");
-  if (!input.settlementAccount.trim()) throw new Error(input.paymentType === "BANK" ? "Bank / settlement account is required." : "Cash settlement account is required.");
+  if (!input.settlementAccount.trim())
+    throw new Error(
+      input.paymentType === "BANK" ? "Bank / settlement account is required." : "Cash settlement account is required.",
+    );
   const amount = Math.max(0, Number(input.amount) || 0);
   if (amount <= 0) throw new Error("Amount must be greater than zero.");
   const roe = input.currency === "SAR" ? Math.max(0, Number(input.roe) || 0) : 0;
@@ -231,25 +236,36 @@ async function validateAndResolveAccount(database: Database, companyId: string, 
   const accounts = await database.select<AccountRow[]>(
     `SELECT id,name,account_type,status FROM parties
      WHERE company_id=$1 AND id=$2 LIMIT 1`,
-    [companyId, input.partyId]
+    [companyId, input.partyId],
   );
   const account = accounts[0];
   const expected = expectedAccountType(input.transactionKind);
   if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
-    throw new Error(expected === "PARTY" ? "Select an active Party / Customer account." : "Select an active Vendor / Supplier account.");
+    throw new Error(
+      expected === "PARTY"
+        ? "Select an active Party / Customer account."
+        : "Select an active Vendor / Supplier account.",
+    );
   }
 
   return { account, amount, roe, paidAmount: input.currency === "SAR" ? amount * roe : amount };
 }
 
-async function ensureDocumentAvailable(database: Database, companyId: string, documentNo: string, excludePaymentId = "") {
+async function ensureDocumentAvailable(
+  database: Database,
+  companyId: string,
+  documentNo: string,
+  excludePaymentId = "",
+) {
   const rows = await database.select<CountRow[]>(
     `SELECT COUNT(*) AS count FROM payment_entries
      WHERE company_id=$1 AND receipt_no=$2 COLLATE NOCASE AND ($3='' OR id<>$3)`,
-    [companyId, documentNo.trim(), excludePaymentId]
+    [companyId, documentNo.trim(), excludePaymentId],
   );
   if (Number(rows[0]?.count || 0) > 0) {
-    throw new Error(`${documentNo.trim()} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`);
+    throw new Error(
+      `${documentNo.trim()} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
+    );
   }
 }
 
@@ -265,7 +281,7 @@ function metaStatement(
   paymentId: string,
   input: PaymentV2Input,
   userId: string,
-  now: string
+  now: string,
 ): AtomicSqlStatement {
   return {
     sql: `INSERT INTO payment_v2_meta
@@ -290,10 +306,22 @@ function metaStatement(
         updated_by_user_id=excluded.updated_by_user_id,
         updated_at=excluded.updated_at`,
     params: [
-      paymentId, companyId, input.transactionKind, input.settlementAccount.trim(), input.reference.trim(),
-      input.bankName.trim(), input.bankTransactionReference.trim(), input.accountTitle.trim(), input.accountLastDigits.trim(),
-      input.chequeNo.trim(), input.transferDate, input.handledBy.trim(), input.location.trim(), input.internalNotes.trim(),
-      userId, now,
+      paymentId,
+      companyId,
+      input.transactionKind,
+      input.settlementAccount.trim(),
+      input.reference.trim(),
+      input.bankName.trim(),
+      input.bankTransactionReference.trim(),
+      input.accountTitle.trim(),
+      input.accountLastDigits.trim(),
+      input.chequeNo.trim(),
+      input.transferDate,
+      input.handledBy.trim(),
+      input.location.trim(),
+      input.internalNotes.trim(),
+      userId,
+      now,
     ],
   };
 }
@@ -304,7 +332,7 @@ function auditStatement(
   action: string,
   recordId: string,
   details: string,
-  now: string
+  now: string,
 ): AtomicSqlStatement | null {
   if (!userId) return null;
   return {
@@ -335,9 +363,22 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
          created_by_user_id,updated_by_user_id)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15,$16,$16)`,
       params: [
-        id, companyId, input.partyId, input.transactionDate, documentNo,
-        movement.from, movement.to, input.description.trim(), input.paymentType, input.currency,
-        amount, input.currency === "SAR" ? amount : 0, roe, paidAmount, now, userId,
+        id,
+        companyId,
+        input.partyId,
+        input.transactionDate,
+        documentNo,
+        movement.from,
+        movement.to,
+        input.description.trim(),
+        input.paymentType,
+        input.currency,
+        amount,
+        input.currency === "SAR" ? amount : 0,
+        roe,
+        paidAmount,
+        now,
+        userId,
       ],
     },
     metaStatement(companyId, id, input, userId, now),
@@ -348,7 +389,7 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
     "PAYMENT_CREATED",
     id,
     `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`,
-    now
+    now,
   );
   if (audit) statements.push(audit);
 
@@ -357,7 +398,10 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
-      throw new Error(`${documentNo} was just used by another payment. Return to Section 01 and generate the next Receipt / Voucher number.`);
+      throw new Error(
+        `${documentNo} was just used by another payment. Return to Section 01 and generate the next Receipt / Voucher number.`,
+        { cause: error },
+      );
     }
     throw error;
   }
@@ -385,9 +429,22 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
         paid_amount=$12,updated_at=$13,updated_by_user_id=$14
         WHERE id=$15 AND company_id=$16 AND status='ACTIVE'`,
       params: [
-        input.partyId, input.transactionDate, documentNo, movement.from, movement.to,
-        input.description.trim(), input.paymentType, input.currency, amount,
-        input.currency === "SAR" ? amount : 0, roe, paidAmount, now, userId, paymentId, companyId,
+        input.partyId,
+        input.transactionDate,
+        documentNo,
+        movement.from,
+        movement.to,
+        input.description.trim(),
+        input.paymentType,
+        input.currency,
+        amount,
+        input.currency === "SAR" ? amount : 0,
+        roe,
+        paidAmount,
+        now,
+        userId,
+        paymentId,
+        companyId,
       ],
     },
     metaStatement(companyId, paymentId, input, userId, now),
@@ -398,7 +455,7 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
     "PAYMENT_UPDATED",
     paymentId,
     `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`,
-    now
+    now,
   );
   if (audit) statements.push(audit);
 
@@ -407,7 +464,10 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
-      throw new Error(`${documentNo} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`);
+      throw new Error(
+        `${documentNo} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
+        { cause: error },
+      );
     }
     throw error;
   }
@@ -417,7 +477,7 @@ export async function voidPaymentV2(companyId: string, paymentId: string, userId
   const database = await ready();
   const rows = await database.select<Array<{ receipt_no: string; paid_amount: number }>>(
     `SELECT receipt_no,paid_amount FROM payment_entries WHERE company_id=$1 AND id=$2 LIMIT 1`,
-    [companyId, paymentId]
+    [companyId, paymentId],
   );
   const record = rows[0];
   const now = new Date().toISOString();
@@ -435,7 +495,7 @@ export async function voidPaymentV2(companyId: string, paymentId: string, userId
       "PAYMENT_VOIDED",
       paymentId,
       `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)}`,
-      now
+      now,
     );
     if (audit) statements.push(audit);
   }

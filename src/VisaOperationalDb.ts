@@ -71,7 +71,9 @@ async function ensureSchema() {
         mofa_reference TEXT NOT NULL DEFAULT '',
         sort_order INTEGER NOT NULL DEFAULT 0
       )`);
-      await database.execute(`CREATE INDEX IF NOT EXISTS idx_visa_operational_passengers ON visa_operational_passengers(company_id,booking_id,sort_order)`);
+      await database.execute(
+        `CREATE INDEX IF NOT EXISTS idx_visa_operational_passengers ON visa_operational_passengers(company_id,booking_id,sort_order)`,
+      );
     })().catch((error) => {
       schemaPromise = null;
       throw error;
@@ -85,7 +87,7 @@ async function requireEdit(companyId: string, userId: string) {
   const database = await db();
   const rows = await database.select<Array<{ role: UserRole; status: string }>>(
     `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
+    [userId, companyId],
   );
   const actor = rows[0];
   if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, "edit_bookings")) {
@@ -98,29 +100,51 @@ async function audit(companyId: string, userId: string, bookingId: string) {
   const database = await db();
   const users = await database.select<Array<{ full_name: string }>>(
     `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
+    [userId, companyId],
   );
   await database.execute(
     `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
      VALUES ($1,$2,$3,$4,'BOOKING_DETAILS_UPDATED','VISA',$5,$6,$7)`,
-    [crypto.randomUUID(), companyId, userId, users[0]?.full_name || "Unknown User", bookingId, "Visa passenger, passport, Visa Number and MOFA reference details updated without changing Visa totals.", new Date().toISOString()]
+    [
+      crypto.randomUUID(),
+      companyId,
+      userId,
+      users[0]?.full_name || "Unknown User",
+      bookingId,
+      "Visa passenger, passport, Visa Number and MOFA reference details updated without changing Visa totals.",
+      new Date().toISOString(),
+    ],
   );
 }
 
 export async function getVisaOperationalDetails(companyId: string, bookingId: string): Promise<VisaOperationalDetails> {
   await ensureSchema();
   const database = await db();
-  const passengers = await database.select<Array<{
-    id: string; source_family_name: string; passenger_type: VisaPassengerType; visa_type: VisaType; given_name: string; surname: string;
-    passport_number: string; nationality: string; date_of_birth: string; passport_issuance: string; passport_expiry: string; visa_number: string; mofa_reference: string; sort_order: number;
-  }>>(
+  const passengers = await database.select<
+    Array<{
+      id: string;
+      source_family_name: string;
+      passenger_type: VisaPassengerType;
+      visa_type: VisaType;
+      given_name: string;
+      surname: string;
+      passport_number: string;
+      nationality: string;
+      date_of_birth: string;
+      passport_issuance: string;
+      passport_expiry: string;
+      visa_number: string;
+      mofa_reference: string;
+      sort_order: number;
+    }>
+  >(
     `SELECT id,source_family_name,passenger_type,visa_type,given_name,surname,passport_number,nationality,date_of_birth,passport_issuance,passport_expiry,visa_number,mofa_reference,sort_order
      FROM visa_operational_passengers WHERE company_id=$1 AND booking_id=$2 ORDER BY sort_order`,
-    [companyId, bookingId]
+    [companyId, bookingId],
   );
   const meta = await database.select<Array<{ expected_entry_date: string; notes: string }>>(
     `SELECT expected_entry_date,notes FROM visa_operational_meta WHERE company_id=$1 AND booking_id=$2 LIMIT 1`,
-    [companyId, bookingId]
+    [companyId, bookingId],
   );
   return {
     expectedEntryDate: meta[0]?.expected_entry_date || "",
@@ -144,25 +168,50 @@ export async function getVisaOperationalDetails(companyId: string, bookingId: st
   };
 }
 
-export async function saveVisaOperationalDetails(companyId: string, bookingId: string, input: SaveVisaOperationalInput, userId = "") {
+export async function saveVisaOperationalDetails(
+  companyId: string,
+  bookingId: string,
+  input: SaveVisaOperationalInput,
+  userId = "",
+) {
   await requireEdit(companyId, userId);
   await ensureSchema();
   const database = await db();
   const now = new Date().toISOString();
-  await database.execute(`DELETE FROM visa_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [companyId, bookingId]);
+  await database.execute(`DELETE FROM visa_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [
+    companyId,
+    bookingId,
+  ]);
   for (const [index, passenger] of input.passengers.entries()) {
     await database.execute(
       `INSERT INTO visa_operational_passengers
        (id,company_id,booking_id,source_family_name,passenger_type,visa_type,given_name,surname,passport_number,nationality,date_of_birth,passport_issuance,passport_expiry,visa_number,mofa_reference,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-      [crypto.randomUUID(), companyId, bookingId, passenger.sourceFamilyName.trim(), passenger.passengerType, passenger.visaType, passenger.givenName.trim(), passenger.surname.trim(), passenger.passportNumber.trim().toUpperCase(), passenger.nationality.trim(), passenger.dateOfBirth, passenger.passportIssuance, passenger.passportExpiry, passenger.visaNumber.trim().toUpperCase(), passenger.mofaReference.trim().toUpperCase(), index]
+      [
+        crypto.randomUUID(),
+        companyId,
+        bookingId,
+        passenger.sourceFamilyName.trim(),
+        passenger.passengerType,
+        passenger.visaType,
+        passenger.givenName.trim(),
+        passenger.surname.trim(),
+        passenger.passportNumber.trim().toUpperCase(),
+        passenger.nationality.trim(),
+        passenger.dateOfBirth,
+        passenger.passportIssuance,
+        passenger.passportExpiry,
+        passenger.visaNumber.trim().toUpperCase(),
+        passenger.mofaReference.trim().toUpperCase(),
+        index,
+      ],
     );
   }
   await database.execute(
     `INSERT INTO visa_operational_meta (booking_id,company_id,expected_entry_date,notes,created_at,updated_at)
      VALUES ($1,$2,$3,$4,$5,$5)
      ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,expected_entry_date=excluded.expected_entry_date,notes=excluded.notes,updated_at=excluded.updated_at`,
-    [bookingId, companyId, input.expectedEntryDate, input.notes.trim(), now]
+    [bookingId, companyId, input.expectedEntryDate, input.notes.trim(), now],
   );
   await audit(companyId, userId, bookingId);
 }

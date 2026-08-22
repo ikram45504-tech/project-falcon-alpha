@@ -1,0 +1,409 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR PackageBookingFlow.css */
+
+:root[data-theme="midnight"] .package14-title h2,
+:root[data-theme="midnight"] .package14-register-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-identity,
+:root[data-theme="midnight"] .package14-commercial-card,
+:root[data-theme="midnight"] .package14-additional {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-identity {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-section-heading {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-section-heading b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-identity-grid > label {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-identity-grid input,
+:root[data-theme="midnight"] .package14-identity-grid select {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-ub-input span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-ub-preview {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-ub-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-identity-complete.ready {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-identity-complete.saved {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-check {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-identity-complete b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-lock {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-passenger-group {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-passenger-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-passenger-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-passenger-head small {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-passenger-head button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-rate-row {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-rate-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-rate-row input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-sr {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-subtotal {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-subtotal b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-remove {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-summary {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-summary-title {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-summary-title span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-breakdown {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-breakdown div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-breakdown span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-breakdown b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-breakdown strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-grand > div + div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-grand b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-grand strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-additional {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-additional-toggle {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-additional-toggle b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-additional-toggle strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-optional {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-additional-body {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-details-grid > label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-details-grid input,
+:root[data-theme="midnight"] .package14-details-grid textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-details-grid fieldset {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-details-grid fieldset legend {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-copy button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-details-actions {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-next-step {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-quick-modal h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-quick-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-register-stats > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-register-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-detail-status.complete {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package14-detail-status.optional {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package14-breakdown {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package14-grand > div + div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+:root[data-theme="ocean"] .package14-title h2,
+:root[data-theme="ocean"] .package14-register-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-identity,
+:root[data-theme="ocean"] .package14-commercial-card,
+:root[data-theme="ocean"] .package14-additional {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-identity {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-section-heading {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-section-heading b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-identity-grid > label {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-identity-grid input,
+:root[data-theme="ocean"] .package14-identity-grid select {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-ub-input span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-ub-preview {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-ub-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-identity-complete.ready {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-identity-complete.saved {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-check {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-identity-complete b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-lock {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-passenger-group {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-passenger-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-passenger-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-passenger-head small {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-passenger-head button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-rate-row {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-rate-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-rate-row input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-sr {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-subtotal {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-subtotal b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-remove {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-summary {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-summary-title {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-summary-title span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-breakdown {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-breakdown div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-breakdown span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-breakdown b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-breakdown strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-grand > div + div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-grand b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-grand strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-additional {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-additional-toggle {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-additional-toggle b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-additional-toggle strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-optional {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-additional-body {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-details-grid > label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-details-grid input,
+:root[data-theme="ocean"] .package14-details-grid textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-details-grid fieldset {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-details-grid fieldset legend {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-copy button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-details-actions {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-next-step {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-quick-modal h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-quick-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-register-stats > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-register-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-detail-status.complete {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package14-detail-status.optional {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package14-breakdown {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package14-grand > div + div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}

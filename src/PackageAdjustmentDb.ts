@@ -172,7 +172,7 @@ async function requirePermission(companyId: string, userId: string, permission: 
   const rows = await select<Array<{ role: UserRole; status: string }>>(
     database,
     `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
+    [userId, companyId],
   );
   const actor = rows[0];
   if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, permission)) {
@@ -185,7 +185,9 @@ export async function initPackageAdjustmentDatabase() {
   initializationPromise = (async () => {
     const database = await db();
     await execute(database, "PRAGMA busy_timeout = 5000");
-    await execute(database, `CREATE TABLE IF NOT EXISTS package_booking_adjustments (
+    await execute(
+      database,
+      `CREATE TABLE IF NOT EXISTS package_booking_adjustments (
       id TEXT PRIMARY KEY,
       company_id TEXT NOT NULL,
       booking_id TEXT NOT NULL,
@@ -210,11 +212,18 @@ export async function initPackageAdjustmentDatabase() {
       lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
       created_by_user_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
-    )`);
-    await execute(database, `CREATE INDEX IF NOT EXISTS idx_package_adjustments_booking_revision
-      ON package_booking_adjustments(company_id,booking_id,revision_no)`);
-    await execute(database, `CREATE INDEX IF NOT EXISTS idx_package_adjustments_date
-      ON package_booking_adjustments(company_id,adjustment_date)`);
+    )`,
+    );
+    await execute(
+      database,
+      `CREATE INDEX IF NOT EXISTS idx_package_adjustments_booking_revision
+      ON package_booking_adjustments(company_id,booking_id,revision_no)`,
+    );
+    await execute(
+      database,
+      `CREATE INDEX IF NOT EXISTS idx_package_adjustments_date
+      ON package_booking_adjustments(company_id,adjustment_date)`,
+    );
   })();
   return initializationPromise;
 }
@@ -229,7 +238,7 @@ async function loadBooking(database: Database, companyId: string, bookingId: str
     database,
     `SELECT id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status
      FROM package_bookings WHERE company_id=$1 AND id=$2 LIMIT 1`,
-    [companyId, bookingId]
+    [companyId, bookingId],
   );
   const booking = headers[0];
   if (!booking || booking.status !== "ACTIVE") throw new Error("This Package booking is not active.");
@@ -238,7 +247,7 @@ async function loadBooking(database: Database, companyId: string, bookingId: str
     `SELECT id,booking_id,passenger_type,passenger_name,package_type,rate_per_person,
             person_count,qty_is_explicit,line_total_pkr,sort_order
      FROM package_booking_lines WHERE booking_id=$1 ORDER BY sort_order ASC`,
-    [bookingId]
+    [bookingId],
   );
   return { booking, lines };
 }
@@ -285,12 +294,12 @@ async function latestState(database: Database, companyId: string, bookingId: str
     database,
     `SELECT * FROM package_booking_adjustments
      WHERE company_id=$1 AND booking_id=$2 ORDER BY revision_no DESC,created_at DESC LIMIT 1`,
-    [companyId, bookingId]
+    [companyId, bookingId],
   );
   const latest = rows[0];
   return {
     revisionNo: latest ? Number(latest.revision_no) : 1,
-    lifecycleStatus: latest?.lifecycle_status || "ACTIVE" as PackageLifecycleStatus,
+    lifecycleStatus: latest?.lifecycle_status || ("ACTIVE" as PackageLifecycleStatus),
   };
 }
 
@@ -306,15 +315,25 @@ function lineStatements(bookingId: string, lines: CalculatedLine[]): AtomicSqlSt
   const statements: AtomicSqlStatement[] = [
     { sql: `DELETE FROM package_booking_lines WHERE booking_id=$1`, params: [bookingId] },
   ];
-  lines.forEach((line) => statements.push({
-    sql: `INSERT INTO package_booking_lines
+  lines.forEach((line) =>
+    statements.push({
+      sql: `INSERT INTO package_booking_lines
       (id,booking_id,passenger_type,passenger_name,package_type,rate_per_person,person_count,qty_is_explicit,line_total_pkr,sort_order)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-    params: [
-      crypto.randomUUID(), bookingId, line.passengerType, line.passengerName, line.packageType,
-      line.ratePerPerson, line.personCount, line.qtyIsExplicit, line.lineTotalPkr, line.sortOrder,
-    ],
-  }));
+      params: [
+        crypto.randomUUID(),
+        bookingId,
+        line.passengerType,
+        line.passengerName,
+        line.packageType,
+        line.ratePerPerson,
+        line.personCount,
+        line.qtyIsExplicit,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
+    }),
+  );
   return statements;
 }
 
@@ -323,7 +342,7 @@ function adjustmentStatement(
   bookingId: string,
   input: AdjustmentInsert,
   actorUserId: string,
-  now: string
+  now: string,
 ): AtomicSqlStatement {
   return {
     sql: `INSERT INTO package_booking_adjustments
@@ -332,11 +351,30 @@ function adjustmentStatement(
        before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
     params: [
-      crypto.randomUUID(), companyId, bookingId, input.adjustmentType, input.adjustmentDate,
-      input.requestedBy, input.category.trim(), input.reason.trim(), input.reference.trim(), input.notes.trim(),
-      input.previousTotal, input.previousBase, input.revisedBase, input.charge, input.credit, input.delta,
-      input.effectiveTotal, input.beforeSnapshot, input.afterSnapshot, input.cancelledLines,
-      input.revisionNo, input.lifecycleStatus, actorUserId, now,
+      crypto.randomUUID(),
+      companyId,
+      bookingId,
+      input.adjustmentType,
+      input.adjustmentDate,
+      input.requestedBy,
+      input.category.trim(),
+      input.reason.trim(),
+      input.reference.trim(),
+      input.notes.trim(),
+      input.previousTotal,
+      input.previousBase,
+      input.revisedBase,
+      input.charge,
+      input.credit,
+      input.delta,
+      input.effectiveTotal,
+      input.beforeSnapshot,
+      input.afterSnapshot,
+      input.cancelledLines,
+      input.revisionNo,
+      input.lifecycleStatus,
+      actorUserId,
+      now,
     ],
   };
 }
@@ -347,7 +385,7 @@ function auditStatement(
   action: string,
   recordId: string,
   details: string,
-  now: string
+  now: string,
 ): AtomicSqlStatement | null {
   if (!userId) return null;
   return {
@@ -368,7 +406,7 @@ async function writeAdjustment(
   adjustment: AdjustmentInsert,
   actorUserId: string,
   auditAction: string,
-  auditDetails: string
+  auditDetails: string,
 ) {
   const now = new Date().toISOString();
   const statements = lineStatements(bookingId, lines);
@@ -387,7 +425,7 @@ export async function savePackageCorrectionOrAmendment(
   companyId: string,
   bookingId: string,
   input: PackageCorrectionAmendmentInput,
-  actorUserId = ""
+  actorUserId = "",
 ) {
   await requirePermission(companyId, actorUserId, "edit_bookings");
   if (!input.adjustmentDate) throw new Error("Adjustment Date is required.");
@@ -395,7 +433,8 @@ export async function savePackageCorrectionOrAmendment(
   const database = await ready();
   const { booking, lines: currentLines } = await loadBooking(database, companyId, bookingId);
   const state = await latestState(database, companyId, bookingId);
-  if (state.lifecycleStatus === "CANCELLED") throw new Error("A fully cancelled booking cannot be amended. Review its History instead.");
+  if (state.lifecycleStatus === "CANCELLED")
+    throw new Error("A fully cancelled booking cannot be amended. Review its History instead.");
 
   const revisedLines = calculateLines(input.lines);
   const previousBase = baseTotal(currentLines);
@@ -404,7 +443,8 @@ export async function savePackageCorrectionOrAmendment(
   const charge = input.adjustmentType === "AMENDMENT" ? Math.max(0, Number(input.amendmentChargePkr) || 0) : 0;
   const credit = input.adjustmentType === "AMENDMENT" ? Math.max(0, Number(input.creditPkr) || 0) : 0;
   const effectiveTotal = revisedBase + carriedFinancialAdjustments + charge - credit;
-  if (effectiveTotal < 0) throw new Error("This adjustment would make the booking value negative. Reduce the credit amount.");
+  if (effectiveTotal < 0)
+    throw new Error("This adjustment would make the booking value negative. Reduce the credit amount.");
   const delta = effectiveTotal - Number(booking.total_pkr || 0);
   const lifecycleStatus = nextLifecycle(state.lifecycleStatus, input.adjustmentType);
   const revisionNo = state.revisionNo + 1;
@@ -439,7 +479,7 @@ export async function savePackageCorrectionOrAmendment(
     adjustment,
     actorUserId,
     `BOOKING_${input.adjustmentType}`,
-    `${booking.ub_number} ${input.adjustmentType} ${delta >= 0 ? "+" : ""}${delta.toFixed(2)} PKR; effective ${effectiveTotal.toFixed(2)} PKR.`
+    `${booking.ub_number} ${input.adjustmentType} ${delta >= 0 ? "+" : ""}${delta.toFixed(2)} PKR; effective ${effectiveTotal.toFixed(2)} PKR.`,
   );
   return { effectiveTotal, delta, revisionNo, lifecycleStatus };
 }
@@ -448,7 +488,7 @@ export async function savePackageCancellation(
   companyId: string,
   bookingId: string,
   input: PackageCancellationInput,
-  actorUserId = ""
+  actorUserId = "",
 ) {
   await requirePermission(companyId, actorUserId, "edit_bookings");
   if (!input.adjustmentDate) throw new Error("Cancellation Date is required.");
@@ -461,14 +501,21 @@ export async function savePackageCancellation(
 
   const previousBase = baseTotal(currentLines);
   const carriedFinancialAdjustments = Number(booking.total_pkr || 0) - previousBase;
-  const cancelled: Array<{ lineId: string; passengerName: string; packageType: string; qty: number; valuePkr: number }> = [];
+  const cancelled: Array<{
+    lineId: string;
+    passengerName: string;
+    packageType: string;
+    qty: number;
+    valuePkr: number;
+  }> = [];
   const remaining: CalculatedLine[] = [];
 
   for (const line of currentLines) {
     const availableQty = Math.max(1, Math.trunc(Number(line.person_count) || 1));
-    const requestedQty = input.adjustmentType === "FULL_CANCELLATION"
-      ? availableQty
-      : Math.max(0, Math.min(availableQty, Math.trunc(Number(input.cancelQuantities[line.id]) || 0)));
+    const requestedQty =
+      input.adjustmentType === "FULL_CANCELLATION"
+        ? availableQty
+        : Math.max(0, Math.min(availableQty, Math.trunc(Number(input.cancelQuantities[line.id]) || 0)));
     if (requestedQty > 0) {
       cancelled.push({
         lineId: line.id,
@@ -500,7 +547,8 @@ export async function savePackageCancellation(
 
   const cancelledValue = cancelled.reduce((sum, item) => sum + item.valuePkr, 0);
   const charge = Math.max(0, Number(input.cancellationChargePkr) || 0);
-  if (charge > cancelledValue) throw new Error("Cancellation charge cannot be greater than the cancelled commercial value.");
+  if (charge > cancelledValue)
+    throw new Error("Cancellation charge cannot be greater than the cancelled commercial value.");
   const revisedBase = remaining.reduce((sum, line) => sum + line.lineTotalPkr, 0);
   const effectiveTotal = Math.max(0, revisedBase + carriedFinancialAdjustments + charge);
   const delta = effectiveTotal - Number(booking.total_pkr || 0);
@@ -537,9 +585,17 @@ export async function savePackageCancellation(
     adjustment,
     actorUserId,
     `BOOKING_${input.adjustmentType}`,
-    `${booking.ub_number} ${input.adjustmentType}; cancelled ${cancelledValue.toFixed(2)} PKR, charge ${charge.toFixed(2)} PKR, effective ${effectiveTotal.toFixed(2)} PKR.`
+    `${booking.ub_number} ${input.adjustmentType}; cancelled ${cancelledValue.toFixed(2)} PKR, charge ${charge.toFixed(2)} PKR, effective ${effectiveTotal.toFixed(2)} PKR.`,
   );
-  return { effectiveTotal, delta, revisionNo, lifecycleStatus, cancelledValue, cancellationCharge: charge, accountCredit: cancelledValue - charge };
+  return {
+    effectiveTotal,
+    delta,
+    revisionNo,
+    lifecycleStatus,
+    cancelledValue,
+    cancellationCharge: charge,
+    accountCredit: cancelledValue - charge,
+  };
 }
 
 export async function getPackageAdjustmentHistory(companyId: string, bookingId: string) {
@@ -552,7 +608,7 @@ export async function getPackageAdjustmentHistory(companyId: string, bookingId: 
      FROM package_booking_adjustments
      WHERE company_id=$1 AND booking_id=$2
      ORDER BY revision_no ASC,created_at ASC`,
-    [companyId, bookingId]
+    [companyId, bookingId],
   );
 }
 
@@ -565,7 +621,7 @@ export async function getPackageAdjustmentSummaryMap(companyId: string) {
             before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at
      FROM package_booking_adjustments
      WHERE company_id=$1 ORDER BY booking_id ASC,revision_no ASC,created_at ASC`,
-    [companyId]
+    [companyId],
   );
   const result: Record<string, PackageAdjustmentSummary> = {};
   for (const row of rows) {

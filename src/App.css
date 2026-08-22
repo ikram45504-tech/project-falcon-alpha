@@ -1,3 +1,7 @@
+@import "./App.dark-overrides.css";
+
+@import "./App.dark-overrides.css";
+
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
 :root {
   --bg-app: #f8fafc;
@@ -53,8 +57,7 @@ button:disabled {
   display: grid;
   place-items: center;
   padding: 28px;
-  background:
-    radial-gradient(circle at 15% 10%, #dceafb 0, transparent 32%), #f4f7fb;
+  background: radial-gradient(circle at 15% 10%, #dceafb 0, transparent 32%), #f4f7fb;
 }
 .card {
   width: min(470px, 100%);
@@ -198,12 +201,16 @@ select:focus {
 .primary {
   color: #fff;
   background: linear-gradient(135deg, #0a2540, #173d6b);
-  box-shadow: var(--shadow-inner), 0 4px 6px rgba(10, 37, 64, 0.2);
+  box-shadow:
+    var(--shadow-inner),
+    0 4px 6px rgba(10, 37, 64, 0.2);
   transition: var(--transition-smooth);
 }
 .primary:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-inner), 0 6px 12px rgba(10, 37, 64, 0.3);
+  box-shadow:
+    var(--shadow-inner),
+    0 6px 12px rgba(10, 37, 64, 0.3);
   background: linear-gradient(135deg, #0e3052, #1b4b82);
 }
 .primary.small {
@@ -378,7 +385,7 @@ select:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.1);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
 }
 .identity {
   display: flex;
@@ -449,7 +456,9 @@ select:focus {
   font-size: 11px;
   transition: all 0.1s ease;
   border-radius: 6px;
-  box-shadow: 0 4px 0 #8b1c1c, 0 6px 12px rgba(0,0,0,0.3);
+  box-shadow:
+    0 4px 0 #8b1c1c,
+    0 6px 12px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   margin-left: 16px;
 }
@@ -458,7 +467,9 @@ select:focus {
 }
 .minimal-signout-btn:active {
   transform: translateY(4px);
-  box-shadow: 0 0 0 #8b1c1c, 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow:
+    0 0 0 #8b1c1c,
+    0 2px 4px rgba(0, 0, 0, 0.3);
   border-top: none;
 }
 .workspace-nav {
@@ -495,7 +506,9 @@ select:focus {
   background: linear-gradient(180deg, var(--brand-secondary) 0%, #00b4d8 100%);
   border-top: 1px solid rgba(255, 255, 255, 0.5);
   border-bottom: 1px solid #007790;
-  box-shadow: 0 4px 10px rgba(0, 212, 255, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 4px 10px rgba(0, 212, 255, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4);
   transform: translateY(-1px);
 }
 .welcome,
@@ -543,7 +556,7 @@ select:focus {
 .stats > div {
   padding: 22px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(255,255,255,0.6), rgba(255,255,255,0.9));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.9));
   border: 1px solid var(--border-glass);
   color: var(--text-main);
   display: grid;
@@ -2749,10 +2762,7 @@ select:focus {
 
 .package-common-fields {
   display: grid;
-  grid-template-columns: minmax(150px, 0.65fr) minmax(190px, 0.9fr) minmax(
-      240px,
-      1.45fr
-    );
+  grid-template-columns: minmax(150px, 0.65fr) minmax(190px, 0.9fr) minmax(240px, 1.45fr);
   gap: 12px;
   margin-top: 16px;
 }
@@ -2864,10 +2874,9 @@ select:focus {
 
 .package-line {
   display: grid;
-  grid-template-columns: 110px minmax(240px, 1.8fr) minmax(150px, 0.8fr) minmax(
-      135px,
-      0.7fr
-    ) minmax(160px, 0.8fr);
+  grid-template-columns:
+    110px minmax(240px, 1.8fr) minmax(150px, 0.8fr) minmax(135px, 0.7fr)
+    minmax(160px, 0.8fr);
   gap: 10px;
   align-items: end;
   border: 1px solid #dfe7f0;
@@ -3145,10 +3154,9 @@ select:focus {
 
 @media (max-width: 1100px) {
   .package-line {
-    grid-template-columns: 100px minmax(220px, 1.5fr) minmax(
-        140px,
-        0.8fr
-      ) minmax(120px, 0.7fr);
+    grid-template-columns:
+      100px minmax(220px, 1.5fr) minmax(140px, 0.8fr)
+      minmax(120px, 0.7fr);
   }
 
   .package-line-total {
@@ -3583,10 +3591,9 @@ select:focus {
 
 .package-entry-row {
   display: grid;
-  grid-template-columns: 34px 78px minmax(220px, 1.8fr) minmax(
-      150px,
-      1fr
-    ) minmax(120px, 0.8fr) minmax(135px, 0.9fr) 32px;
+  grid-template-columns:
+    34px 78px minmax(220px, 1.8fr) minmax(150px, 1fr)
+    minmax(120px, 0.8fr) minmax(135px, 0.9fr) 32px;
   gap: 9px;
   align-items: end;
   padding: 12px;
@@ -3756,10 +3763,9 @@ select:focus {
 
 @media (max-width: 1050px) {
   .package-entry-row {
-    grid-template-columns: 30px 72px minmax(190px, 1.5fr) minmax(
-        130px,
-        1fr
-      ) minmax(110px, 0.8fr) minmax(120px, 0.9fr) 30px;
+    grid-template-columns:
+      30px 72px minmax(190px, 1.5fr) minmax(130px, 1fr)
+      minmax(110px, 0.8fr) minmax(120px, 0.9fr) 30px;
     gap: 7px;
   }
 }
@@ -3899,10 +3905,7 @@ select:focus {
 
 .package7d-header-fields {
   display: grid;
-  grid-template-columns: minmax(280px, 1.45fr) minmax(190px, 0.85fr) minmax(
-      230px,
-      1fr
-    );
+  grid-template-columns: minmax(280px, 1.45fr) minmax(190px, 0.85fr) minmax(230px, 1fr);
   gap: 14px;
   padding: 16px;
   border: 1px solid #d9e3ef;
@@ -4033,10 +4036,9 @@ select:focus {
 
 .package7d-row {
   display: grid;
-  grid-template-columns: 34px minmax(185px, 1.35fr) minmax(190px, 1.2fr) minmax(
-      145px,
-      0.82fr
-    ) minmax(115px, 0.62fr) minmax(145px, 0.75fr) 36px;
+  grid-template-columns:
+    34px minmax(185px, 1.35fr) minmax(190px, 1.2fr) minmax(145px, 0.82fr)
+    minmax(115px, 0.62fr) minmax(145px, 0.75fr) 36px;
   align-items: end;
   gap: 10px;
   padding: 12px 14px;
@@ -4298,10 +4300,9 @@ select:focus {
 
 @media (max-width: 1180px) {
   .package7d-row {
-    grid-template-columns: 32px minmax(175px, 1.3fr) minmax(
-        175px,
-        1.2fr
-      ) minmax(130px, 0.8fr) minmax(105px, 0.6fr);
+    grid-template-columns:
+      32px minmax(175px, 1.3fr) minmax(175px, 1.2fr)
+      minmax(130px, 0.8fr) minmax(105px, 0.6fr);
   }
   .package7d-subtotal {
     grid-column: 2 / 5;
@@ -6528,10 +6529,7 @@ select:focus {
 }
 .visa11-header-grid {
   display: grid;
-  grid-template-columns: minmax(250px, 1.35fr) minmax(180px, 0.8fr) minmax(
-      220px,
-      1fr
-    );
+  grid-template-columns: minmax(250px, 1.35fr) minmax(180px, 0.8fr) minmax(220px, 1fr);
   gap: 18px;
   padding: 18px;
 }
@@ -8105,7 +8103,7 @@ select:focus {
   --loss-glow: rgba(209, 43, 28, 0.2);
   --volume-color: #174e8b;
   --volume-glow: rgba(23, 78, 139, 0.2);
-  
+
   --input-bg: #fff;
   --input-border: #caddef;
   --header-bg: #fff;
@@ -8119,13 +8117,13 @@ select:focus {
 
 /* 2. MIDNIGHT SAPPHIRE (Dark) */
 :root[data-theme="midnight"] {
-  --bg-app: #0B1120;
+  --bg-app: #0b1120;
   --bg-panel: rgba(17, 24, 39, 0.75);
   --bg-card: rgba(17, 24, 39, 0.9);
-  --brand-primary: #0EA5E9;
-  --brand-secondary: #38BDF8;
-  --text-main: #F8FAFC;
-  --text-muted: #94A3B8;
+  --brand-primary: #0ea5e9;
+  --brand-secondary: #38bdf8;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
   --border-light: rgba(56, 189, 248, 0.15);
   --border-glass: rgba(56, 189, 248, 0.3);
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
@@ -8133,35 +8131,33 @@ select:focus {
   --shadow-glow: 0 0 20px rgba(14, 165, 233, 0.3);
   --shadow-inner: inset 0 2px 4px 0 rgba(255, 255, 255, 0.1);
 
-  --profit-color: #10B981;
+  --profit-color: #10b981;
   --profit-glow: rgba(16, 185, 129, 0.4);
-  --loss-color: #F43F5E;
+  --loss-color: #f43f5e;
   --loss-glow: rgba(244, 63, 94, 0.4);
-  --volume-color: #38BDF8;
+  --volume-color: #38bdf8;
   --volume-glow: rgba(56, 189, 248, 0.4);
 
-  --input-bg: #1E293B;
+  --input-bg: #1e293b;
   --input-border: #334155;
-  --header-bg: #070B14;
-  --table-th-bg: #0F172A;
-  --table-border: #1E293B;
-  --row-hover: #1E293B;
+  --header-bg: #070b14;
+  --table-th-bg: #0f172a;
+  --table-border: #1e293b;
+  --row-hover: #1e293b;
   --row-alt: rgba(15, 23, 42, 0.5);
-  --btn-primary-bg: linear-gradient(135deg, #0EA5E9, #2563EB);
-  --btn-primary-hover: linear-gradient(135deg, #38BDF8, #3B82F6);
+  --btn-primary-bg: linear-gradient(135deg, #0ea5e9, #2563eb);
+  --btn-primary-hover: linear-gradient(135deg, #38bdf8, #3b82f6);
 }
-
-
 
 /* 3. OCEAN BREEZE */
 :root[data-theme="ocean"] {
-  --bg-app: #E0F2FE;
+  --bg-app: #e0f2fe;
   --bg-panel: rgba(255, 255, 255, 0.8);
   --bg-card: rgba(255, 255, 255, 0.95);
-  --brand-primary: #0284C7;
-  --brand-secondary: #0EA5E9;
-  --text-main: #0C4A6E;
-  --text-muted: #0369A1;
+  --brand-primary: #0284c7;
+  --brand-secondary: #0ea5e9;
+  --text-main: #0c4a6e;
+  --text-muted: #0369a1;
   --border-light: rgba(2, 132, 199, 0.2);
   --border-glass: rgba(2, 132, 199, 0.4);
   --shadow-sm: 0 4px 6px -1px rgba(2, 132, 199, 0.1);
@@ -8171,87 +8167,251 @@ select:focus {
 
   --profit-color: #059669;
   --profit-glow: rgba(5, 150, 105, 0.2);
-  --loss-color: #E11D48;
+  --loss-color: #e11d48;
   --loss-glow: rgba(225, 29, 72, 0.2);
-  --volume-color: #0284C7;
+  --volume-color: #0284c7;
   --volume-glow: rgba(2, 132, 199, 0.2);
 
-  --input-bg: #FFFFFF;
-  --input-border: #BAE6FD;
-  --header-bg: #FFFFFF;
-  --table-th-bg: #F0F9FF;
-  --table-border: #BAE6FD;
-  --row-hover: #E0F2FE;
+  --input-bg: #ffffff;
+  --input-border: #bae6fd;
+  --header-bg: #ffffff;
+  --table-th-bg: #f0f9ff;
+  --table-border: #bae6fd;
+  --row-hover: #e0f2fe;
   --row-alt: transparent;
-  --btn-primary-bg: linear-gradient(135deg, #0284C7, #0369A1);
-  --btn-primary-hover: linear-gradient(135deg, #0EA5E9, #0284C7);
+  --btn-primary-bg: linear-gradient(135deg, #0284c7, #0369a1);
+  --btn-primary-hover: linear-gradient(135deg, #0ea5e9, #0284c7);
 }
 
 /* =========================================================
    DYNAMIC THEME OVERRIDES
    ========================================================= */
 
-body, .workspace, .center, .setup { background: var(--bg-app) !important; color: var(--text-main) !important; }
-
-.card, .panel, .welcome, .content-card, .ledger-page, .preview, .party-table-wrap, .payment-table-wrap, .ledger-table-wrap, .statement-controls, .statement-v6-controls, .company-choice { 
-  background: var(--bg-card) !important; 
-  border-color: var(--border-light) !important; 
+body,
+.workspace,
+.center,
+.setup {
+  background: var(--bg-app) !important;
   color: var(--text-main) !important;
 }
 
-.app-header { background: var(--header-bg) !important; border-bottom: 1px solid var(--border-light) !important; box-shadow: none !important; }
+.card,
+.panel,
+.welcome,
+.content-card,
+.ledger-page,
+.preview,
+.party-table-wrap,
+.payment-table-wrap,
+.ledger-table-wrap,
+.statement-controls,
+.statement-v6-controls,
+.company-choice {
+  background: var(--bg-card) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-main) !important;
+}
 
-.workspace-nav { background: var(--bg-card) !important; border-color: var(--border-light) !important; }
-.workspace-nav a { color: var(--text-muted) !important; }
-.workspace-nav a.active { color: #fff !important; }
+.app-header {
+  background: var(--header-bg) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+  box-shadow: none !important;
+}
 
-.module-card { background: var(--bg-panel) !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-.module-card h3, .welcome h2, .panel-head h2, .page-title h2, .ledger-top h2, .statement-control-title h2, .statement-v6-title-row h2 { color: var(--text-main) !important; }
-.module-card p, .welcome p, .page-title p, .ledger-top p, .statement-control-title p, .statement-v6-title-row p, .preview p { color: var(--text-muted) !important; }
+.workspace-nav {
+  background: var(--bg-card) !important;
+  border-color: var(--border-light) !important;
+}
+.workspace-nav a {
+  color: var(--text-muted) !important;
+}
+.workspace-nav a.active {
+  color: #fff !important;
+}
 
-.stats > div { background: var(--bg-panel) !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-.stats small { color: var(--text-muted) !important; }
-.stats .paid-stat b, .stats .clear b { color: var(--profit-color) !important; text-shadow: 0 0 15px var(--profit-glow); }
-.stats .purchase-stat b { color: var(--volume-color) !important; text-shadow: 0 0 15px var(--volume-glow); }
-.stats .due b { color: var(--loss-color) !important; text-shadow: 0 0 15px var(--loss-glow); }
-.amount { color: var(--profit-color) !important; }
-.stat-money { color: inherit !important; }
+.module-card {
+  background: var(--bg-panel) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-main) !important;
+}
+.module-card h3,
+.welcome h2,
+.panel-head h2,
+.page-title h2,
+.ledger-top h2,
+.statement-control-title h2,
+.statement-v6-title-row h2 {
+  color: var(--text-main) !important;
+}
+.module-card p,
+.welcome p,
+.page-title p,
+.ledger-top p,
+.statement-control-title p,
+.statement-v6-title-row p,
+.preview p {
+  color: var(--text-muted) !important;
+}
 
-input, textarea, select, .search-box { background: var(--input-bg) !important; border-color: var(--input-border) !important; color: var(--text-main) !important; }
-input:focus, textarea:focus, select:focus { border-color: var(--brand-secondary) !important; box-shadow: 0 0 0 3px var(--border-glass) !important; }
-input:disabled, select:disabled { background: var(--table-th-bg) !important; color: var(--text-muted) !important; }
+.stats > div {
+  background: var(--bg-panel) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-main) !important;
+}
+.stats small {
+  color: var(--text-muted) !important;
+}
+.stats .paid-stat b,
+.stats .clear b {
+  color: var(--profit-color) !important;
+  text-shadow: 0 0 15px var(--profit-glow);
+}
+.stats .purchase-stat b {
+  color: var(--volume-color) !important;
+  text-shadow: 0 0 15px var(--volume-glow);
+}
+.stats .due b {
+  color: var(--loss-color) !important;
+  text-shadow: 0 0 15px var(--loss-glow);
+}
+.amount {
+  color: var(--profit-color) !important;
+}
+.stat-money {
+  color: inherit !important;
+}
 
-table th { background: var(--table-th-bg) !important; color: var(--text-muted) !important; border-color: var(--table-border) !important; }
-table td { border-color: var(--table-border) !important; color: var(--text-main) !important; }
-table tbody tr:nth-child(even) { background: var(--row-alt) !important; }
-table tbody tr:nth-child(odd) { background: transparent !important; }
-table tbody tr:hover { background: var(--row-hover) !important; }
-.party-name { color: var(--volume-color) !important; }
-.table-note { color: var(--text-muted) !important; }
+input,
+textarea,
+select,
+.search-box {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-main) !important;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--brand-secondary) !important;
+  box-shadow: 0 0 0 3px var(--border-glass) !important;
+}
+input:disabled,
+select:disabled {
+  background: var(--table-th-bg) !important;
+  color: var(--text-muted) !important;
+}
 
-.primary { background: var(--btn-primary-bg) !important; color: #fff !important; border: 0 !important; box-shadow: 0 4px 10px var(--profit-glow) !important; }
-.primary:hover { background: var(--btn-primary-hover) !important; box-shadow: var(--shadow-glow) !important; }
-.secondary { background: var(--input-bg) !important; border-color: var(--input-border) !important; color: var(--text-main) !important; }
-.ghost-btn { color: var(--text-muted) !important; }
-.ghost-btn:hover { color: var(--text-main) !important; background: var(--border-light) !important; }
+table th {
+  background: var(--table-th-bg) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--table-border) !important;
+}
+table td {
+  border-color: var(--table-border) !important;
+  color: var(--text-main) !important;
+}
+table tbody tr:nth-child(even) {
+  background: var(--row-alt) !important;
+}
+table tbody tr:nth-child(odd) {
+  background: transparent !important;
+}
+table tbody tr:hover {
+  background: var(--row-hover) !important;
+}
+.party-name {
+  color: var(--volume-color) !important;
+}
+.table-note {
+  color: var(--text-muted) !important;
+}
 
-.doc-preview, .alert { background: var(--input-bg) !important; border-color: var(--input-border) !important; }
-.doc-preview b { color: var(--text-main) !important; }
-.doc-preview span { color: var(--text-muted) !important; }
-.party-count { background: var(--input-bg) !important; color: var(--text-muted) !important; }
-.party-count b { color: var(--text-main) !important; }
-.empty-state { background: transparent !important; border-color: var(--border-light) !important; }
-.empty-icon { background: var(--border-light) !important; color: var(--brand-secondary) !important; }
+.primary {
+  background: var(--btn-primary-bg) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 4px 10px var(--profit-glow) !important;
+}
+.primary:hover {
+  background: var(--btn-primary-hover) !important;
+  box-shadow: var(--shadow-glow) !important;
+}
+.secondary {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-main) !important;
+}
+.ghost-btn {
+  color: var(--text-muted) !important;
+}
+.ghost-btn:hover {
+  color: var(--text-main) !important;
+  background: var(--border-light) !important;
+}
 
-.row-actions button { background: var(--table-th-bg) !important; color: var(--volume-color) !important; border-color: var(--table-border) !important; }
-.row-actions button:hover { background: var(--row-hover) !important; color: var(--text-main) !important; }
-.status.active { background: var(--profit-glow) !important; color: var(--profit-color) !important; border-color: var(--profit-color) !important; }
-.status.void, .void-label { background: var(--loss-glow) !important; color: var(--loss-color) !important; border-color: var(--loss-color) !important; }
+.doc-preview,
+.alert {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+}
+.doc-preview b {
+  color: var(--text-main) !important;
+}
+.doc-preview span {
+  color: var(--text-muted) !important;
+}
+.party-count {
+  background: var(--input-bg) !important;
+  color: var(--text-muted) !important;
+}
+.party-count b {
+  color: var(--text-main) !important;
+}
+.empty-state {
+  background: transparent !important;
+  border-color: var(--border-light) !important;
+}
+.empty-icon {
+  background: var(--border-light) !important;
+  color: var(--brand-secondary) !important;
+}
 
-.ledger-summary > div { border-color: var(--border-light) !important; }
-.ledger-summary .purchase { background: var(--volume-glow) !important; color: var(--volume-color) !important; }
-.ledger-summary .paid { background: var(--profit-glow) !important; color: var(--profit-color) !important; }
-.ledger-summary .balance { background: var(--loss-glow) !important; color: var(--loss-color) !important; }
+.row-actions button {
+  background: var(--table-th-bg) !important;
+  color: var(--volume-color) !important;
+  border-color: var(--table-border) !important;
+}
+.row-actions button:hover {
+  background: var(--row-hover) !important;
+  color: var(--text-main) !important;
+}
+.status.active {
+  background: var(--profit-glow) !important;
+  color: var(--profit-color) !important;
+  border-color: var(--profit-color) !important;
+}
+.status.void,
+.void-label {
+  background: var(--loss-glow) !important;
+  color: var(--loss-color) !important;
+  border-color: var(--loss-color) !important;
+}
+
+.ledger-summary > div {
+  border-color: var(--border-light) !important;
+}
+.ledger-summary .purchase {
+  background: var(--volume-glow) !important;
+  color: var(--volume-color) !important;
+}
+.ledger-summary .paid {
+  background: var(--profit-glow) !important;
+  color: var(--profit-color) !important;
+}
+.ledger-summary .balance {
+  background: var(--loss-glow) !important;
+  color: var(--loss-color) !important;
+}
 
 /* =========================================================
    LAYOUT ENGINE ARCHITECTURES
@@ -8263,7 +8423,7 @@ table tbody tr:hover { background: var(--row-hover) !important; }
   background: var(--brand-primary) !important;
   color: #ffffff !important;
   border-bottom: none !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 :root[data-layout="layout-1"] .app-header h1,
 :root[data-layout="layout-1"] .app-header p,
@@ -8279,17 +8439,17 @@ table tbody tr:hover { background: var(--row-hover) !important; }
 }
 :root[data-layout="layout-1"] .app-header .header-logo,
 :root[data-layout="layout-2"] .app-header .header-logo {
-  background: rgba(255,255,255,0.1) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   color: #fff !important;
 }
 :root[data-layout="layout-1"] .app-header .ghost-btn,
 :root[data-layout="layout-2"] .app-header .ghost-btn {
-  color: rgba(255,255,255,0.8) !important;
-  border-color: rgba(255,255,255,0.2) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
 }
 :root[data-layout="layout-1"] .app-header .ghost-btn:hover,
 :root[data-layout="layout-2"] .app-header .ghost-btn:hover {
-  background: rgba(255,255,255,0.1) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   color: #ffffff !important;
 }
 
@@ -8303,13 +8463,12 @@ table tbody tr:hover { background: var(--row-hover) !important; }
   gap: 32px;
 }
 
-
 :root[data-layout="layout-1"] .layout-content-wrapper {
   background: var(--bg-app);
   padding: 32px;
   min-height: calc(100vh - 140px);
 }
-:root[data-layout="layout-1"] .module-card, 
+:root[data-layout="layout-1"] .module-card,
 :root[data-layout="layout-1"] .card {
   box-shadow: var(--shadow-lg) !important;
   border: 1px solid var(--border-light) !important;
@@ -8319,7 +8478,7 @@ table tbody tr:hover { background: var(--row-hover) !important; }
   display: grid;
   grid-template-columns: 280px 1fr;
   grid-template-rows: auto 1fr;
-  grid-template-areas: 
+  grid-template-areas:
     "header content"
     "nav content";
   height: 100vh;
@@ -8384,11 +8543,11 @@ table tbody tr:hover { background: var(--row-hover) !important; }
 }
 :root[data-layout="layout-3"] .workspace-nav a.active {
   color: #fff !important;
-  background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
   border-left: 4px solid #fff !important;
-  border-top: 1px solid rgba(255,255,255,0.2) !important;
-  border-bottom: 1px solid rgba(0,0,0,0.2) !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
   transform: translateY(-1px);
 }
 
@@ -8422,4 +8581,188 @@ table tbody tr:hover { background: var(--row-hover) !important; }
   background: var(--bg-app);
   padding: 32px;
   min-height: calc(100vh - 140px);
+}
+
+/* =========================================================
+   UI/UX POLISH & DARK MODE LEGIBILITY FIXES
+   ========================================================= */
+
+/* 1. Global Micro-Animations */
+button,
+.module-card,
+input,
+select,
+.party-table tbody tr,
+.bf-table tbody tr,
+.booking-direction-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+button:hover:not(:disabled),
+.booking-direction-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.2);
+}
+button:active:not(:disabled),
+.booking-direction-card:active {
+  transform: translateY(1px) scale(0.98);
+}
+.party-table tbody tr:hover td,
+.bf-table tbody tr:hover td {
+  opacity: 0.95;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  transform: translateY(-1px);
+}
+
+/* 2. Theme Specific Polish & Dark Mode Fixes */
+:root[data-theme="midnight"] body,
+:root[data-theme="midnight"] .workspace,
+:root[data-theme="midnight"] .setup,
+:root[data-theme="midnight"] .center {
+  background: radial-gradient(circle at 100% 0%, #0f172a 0%, #050811 100%) !important;
+}
+
+:root[data-theme="ocean"] body,
+:root[data-theme="ocean"] .workspace,
+:root[data-theme="ocean"] .setup,
+:root[data-theme="ocean"] .center {
+  background: radial-gradient(circle at 100% 0%, #e0f2fe 0%, #bae6fd 100%) !important;
+}
+
+:root[data-theme="midnight"] .card,
+:root[data-theme="midnight"] .panel,
+:root[data-theme="midnight"] .welcome,
+:root[data-theme="midnight"] .content-card,
+:root[data-theme="midnight"] .ledger-page {
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.15) !important;
+  box-shadow:
+    0 10px 40px -10px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Fix Hardcoded Dark Text in Dark Mode */
+:root[data-theme="midnight"] h1,
+:root[data-theme="midnight"] h2,
+:root[data-theme="midnight"] h3,
+:root[data-theme="midnight"] h4,
+:root[data-theme="midnight"] h5,
+:root[data-theme="midnight"] p,
+:root[data-theme="midnight"] small,
+:root[data-theme="midnight"] label,
+:root[data-theme="midnight"] th,
+:root[data-theme="midnight"] .party-name,
+:root[data-theme="midnight"] .table-note,
+:root[data-theme="midnight"] .company-choice small,
+:root[data-theme="midnight"] .booking-direction-card b,
+:root[data-theme="midnight"] .booking-direction-card p,
+:root[data-theme="midnight"] .booking-direction-card small {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] td {
+  color: var(--text-muted) !important;
+}
+:root[data-theme="midnight"] b,
+:root[data-theme="midnight"] strong {
+  color: var(--text-main);
+}
+
+/* Except specific colored elements */
+:root[data-theme="midnight"] .eyebrow.blue {
+  color: var(--brand-secondary) !important;
+}
+:root[data-theme="midnight"] .alert.error {
+  color: #fecdd3 !important;
+  background: rgba(225, 29, 72, 0.2) !important;
+  border-color: rgba(225, 29, 72, 0.5) !important;
+}
+:root[data-theme="midnight"] .alert.success {
+  color: #d1fae5 !important;
+  background: rgba(5, 150, 105, 0.2) !important;
+  border-color: rgba(5, 150, 105, 0.5) !important;
+}
+:root[data-theme="midnight"] .alert.info {
+  color: #bae6fd !important;
+  background: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.5) !important;
+}
+
+/* Fix Inputs in Dark Mode */
+:root[data-theme="midnight"] input,
+:root[data-theme="midnight"] select,
+:root[data-theme="midnight"] textarea,
+:root[data-theme="midnight"] .search-box {
+  background: var(--input-bg) !important;
+  color: var(--text-main) !important;
+  border-color: var(--input-border) !important;
+}
+:root[data-theme="midnight"] .search-box input {
+  background: transparent !important;
+}
+:root[data-theme="midnight"] input:focus,
+:root[data-theme="midnight"] select:focus,
+:root[data-theme="midnight"] textarea:focus {
+  border-color: var(--brand-primary) !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25) !important;
+}
+
+/* Fix generic panels and cards in dark mode */
+:root[data-theme="midnight"] .module-summary-row > div,
+:root[data-theme="midnight"] .empty-state,
+:root[data-theme="midnight"] .coming-data,
+:root[data-theme="midnight"] .party-count,
+:root[data-theme="midnight"] .ledger-summary > div,
+:root[data-theme="midnight"] .company-choice,
+:root[data-theme="midnight"] .booking-direction-card,
+:root[data-theme="midnight"] .booking-service-tile {
+  background: rgba(15, 23, 42, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-direction-card:hover,
+:root[data-theme="midnight"] .booking-service-tile:hover {
+  background: rgba(30, 41, 59, 0.6) !important;
+  border-color: var(--brand-primary) !important;
+}
+
+/* Fix Tables in dark mode */
+:root[data-theme="midnight"] .party-table th,
+:root[data-theme="midnight"] .bf-table th,
+:root[data-theme="midnight"] .ledger-service-table th,
+:root[data-theme="midnight"] .ledger-payment-table th,
+:root[data-theme="midnight"] .booking-list-table th {
+  background: var(--table-th-bg) !important;
+  border-color: var(--table-border) !important;
+  color: var(--text-muted) !important;
+}
+:root[data-theme="midnight"] .party-table td,
+:root[data-theme="midnight"] .bf-table td,
+:root[data-theme="midnight"] .ledger-service-table td,
+:root[data-theme="midnight"] .ledger-payment-table td,
+:root[data-theme="midnight"] .booking-list-table td {
+  border-color: var(--table-border) !important;
+}
+:root[data-theme="midnight"] .party-table tbody tr:nth-child(even),
+:root[data-theme="midnight"] .bf-table tbody tr:nth-child(even),
+:root[data-theme="midnight"] .booking-list-table tbody tr:nth-child(even) {
+  background: var(--row-alt) !important;
+}
+:root[data-theme="midnight"] .party-table tbody tr:hover,
+:root[data-theme="midnight"] .bf-table tbody tr:hover,
+:root[data-theme="midnight"] .booking-list-table tbody tr:hover {
+  background: var(--row-hover) !important;
+}
+
+/* Fix Secondary Buttons in Dark Mode */
+:root[data-theme="midnight"] .secondary {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+:root[data-theme="midnight"] .secondary:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
 }

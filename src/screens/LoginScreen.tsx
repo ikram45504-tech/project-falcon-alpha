@@ -12,20 +12,26 @@ function getOrCreateDeviceId() {
   return created;
 }
 
-export default function LoginScreen({ 
-  accountCreatedNotice, 
-  setAccountCreatedNotice 
-}: { 
-  accountCreatedNotice: any; 
+export default function LoginScreen({
+  accountCreatedNotice,
+  setAccountCreatedNotice,
+}: {
+  accountCreatedNotice: any;
   setAccountCreatedNotice: (n: any) => void;
 }) {
   const { setSessionData } = useAuth();
   const navigate = useNavigate();
-  
-  const [loginCompanyCode, setLoginCompanyCode] = useState(() => localStorage.getItem("travelAccountingLastCompanyCode") || accountCreatedNotice?.companyCode || "");
-  const [loginName, setLoginName] = useState(() => localStorage.getItem("travelAccountingLastIdentifier") || accountCreatedNotice?.username || "");
+
+  const [loginCompanyCode, setLoginCompanyCode] = useState(
+    () => localStorage.getItem("travelAccountingLastCompanyCode") || accountCreatedNotice?.companyCode || "",
+  );
+  const [loginName, setLoginName] = useState(
+    () => localStorage.getItem("travelAccountingLastIdentifier") || accountCreatedNotice?.username || "",
+  );
   const [loginPassword, setLoginPassword] = useState("");
-  const [rememberCredentials, setRememberCredentials] = useState(() => Boolean(localStorage.getItem("travelAccountingRememberToken")));
+  const [rememberCredentials, setRememberCredentials] = useState(() =>
+    Boolean(localStorage.getItem("travelAccountingRememberToken")),
+  );
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -105,33 +111,73 @@ export default function LoginScreen({
         <form onSubmit={signIn}>
           <label>
             Company Code
-            <input autoFocus value={loginCompanyCode} onChange={e => setLoginCompanyCode(e.target.value.toUpperCase())} placeholder="Enter Company Code" autoComplete="organization" />
+            <input
+              autoFocus
+              value={loginCompanyCode}
+              onChange={(e) => setLoginCompanyCode(e.target.value.toUpperCase())}
+              placeholder="Enter Company Code"
+              autoComplete="organization"
+            />
           </label>
           <label>
             Username or Email
-            <input value={loginName} onChange={e => setLoginName(e.target.value)} placeholder="Enter username or email" autoComplete="username" />
+            <input
+              value={loginName}
+              onChange={(e) => setLoginName(e.target.value)}
+              placeholder="Enter username or email"
+              autoComplete="username"
+            />
           </label>
           <label>
             Password
             <div className="password-input-wrap-v8b">
-              <input type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={e => setLoginPassword(e.target.value)} autoComplete="current-password" />
-              <button className="password-eye-v8b" type="button" onClick={() => setShowLoginPassword(v => !v)} aria-label={showLoginPassword ? "Hide password" : "Show password"}>
+              <input
+                type={showLoginPassword ? "text" : "password"}
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+              <button
+                className="password-eye-v8b"
+                type="button"
+                onClick={() => setShowLoginPassword((v) => !v)}
+                aria-label={showLoginPassword ? "Hide password" : "Show password"}
+              >
                 {showLoginPassword ? "Hide" : "Show"}
               </button>
             </div>
           </label>
 
           <label className="remember-company-code">
-            <input type="checkbox" checked={rememberCredentials} onChange={e => setRememberCredentials(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={rememberCredentials}
+              onChange={(e) => setRememberCredentials(e.target.checked)}
+            />
             <span>Remember credentials to sign in next time on this device</span>
           </label>
-          <small className="remember-session-help">Your password is not stored. A device session is used instead.</small>
+          <small className="remember-session-help">
+            Your password is not stored. A device session is used instead.
+          </small>
 
-          <button className="primary" type="submit" disabled={busy}>{busy ? "Signing in..." : "Sign In"}</button>
+          <button className="primary" type="submit" disabled={busy}>
+            {busy ? "Signing in..." : "Sign In"}
+          </button>
         </form>
 
-        <div className="new-company-divider"><span>New to Travel Accounting?</span></div>
-        <button className="create-company-login-button" type="button" onClick={() => { setAccountCreatedNotice(null); navigate("/setup"); }}>Create an Account</button>
+        <div className="new-company-divider">
+          <span>New to Travel Accounting?</span>
+        </div>
+        <button
+          className="create-company-login-button"
+          type="button"
+          onClick={() => {
+            setAccountCreatedNotice(null);
+            navigate("/setup");
+          }}
+        >
+          Create an Account
+        </button>
 
         <div className="platform-ready-note">
           <b>Secure company access</b>
@@ -141,8 +187,15 @@ export default function LoginScreen({
 
       {accountCreatedNotice && (
         <div className="modal-backdrop account-created-backdrop" onMouseDown={closeAccountNotice}>
-          <section className="modal-card account-created-modal" onMouseDown={e => e.stopPropagation()}>
-            <button className="close-btn account-created-close" type="button" onClick={closeAccountNotice} aria-label="Close">×</button>
+          <section className="modal-card account-created-modal" onMouseDown={(e) => e.stopPropagation()}>
+            <button
+              className="close-btn account-created-close"
+              type="button"
+              onClick={closeAccountNotice}
+              aria-label="Close"
+            >
+              ×
+            </button>
 
             {accountCreatedNotice.accountStatus === "ACTIVE" ? (
               <>
@@ -152,20 +205,39 @@ export default function LoginScreen({
                 <p className="account-created-intro">Keep the following login details in a safe place.</p>
 
                 <div className="account-created-details">
-                  <div><span>Company</span><b>{accountCreatedNotice.companyName}</b></div>
-                  <div className="confidential-code-row"><span>Company Code</span><b>{accountCreatedNotice.companyCode}</b></div>
-                  <div><span>Master Username</span><b>{accountCreatedNotice.username}</b></div>
-                  <div><span>Email Address</span><b>{accountCreatedNotice.email}</b></div>
+                  <div>
+                    <span>Company</span>
+                    <b>{accountCreatedNotice.companyName}</b>
+                  </div>
+                  <div className="confidential-code-row">
+                    <span>Company Code</span>
+                    <b>{accountCreatedNotice.companyCode}</b>
+                  </div>
+                  <div>
+                    <span>Master Username</span>
+                    <b>{accountCreatedNotice.username}</b>
+                  </div>
+                  <div>
+                    <span>Email Address</span>
+                    <b>{accountCreatedNotice.email}</b>
+                  </div>
                 </div>
 
                 <div className="confidential-warning">
                   <b>Confidential Company Code</b>
-                  <p>Your Company Code is confidential to your organization. Please write it down and keep it secure. You and your authorized company users will need it to sign in.</p>
+                  <p>
+                    Your Company Code is confidential to your organization. Please write it down and keep it secure. You
+                    and your authorized company users will need it to sign in.
+                  </p>
                 </div>
 
                 <div className="account-created-actions">
-                  <button className="secondary" type="button" onClick={() => void copyLoginDetails()}>Copy Login Details</button>
-                  <button className="primary" type="button" onClick={closeAccountNotice}>Continue to Sign In</button>
+                  <button className="secondary" type="button" onClick={() => void copyLoginDetails()}>
+                    Copy Login Details
+                  </button>
+                  <button className="primary" type="button" onClick={closeAccountNotice}>
+                    Continue to Sign In
+                  </button>
                 </div>
               </>
             ) : (
@@ -175,10 +247,15 @@ export default function LoginScreen({
                 <h2>Company registration received</h2>
                 <p className="account-created-intro">Your company account creation has been successfully completed.</p>
                 <div className="confidential-warning neutral">
-                  <p>Please wait while the relevant staff reviews your registration. You will be contacted with your Company Code and account credentials after activation.</p>
+                  <p>
+                    Please wait while the relevant staff reviews your registration. You will be contacted with your
+                    Company Code and account credentials after activation.
+                  </p>
                 </div>
                 <div className="account-created-actions single">
-                  <button className="primary" type="button" onClick={closeAccountNotice}>Close</button>
+                  <button className="primary" type="button" onClick={closeAccountNotice}>
+                    Close
+                  </button>
                 </div>
               </>
             )}

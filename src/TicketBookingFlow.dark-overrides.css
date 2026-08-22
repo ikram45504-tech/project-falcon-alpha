@@ -1,0 +1,131 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR TicketBookingFlow.css */
+
+:root[data-theme="midnight"] .ticket17-add-row {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-fare-table {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket17-fare-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-fare-table input,
+:root[data-theme="midnight"] .ticket17-fare-table select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-fare-table .money-cell {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-remove {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-additional {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-additional-toggle {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-additional-toggle b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-optional {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-additional.open .ticket17-additional-toggle {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket17-fare-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket17-fare-table td {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-additional {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket17-additional-toggle {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket17-additional-toggle b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket17-optional {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .ticket17-add-row {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-fare-table {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket17-fare-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-fare-table input,
+:root[data-theme="ocean"] .ticket17-fare-table select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-fare-table .money-cell {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-remove {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-additional {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-additional-toggle {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-additional-toggle b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-optional {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-additional.open .ticket17-additional-toggle {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket17-fare-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket17-fare-table td {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-additional {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket17-additional-toggle {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket17-additional-toggle b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket17-optional {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}

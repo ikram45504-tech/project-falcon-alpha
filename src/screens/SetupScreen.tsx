@@ -44,7 +44,7 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
 
   const updateSetup = (key: keyof typeof setup, value: string) => {
     setError("");
-    setSetup(prev => ({ ...prev, [key]: value }));
+    setSetup((prev) => ({ ...prev, [key]: value }));
   };
 
   const finishSetup = async () => {
@@ -92,11 +92,20 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
         <div>
           <span className="eyebrow gold">CREATE ACCOUNT</span>
           <h1>Create your company account and secure master access.</h1>
-          <p>Start with the essential account details. Company branding, address, currencies and additional profile information can be completed after sign in.</p>
+          <p>
+            Start with the essential account details. Company branding, address, currencies and additional profile
+            information can be completed after sign in.
+          </p>
           <div className="features">
-            <b>01 <small>Unique Company Identity</small></b>
-            <b>02 <small>Master Username or Email Sign In</small></b>
-            <b>03 <small>Role-Based Team Access</small></b>
+            <b>
+              01 <small>Unique Company Identity</small>
+            </b>
+            <b>
+              02 <small>Master Username or Email Sign In</small>
+            </b>
+            <b>
+              03 <small>Role-Based Team Access</small>
+            </b>
           </div>
         </div>
       </section>
@@ -112,32 +121,64 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
 
         {error && <div className="alert error">{error}</div>}
 
-        <form className="form signup-form-v8b" onSubmit={(e) => { e.preventDefault(); void finishSetup(); }}>
+        <form
+          className="form signup-form-v8b"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void finishSetup();
+          }}
+        >
           <label>
             Company Name *
-            <input autoFocus value={setup.companyName} onChange={e => updateSetup("companyName", e.target.value)} placeholder="e.g. ABC Travel & Tours" />
+            <input
+              autoFocus
+              value={setup.companyName}
+              onChange={(e) => updateSetup("companyName", e.target.value)}
+              placeholder="e.g. ABC Travel & Tours"
+            />
           </label>
 
           <label>
             Master Username *
-            <input value={setup.username} onChange={e => updateSetup("username", e.target.value)} placeholder="e.g. admin" autoComplete="username" />
+            <input
+              value={setup.username}
+              onChange={(e) => updateSetup("username", e.target.value)}
+              placeholder="e.g. admin"
+              autoComplete="username"
+            />
             <small className="field-help">This username will be used to sign in to the Master account.</small>
           </label>
 
           <label>
             Email Address *
-            <input type="email" value={setup.email} onChange={e => updateSetup("email", e.target.value)} placeholder="e.g. accounts@abctravel.com" autoComplete="email" />
+            <input
+              type="email"
+              value={setup.email}
+              onChange={(e) => updateSetup("email", e.target.value)}
+              placeholder="e.g. accounts@abctravel.com"
+              autoComplete="email"
+            />
             <small className="field-help">You can also use this email address to sign in.</small>
           </label>
 
           <label>
             DTS License # <small>(Optional)</small>
-            <input value={setup.dtsLicense} onChange={e => updateSetup("dtsLicense", e.target.value)} placeholder="Enter DTS License #" />
+            <input
+              value={setup.dtsLicense}
+              onChange={(e) => updateSetup("dtsLicense", e.target.value)}
+              placeholder="Enter DTS License #"
+            />
           </label>
 
           <label>
             Phone / WhatsApp Number *
-            <input value={setup.phone} onChange={e => updateSetup("phone", e.target.value)} placeholder="e.g. +92 300 1234567" inputMode="tel" autoComplete="tel" />
+            <input
+              value={setup.phone}
+              onChange={(e) => updateSetup("phone", e.target.value)}
+              placeholder="e.g. +92 300 1234567"
+              inputMode="tel"
+              autoComplete="tel"
+            />
             <small className="field-help">Company will contact you on this number.</small>
           </label>
 
@@ -148,11 +189,16 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
                 <input
                   type={showSetupPassword ? "text" : "password"}
                   value={setup.password}
-                  onChange={e => updateSetup("password", e.target.value)}
+                  onChange={(e) => updateSetup("password", e.target.value)}
                   placeholder="Create a strong password"
                   autoComplete="new-password"
                 />
-                <button className="password-eye-v8b" type="button" onClick={() => setShowSetupPassword(v => !v)} aria-label={showSetupPassword ? "Hide password" : "Show password"}>
+                <button
+                  className="password-eye-v8b"
+                  type="button"
+                  onClick={() => setShowSetupPassword((v) => !v)}
+                  aria-label={showSetupPassword ? "Hide password" : "Show password"}
+                >
                   {showSetupPassword ? "Hide" : "Show"}
                 </button>
               </div>
@@ -163,11 +209,16 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
                 <input
                   type={showSetupConfirmPassword ? "text" : "password"}
                   value={setup.confirmPassword}
-                  onChange={e => updateSetup("confirmPassword", e.target.value)}
+                  onChange={(e) => updateSetup("confirmPassword", e.target.value)}
                   placeholder="Repeat password"
                   autoComplete="new-password"
                 />
-                <button className="password-eye-v8b" type="button" onClick={() => setShowSetupConfirmPassword(v => !v)} aria-label={showSetupConfirmPassword ? "Hide confirm password" : "Show confirm password"}>
+                <button
+                  className="password-eye-v8b"
+                  type="button"
+                  onClick={() => setShowSetupConfirmPassword((v) => !v)}
+                  aria-label={showSetupConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                >
                   {showSetupConfirmPassword ? "Hide" : "Show"}
                 </button>
               </div>

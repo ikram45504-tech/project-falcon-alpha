@@ -22,7 +22,7 @@ export function useBookingFlowState<T extends CommonEntry>(
   companyId: string,
   transactionType: BookingTransactionType,
   entries: T[],
-  serviceLabel: string
+  serviceLabel: string,
 ) {
   const [mode, setMode] = useState<Mode>("FORM");
   const [tx, setTx] = useState<BookingTransactionType>(transactionType);
@@ -58,24 +58,25 @@ export function useBookingFlowState<T extends CommonEntry>(
 
   async function assignUb(formatted: string) {
     setError("");
-    if (!counterpartyId) return setError(tx === "SALE" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");
+    if (!counterpartyId)
+      return setError(tx === "SALE" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");
     if (!bookingDate) return setError("Date of Booking is required.");
     if (!formatted) return setError("Enter a booking number using 1 to 4 digits.");
-    
+
     // 1. Check local duplicates within this service
     const duplicate = entries.find(
       (entry) =>
         normalizeBookingUb(entry.ub_number) === formatted &&
         (tx === "SALE"
           ? entry.transaction_type === "SALE"
-          : entry.transaction_type === "PURCHASE" && entry.counterparty_id === counterpartyId)
+          : entry.transaction_type === "PURCHASE" && entry.counterparty_id === counterpartyId),
     );
-    
+
     if (duplicate) {
       setError(
         tx === "SALE"
           ? `${formatted} already has a ${serviceLabel} Sale booking.`
-          : `This Vendor already has a ${serviceLabel} Purchase booking for ${formatted}.`
+          : `This Vendor already has a ${serviceLabel} Purchase booking for ${formatted}.`,
       );
       return false;
     }
@@ -87,7 +88,9 @@ export function useBookingFlowState<T extends CommonEntry>(
       if (owner && tx === "SALE" && owner.partyId !== counterpartyId) {
         const partyInfo = await getPartyById(companyId, owner.partyId);
         const partyName = partyInfo?.name || "another customer";
-        setError(`This Unique Booking # (${formatted}) is designed for ${partyName} only. Please change unique number.`);
+        setError(
+          `This Unique Booking # (${formatted}) is designed for ${partyName} only. Please change unique number.`,
+        );
         return false;
       }
     } catch (e) {
@@ -96,7 +99,7 @@ export function useBookingFlowState<T extends CommonEntry>(
     } finally {
       setBusy(false);
     }
-    
+
     setUbNumber(formatted);
     setAssigned(true);
     let detailedMsg = `${formatted} is ready. Enter ${serviceLabel} Details & Rates below.`;
@@ -107,19 +110,32 @@ export function useBookingFlowState<T extends CommonEntry>(
   }
 
   return {
-    mode, setMode,
-    tx, setTx,
-    counterpartyId, setCounterpartyId,
-    bookingDate, setBookingDate,
-    ubDigits, setUbDigits,
-    ubNumber, setUbNumber,
-    assigned, setAssigned,
-    saved, setSaved,
-    detailsOpen, setDetailsOpen,
-    editingId, setEditingId,
-    busy, setBusy,
-    error, setError,
-    message, setMessage,
+    mode,
+    setMode,
+    tx,
+    setTx,
+    counterpartyId,
+    setCounterpartyId,
+    bookingDate,
+    setBookingDate,
+    ubDigits,
+    setUbDigits,
+    ubNumber,
+    setUbNumber,
+    assigned,
+    setAssigned,
+    saved,
+    setSaved,
+    detailsOpen,
+    setDetailsOpen,
+    editingId,
+    setEditingId,
+    busy,
+    setBusy,
+    error,
+    setError,
+    message,
+    setMessage,
     assignUb,
     resetState,
   };

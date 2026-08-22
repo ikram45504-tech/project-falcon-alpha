@@ -28,7 +28,10 @@ export function ServicesModule(_props: ModuleProps) {
         <div>
           <span className="eyebrow green-text">LEGACY MODULE RETIRED</span>
           <h2>Services moved to Bookings</h2>
-          <p>Use Bookings → Sale/Purchase and select Package, Ticket, Visa, Transport or Misc. Those records now feed ledgers and Statements automatically.</p>
+          <p>
+            Use Bookings → Sale/Purchase and select Package, Ticket, Visa, Transport or Misc. Those records now feed
+            ledgers and Statements automatically.
+          </p>
         </div>
       </div>
       <div className="alert info">Manual Service entries are disabled to prevent duplicate accounting records.</div>
@@ -42,11 +45,20 @@ export function ServiceFormModal({ onClose }: ModalProps) {
     <div className="modal-backdrop" onMouseDown={onClose}>
       <section className="modal-card" onMouseDown={(event) => event.stopPropagation()}>
         <div className="modal-head">
-          <div><span className="eyebrow green-text">LEGACY MODULE RETIRED</span><h3>Use the Bookings module</h3></div>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <div>
+            <span className="eyebrow green-text">LEGACY MODULE RETIRED</span>
+            <h3>Use the Bookings module</h3>
+          </div>
+          <button className="close-btn" onClick={onClose}>
+            ×
+          </button>
         </div>
         <div className="alert info">Service transactions must now be created from Bookings.</div>
-        <div className="modal-buttons"><button className="primary" onClick={onClose}>Close</button></div>
+        <div className="modal-buttons">
+          <button className="primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </section>
     </div>
   );

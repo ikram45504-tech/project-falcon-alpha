@@ -1,0 +1,309 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR PaymentsV2.css */
+
+:root[data-theme="midnight"] .payment-register-link,
+:root[data-theme="midnight"] .payment-register-button {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-party-card .direction-card-icon {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-vendor-card .direction-card-icon {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-refund-note {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-refund-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-title .purple-text,
+:root[data-theme="midnight"] .payment-step-heading span,
+:root[data-theme="midnight"] .payment-v2-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-identity {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-step-heading span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-v2-identity-grid label,
+:root[data-theme="midnight"] .payment-v2-setup-grid label,
+:root[data-theme="midnight"] .payment-v2-info-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-identity-grid input,
+:root[data-theme="midnight"] .payment-v2-identity-grid select,
+:root[data-theme="midnight"] .payment-v2-setup-grid input,
+:root[data-theme="midnight"] .payment-v2-setup-grid select,
+:root[data-theme="midnight"] .payment-v2-info-grid input,
+:root[data-theme="midnight"] .payment-v2-info-grid textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-method-field {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-method-tabs {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-method-tabs button + button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-v2-method-tabs button.active.cash {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-method-tabs button.active.bank {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-document-preview {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-document-preview b,
+:root[data-theme="midnight"] .payment-v2-document-number {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-identity-complete {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-setup-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-v2-muted-field input {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-flow {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-flow b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-balance-preview > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-balance-preview > div:nth-child(2) {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-v2-balance-preview > div.highlight {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-v2-balance-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-information {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-v2-information-toggle {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-information-body {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-info-grid.common {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-v2-next-step {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-register-stats > div:nth-child(2) b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-register-stats > div:nth-child(3) b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-kind-chip.receipt {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-kind-chip.vendor {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-kind-chip.refund {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-v2-method-chip.cash {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-v2-method-chip.bank {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-empty-icon {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+:root[data-theme="ocean"] .payment-register-link,
+:root[data-theme="ocean"] .payment-register-button {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-party-card .direction-card-icon {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-vendor-card .direction-card-icon {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-refund-note {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-refund-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-title .purple-text,
+:root[data-theme="ocean"] .payment-step-heading span,
+:root[data-theme="ocean"] .payment-v2-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-identity {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-step-heading span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-v2-identity-grid label,
+:root[data-theme="ocean"] .payment-v2-setup-grid label,
+:root[data-theme="ocean"] .payment-v2-info-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-identity-grid input,
+:root[data-theme="ocean"] .payment-v2-identity-grid select,
+:root[data-theme="ocean"] .payment-v2-setup-grid input,
+:root[data-theme="ocean"] .payment-v2-setup-grid select,
+:root[data-theme="ocean"] .payment-v2-info-grid input,
+:root[data-theme="ocean"] .payment-v2-info-grid textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-method-field {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-method-tabs {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-method-tabs button + button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-v2-method-tabs button.active.cash {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-method-tabs button.active.bank {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-document-preview {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-document-preview b,
+:root[data-theme="ocean"] .payment-v2-document-number {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-identity-complete {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-setup-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-v2-muted-field input {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-flow {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-flow b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-balance-preview > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-balance-preview > div:nth-child(2) {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-v2-balance-preview > div.highlight {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-v2-balance-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-information {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-v2-information-toggle {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-information-body {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-info-grid.common {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-v2-next-step {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-register-stats > div:nth-child(2) b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-register-stats > div:nth-child(3) b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-kind-chip.receipt {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-kind-chip.vendor {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-kind-chip.refund {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-v2-method-chip.cash {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-v2-method-chip.bank {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-empty-icon {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}

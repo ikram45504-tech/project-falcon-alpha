@@ -109,7 +109,7 @@ async function requirePermission(companyId: string, userId: string, permission: 
   const rows = await select<Array<{ role: UserRole; status: string }>>(
     database,
     `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
+    [userId, companyId],
   );
   const actor = rows[0];
   if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, permission)) {
@@ -122,7 +122,9 @@ export async function initUniversalBookingAdjustmentDatabase() {
   initializationPromise = (async () => {
     const database = await db();
     await execute(database, "PRAGMA busy_timeout = 5000");
-    await execute(database, `CREATE TABLE IF NOT EXISTS booking_adjustments (
+    await execute(
+      database,
+      `CREATE TABLE IF NOT EXISTS booking_adjustments (
       id TEXT PRIMARY KEY,
       company_id TEXT NOT NULL,
       service_type TEXT NOT NULL,
@@ -147,11 +149,18 @@ export async function initUniversalBookingAdjustmentDatabase() {
       lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
       created_by_user_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
-    )`);
-    await execute(database, `CREATE INDEX IF NOT EXISTS idx_booking_adjustments_lookup
-      ON booking_adjustments(company_id,service_type,booking_id,revision_no)`);
-    await execute(database, `CREATE INDEX IF NOT EXISTS idx_booking_adjustments_service_date
-      ON booking_adjustments(company_id,service_type,adjustment_date)`);
+    )`,
+    );
+    await execute(
+      database,
+      `CREATE INDEX IF NOT EXISTS idx_booking_adjustments_lookup
+      ON booking_adjustments(company_id,service_type,booking_id,revision_no)`,
+    );
+    await execute(
+      database,
+      `CREATE INDEX IF NOT EXISTS idx_booking_adjustments_service_date
+      ON booking_adjustments(company_id,service_type,adjustment_date)`,
+    );
   })().catch((error) => {
     initializationPromise = null;
     throw error;
@@ -173,7 +182,7 @@ async function latestState(database: Database, companyId: string, service: Booki
     `SELECT * FROM booking_adjustments
      WHERE company_id=$1 AND service_type=$2 AND booking_id=$3
      ORDER BY revision_no DESC,created_at DESC LIMIT 1`,
-    [companyId, service, bookingId]
+    [companyId, service, bookingId],
   );
   const latest = rows[0];
   return {
@@ -182,7 +191,11 @@ async function latestState(database: Database, companyId: string, service: Booki
   };
 }
 
-export async function getUniversalBookingAdjustmentHistory(companyId: string, service: BookingServiceName, bookingId: string) {
+export async function getUniversalBookingAdjustmentHistory(
+  companyId: string,
+  service: BookingServiceName,
+  bookingId: string,
+) {
   await initUniversalBookingAdjustmentDatabase();
   const database = await db();
   return select<UniversalAdjustmentRecord[]>(
@@ -190,7 +203,7 @@ export async function getUniversalBookingAdjustmentHistory(companyId: string, se
     `SELECT * FROM booking_adjustments
      WHERE company_id=$1 AND service_type=$2 AND booking_id=$3
      ORDER BY revision_no ASC,created_at ASC`,
-    [companyId, service, bookingId]
+    [companyId, service, bookingId],
   );
 }
 
@@ -208,7 +221,7 @@ export async function getUniversalBookingAdjustmentSummaryMap(companyId: string,
        GROUP BY booking_id
      ) counts ON counts.booking_id=a.booking_id AND counts.max_revision=a.revision_no
      WHERE a.company_id=$1 AND a.service_type=$2`,
-    [companyId, service]
+    [companyId, service],
   );
   const out: Record<string, UniversalAdjustmentSummary> = {};
   rows.forEach((row) => {
@@ -228,7 +241,7 @@ function auditStatement(
   service: BookingServiceName,
   bookingId: string,
   details: string,
-  now: string
+  now: string,
 ): AtomicSqlStatement | null {
   if (!userId) return null;
   return {
@@ -243,21 +256,22 @@ function auditStatement(
 export async function recordUniversalBookingAdjustment(
   companyId: string,
   input: RecordUniversalAdjustmentInput,
-  actorUserId = ""
+  actorUserId = "",
 ) {
   await initUniversalBookingAdjustmentDatabase();
   await requirePermission(companyId, actorUserId, "edit_bookings");
   if (!input.adjustmentDate) throw new Error("Adjustment Date is required.");
   if (!input.reason.trim()) throw new Error("Reason for adjustment is required.");
   const effectiveTotal = Number(input.effectiveTotalPkr || 0);
-  if (!Number.isFinite(effectiveTotal) || effectiveTotal < 0) throw new Error("Effective booking value cannot be negative.");
+  if (!Number.isFinite(effectiveTotal) || effectiveTotal < 0)
+    throw new Error("Effective booking value cannot be negative.");
 
   const database = await db();
   const table = bookingTables[input.service];
   const bookingRows = await select<Array<{ status: string; ub_number: string }>>(
     database,
     `SELECT status,ub_number FROM ${table} WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [input.bookingId, companyId]
+    [input.bookingId, companyId],
   );
   const booking = bookingRows[0];
   if (!booking || booking.status !== "ACTIVE") throw new Error("This booking is no longer active.");
@@ -283,12 +297,30 @@ export async function recordUniversalBookingAdjustment(
          before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
       params: [
-        adjustmentId, companyId, input.service, input.bookingId, input.adjustmentType, input.adjustmentDate,
-        input.category.trim(), input.reason.trim(), input.reference.trim(), input.notes.trim(),
-        Number(input.previousTotalPkr || 0), Number(input.previousBasePkr || 0), Number(input.revisedBasePkr || 0),
-        Math.max(0, Number(input.chargePkr || 0)), Math.max(0, Number(input.creditPkr || 0)), accountDelta, effectiveTotal,
-        input.beforeSnapshotJson, input.afterSnapshotJson, input.cancelledLinesJson,
-        revisionNo, lifecycleStatus, actorUserId, now,
+        adjustmentId,
+        companyId,
+        input.service,
+        input.bookingId,
+        input.adjustmentType,
+        input.adjustmentDate,
+        input.category.trim(),
+        input.reason.trim(),
+        input.reference.trim(),
+        input.notes.trim(),
+        Number(input.previousTotalPkr || 0),
+        Number(input.previousBasePkr || 0),
+        Number(input.revisedBasePkr || 0),
+        Math.max(0, Number(input.chargePkr || 0)),
+        Math.max(0, Number(input.creditPkr || 0)),
+        accountDelta,
+        effectiveTotal,
+        input.beforeSnapshotJson,
+        input.afterSnapshotJson,
+        input.cancelledLinesJson,
+        revisionNo,
+        lifecycleStatus,
+        actorUserId,
+        now,
       ],
     },
   ];
@@ -299,7 +331,7 @@ export async function recordUniversalBookingAdjustment(
     input.service,
     input.bookingId,
     `${input.adjustmentType} ${booking.ub_number || input.bookingId} · PKR ${input.previousTotalPkr} → ${effectiveTotal}`,
-    now
+    now,
   );
   if (audit) statements.push(audit);
 

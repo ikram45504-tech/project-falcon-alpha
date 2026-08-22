@@ -1,1 +1,64 @@
-.lifecycle-register-page .package14-register-title{align-items:flex-start}.lifecycle-register-page .package14-register-controls{margin-top:16px}.lifecycle-register-page .lifecycle-table-wrap{margin:0}.lifecycle-register-page .lifecycle-table{min-width:1280px}.lifecycle-summary{display:block;max-width:330px;white-space:normal;line-height:1.35;color:#475569}.lifecycle-status{white-space:nowrap}.lifecycle-status.amended{background:#eef2ff;color:#4338ca}.lifecycle-status.partially-cancelled{background:#fff7ed;color:#9a3412}.lifecycle-status.cancelled,.lifecycle-status.void{background:#fee2e2;color:#991b1b}.lifecycle-preview{width:min(1380px,96vw)}.lifecycle-preview .adj-lines-table{min-width:1100px}.adj-add-row-actions>button{border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:7px 10px;font-weight:700;cursor:pointer}.lifecycle-register-page .booking-lifecycle-actions{min-width:330px}@media(max-width:900px){.lifecycle-register-page .booking-lifecycle-actions{min-width:0}.lifecycle-register-page .package14-register-stats{width:100%}}
+@import "./BookingLifecycleCenter.dark-overrides.css";
+
+@import "./BookingLifecycleCenter.dark-overrides.css";
+
+.lifecycle-register-page .package14-register-title {
+  align-items: flex-start;
+}
+.lifecycle-register-page .package14-register-controls {
+  margin-top: 16px;
+}
+.lifecycle-register-page .lifecycle-table-wrap {
+  margin: 0;
+}
+.lifecycle-register-page .lifecycle-table {
+  min-width: 1280px;
+}
+.lifecycle-summary {
+  display: block;
+  max-width: 330px;
+  white-space: normal;
+  line-height: 1.35;
+  color: #475569;
+}
+.lifecycle-status {
+  white-space: nowrap;
+}
+.lifecycle-status.amended {
+  background: #eef2ff;
+  color: #4338ca;
+}
+.lifecycle-status.partially-cancelled {
+  background: #fff7ed;
+  color: #9a3412;
+}
+.lifecycle-status.cancelled,
+.lifecycle-status.void {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.lifecycle-preview {
+  width: min(1380px, 96vw);
+}
+.lifecycle-preview .adj-lines-table {
+  min-width: 1100px;
+}
+.adj-add-row-actions > button {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lifecycle-register-page .booking-lifecycle-actions {
+  min-width: 330px;
+}
+@media (max-width: 900px) {
+  .lifecycle-register-page .booking-lifecycle-actions {
+    min-width: 0;
+  }
+  .lifecycle-register-page .package14-register-stats {
+    width: 100%;
+  }
+}

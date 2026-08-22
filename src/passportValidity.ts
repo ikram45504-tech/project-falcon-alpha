@@ -34,19 +34,30 @@ export function subtractCalendarMonths(value: string, months: number) {
 
 export function passportValidityForTravel(travelDate: string, passportExpiry: string): PassportValidityResult {
   if (!travelDate || !passportExpiry) {
-    return { level: "PENDING", label: "Travel date / expiry pending", latestEligibleTravelDate: passportExpiry ? subtractCalendarMonths(passportExpiry, 6) : "", validForTravel: null };
+    return {
+      level: "PENDING",
+      label: "Travel date / expiry pending",
+      latestEligibleTravelDate: passportExpiry ? subtractCalendarMonths(passportExpiry, 6) : "",
+      validForTravel: null,
+    };
   }
 
   const latest6 = subtractCalendarMonths(passportExpiry, 6);
   const latest7 = subtractCalendarMonths(passportExpiry, 7);
   const latest12 = subtractCalendarMonths(passportExpiry, 12);
-  if (!latest6) return { level: "PENDING", label: "Expiry date pending", latestEligibleTravelDate: "", validForTravel: null };
+  if (!latest6)
+    return { level: "PENDING", label: "Expiry date pending", latestEligibleTravelDate: "", validForTravel: null };
 
   if (travelDate > latest6) {
     return { level: "RED", label: "Less than 6 months", latestEligibleTravelDate: latest6, validForTravel: false };
   }
   if (travelDate > latest7) {
-    return { level: "STRONG_AMBER", label: "About 6–7 months", latestEligibleTravelDate: latest6, validForTravel: true };
+    return {
+      level: "STRONG_AMBER",
+      label: "About 6–7 months",
+      latestEligibleTravelDate: latest6,
+      validForTravel: true,
+    };
   }
   if (travelDate > latest12) {
     return { level: "AMBER", label: "About 7–12 months", latestEligibleTravelDate: latest6, validForTravel: true };

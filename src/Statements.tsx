@@ -14,6 +14,7 @@ import {
 } from "./StatementBookingData";
 import { buildStatementPdf, StatementPdfData } from "./StatementJsPdf";
 import { getChronologicalLedger, type LedgerRow } from "./LedgerEngine";
+import { downloadExcel } from "./exportUtils";
 
 type PeriodType = "FULL_LEDGER" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM";
 
@@ -78,7 +79,10 @@ function makeStatementRef() {
 }
 
 function safeFileName(text: string) {
-  return text.trim().replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_");
+  return text
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, "_");
 }
 
 function inPeriod(date: string, from: string, to: string) {
@@ -102,9 +106,9 @@ function sar(value: number) {
 }
 
 export default function StatementsModule({ company, parties, initialPartyId = "", onOpenLedger, onConsumed }: Props) {
-  const initialParty = parties.find(p => p.id === initialPartyId);
+  const initialParty = parties.find((p) => p.id === initialPartyId);
   const [statementDirection, setStatementDirection] = useState<"PARTY" | "VENDOR" | null>(
-    (initialParty?.account_type as "PARTY" | "VENDOR") || null
+    (initialParty?.account_type as "PARTY" | "VENDOR") || null,
   );
   const [partyId, setPartyId] = useState(initialPartyId || "");
 
@@ -114,7 +118,6 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     if (initialPartyId && onConsumed) {
       onConsumed();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [periodType, setPeriodType] = useState<PeriodType>("FULL_LEDGER");
   const [fromDate, setFromDate] = useState(todayIso());
@@ -176,11 +179,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     }
   }
 
-  function applyAutomaticPeriod(
-    type: PeriodType,
-    headers = bookingHeaders,
-    paymentRows = payments
-  ) {
+  function applyAutomaticPeriod(type: PeriodType, headers = bookingHeaders, paymentRows = payments) {
     if (type === "CUSTOM") return;
     if (type === "THIS_MONTH") {
       const range = thisMonthRange();
@@ -195,10 +194,9 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       return;
     }
 
-    const dates = [
-      ...headers.map((row) => row.transaction_date),
-      ...paymentRows.map((row) => row.transaction_date),
-    ].filter(Boolean).sort();
+    const dates = [...headers.map((row) => row.transaction_date), ...paymentRows.map((row) => row.transaction_date)]
+      .filter(Boolean)
+      .sort();
     if (dates.length) {
       setFromDate(dates[0]);
       setToDate(dates[dates.length - 1]);
@@ -223,32 +221,37 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   }
 
   function validatePeriod() {
-    if (!partyId) return setError("Select a Party / Vendor."), false;
-    if (!fromDate || !toDate) return setError("Select both From Date and To Date."), false;
-    if (fromDate > toDate) return setError("From Date cannot be after To Date."), false;
+    if (!partyId) return (setError("Select a Party / Vendor."), false);
+    if (!fromDate || !toDate) return (setError("Select both From Date and To Date."), false);
+    if (fromDate > toDate) return (setError("From Date cannot be after To Date."), false);
     return true;
   }
 
   const periodSections = useMemo(
     () => filterStatementSections(sections, fromDate, toDate),
-    [sections, fromDate, toDate]
+    [sections, fromDate, toDate],
   );
-  const periodBookingHeaders = useMemo(
-    () => statementBookingHeaders(periodSections),
-    [periodSections]
-  );
+  const periodBookingHeaders = useMemo(() => statementBookingHeaders(periodSections), [periodSections]);
   const periodPayments = useMemo(
     () => payments.filter((row) => inPeriod(row.transaction_date, fromDate, toDate)),
-    [payments, fromDate, toDate]
+    [payments, fromDate, toDate],
   );
 
   const openingBooked = useMemo(
-    () => sum(bookingHeaders.filter((row) => beforePeriod(row.transaction_date, fromDate)), (row) => row.total_pkr),
-    [bookingHeaders, fromDate]
+    () =>
+      sum(
+        bookingHeaders.filter((row) => beforePeriod(row.transaction_date, fromDate)),
+        (row) => row.total_pkr,
+      ),
+    [bookingHeaders, fromDate],
   );
   const openingPayments = useMemo(
-    () => sum(payments.filter((row) => beforePeriod(row.transaction_date, fromDate)), (row) => row.paid_amount),
-    [payments, fromDate]
+    () =>
+      sum(
+        payments.filter((row) => beforePeriod(row.transaction_date, fromDate)),
+        (row) => row.paid_amount,
+      ),
+    [payments, fromDate],
   );
   const openingBalance = openingBooked - openingPayments;
   const bookingsDuringPeriod = sum(periodBookingHeaders, (row) => row.total_pkr);
@@ -256,7 +259,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const closingBalance = openingBalance + bookingsDuringPeriod - paymentsDuringPeriod;
   const pendingSarBalance = sum(
     bookingHeaders.filter((row) => row.transaction_date <= toDate),
-    (row) => row.unconverted_sar
+    (row) => row.unconverted_sar,
   );
 
   const pdfData = useMemo<StatementPdfData | null>(() => {
@@ -276,9 +279,27 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       pendingSarBalance,
       sections: periodSections,
       payments: periodPayments,
-      ledgerRows: ledgerRows.filter((row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate)),
+      ledgerRows: ledgerRows.filter(
+        (row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate),
+      ),
     };
-  }, [company, selectedParty, accountDirection, fromDate, toDate, generatedOn, statementRef, openingBalance, bookingsDuringPeriod, paymentsDuringPeriod, closingBalance, pendingSarBalance, periodSections, periodPayments, ledgerRows]);
+  }, [
+    company,
+    selectedParty,
+    accountDirection,
+    fromDate,
+    toDate,
+    generatedOn,
+    statementRef,
+    openingBalance,
+    bookingsDuringPeriod,
+    paymentsDuringPeriod,
+    closingBalance,
+    pendingSarBalance,
+    periodSections,
+    periodPayments,
+    ledgerRows,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -321,7 +342,11 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       const bytes = new Uint8Array(await pdfBlob.arrayBuffer());
       const fileName = `${safeFileName(company.name)}_Statement_${safeFileName(selectedParty.name)}_${fromDate}_to_${toDate}.pdf`;
       const defaultPath = await join(await downloadDir(), fileName);
-      const filePath = await save({ title: "Save Statement PDF", defaultPath, filters: [{ name: "PDF Document", extensions: ["pdf"] }] });
+      const filePath = await save({
+        title: "Save Statement PDF",
+        defaultPath,
+        filters: [{ name: "PDF Document", extensions: ["pdf"] }],
+      });
       if (!filePath) return;
       await writeFile(filePath, bytes);
       setMessage("PDF saved successfully.");
@@ -330,6 +355,60 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     } finally {
       setSavingPdf(false);
     }
+  }
+
+  function handleExport() {
+    if (!selectedParty) return setError("Select an account first.");
+    const filteredLedger = ledgerRows.filter(
+      (row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate),
+    );
+
+    const bookingData = filteredLedger.map((b, i) => ({
+      "SR #": i + 1,
+      Date: b.transaction_date,
+      "UB #": b.ref_no || "-",
+      Service: b.service_type,
+      Description: b.description || "-",
+      "Debit (PKR)": b.debit || 0,
+      "Credit (PKR)": b.credit || 0,
+      "Balance (PKR)": b.running_balance || 0,
+    }));
+
+    const paymentData = periodPayments.map((p, i) => ({
+      "SR #": i + 1,
+      Date: p.transaction_date,
+      "Receipt #": p.receipt_no || "-",
+      "From Account": p.from_account,
+      "To Account": p.to_account,
+      Description: p.description || "-",
+      Method: p.payment_type,
+      SAR: p.currency === "SAR" ? p.sar || 0 : "",
+      ROE: p.currency === "SAR" ? p.roe || 0 : "",
+      "PKR Amount": p.paid_amount || 0,
+    }));
+
+    const summaryData = [
+      {
+        "Account Name": selectedParty.name,
+        "Account Type": selectedParty.account_type,
+        "Period From": fromDate,
+        "Period To": toDate,
+        "Opening Balance (PKR)": openingBalance,
+        "Total Booked (PKR)": bookingsDuringPeriod,
+        "Total Payments (PKR)": paymentsDuringPeriod,
+        "Closing Balance (PKR)": closingBalance,
+        "Pending SAR": pendingSarBalance,
+      },
+    ];
+
+    downloadExcel(
+      [
+        { name: "Summary", data: summaryData },
+        { name: "Ledger", data: bookingData },
+        { name: "Payments", data: paymentData },
+      ],
+      `${safeFileName(company.name)}_Excel_Statement_${safeFileName(selectedParty.name)}_${fromDate}_to_${toDate}`,
+    );
   }
 
   const accountLabel = statementDirection === "VENDOR" ? "Vendor / Supplier" : "Party / Customer";
@@ -341,15 +420,23 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     return (
       <section className="content-card bookings-page bookings-flow-v2">
         <section className="booking-entry-screen booking-direction-screen">
-          <div className="booking-screen-toolbar"><span></span></div>
+          <div className="booking-screen-toolbar">
+            <span></span>
+          </div>
           <div className="booking-screen-heading centered-heading">
             <span className="eyebrow blue">STATEMENT OF ACCOUNT</span>
             <h2>Which statement do you need?</h2>
             <p>Select whether you want to generate a statement for a Party (Customer) or a Vendor (Supplier).</p>
           </div>
           <div className="booking-direction-grid">
-            <button type="button" className="booking-direction-card sale" onClick={() => setStatementDirection("PARTY")}>
-              <span className="direction-card-icon" aria-hidden="true">↗</span>
+            <button
+              type="button"
+              className="booking-direction-card sale"
+              onClick={() => setStatementDirection("PARTY")}
+            >
+              <span className="direction-card-icon" aria-hidden="true">
+                ↗
+              </span>
               <div>
                 <small>PARTY / CUSTOMER</small>
                 <b>Customer Statement</b>
@@ -357,8 +444,14 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
               </div>
               <span className="direction-arrow">→</span>
             </button>
-            <button type="button" className="booking-direction-card purchase" onClick={() => setStatementDirection("VENDOR")}>
-              <span className="direction-card-icon" aria-hidden="true">↙</span>
+            <button
+              type="button"
+              className="booking-direction-card purchase"
+              onClick={() => setStatementDirection("VENDOR")}
+            >
+              <span className="direction-card-icon" aria-hidden="true">
+                ↙
+              </span>
               <div>
                 <small>VENDOR / SUPPLIER</small>
                 <b>Supplier Statement</b>
@@ -375,7 +468,14 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   return (
     <section className="content-card statements-page bookings-flow-v2">
       <div className="booking-screen-toolbar" style={{ marginBottom: "16px", padding: "0 24px" }}>
-        <button type="button" className="booking-back-button" onClick={() => { setStatementDirection(null); setPartyId(""); }}>
+        <button
+          type="button"
+          className="booking-back-button"
+          onClick={() => {
+            setStatementDirection(null);
+            setPartyId("");
+          }}
+        >
           ← Change Statement Type
         </button>
         <div className="bf-toolbar-actions">
@@ -384,56 +484,150 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
           </span>
         </div>
       </div>
-      
+
       <div className="page-title" style={{ marginTop: 0 }}>
         <div>
           <span className="eyebrow blue">SERVICE-WISE BOOKING STATEMENT</span>
           <h2>{statementDirection === "PARTY" ? "Party Statement" : "Vendor Statement"}</h2>
-          <p>Package, Ticket, Hotel, Visa, Transport and Misc are shown as separate statement sections with service-specific fields.</p>
+          <p>
+            Package, Ticket, Hotel, Visa, Transport and Misc are shown as separate statement sections with
+            service-specific fields.
+          </p>
         </div>
-        {selectedParty && <button className="secondary" onClick={() => onOpenLedger(selectedParty)}>Open Account Ledger</button>}
+        {selectedParty && (
+          <button className="secondary" onClick={() => onOpenLedger(selectedParty)}>
+            Open Account Ledger
+          </button>
+        )}
       </div>
 
       {message && <div className="alert success">{message}</div>}
       {error && <div className="alert error">{error}</div>}
 
       <div className="statement-controls">
-        <label>{accountLabel}
+        <label>
+          {accountLabel}
           <select value={partyId} onChange={(e) => setPartyId(e.target.value)}>
             <option value="">Select account...</option>
-            {parties.filter((party) => party.account_type === statementDirection).map((party) => <option key={party.id} value={party.id}>{party.name} · {party.account_type}</option>)}
+            {parties
+              .filter((party) => party.account_type === statementDirection)
+              .map((party) => (
+                <option key={party.id} value={party.id}>
+                  {party.name} · {party.account_type}
+                </option>
+              ))}
           </select>
         </label>
         <div className="statement-period-tabs">
           {(["FULL_LEDGER", "THIS_MONTH", "LAST_MONTH", "CUSTOM"] as PeriodType[]).map((type) => (
-            <button key={type} type="button" className={periodType === type ? "active" : ""} onClick={() => changePeriod(type)}>
-              {type === "FULL_LEDGER" ? "Full Ledger" : type === "THIS_MONTH" ? "This Month" : type === "LAST_MONTH" ? "Last Month" : "Custom"}
+            <button
+              key={type}
+              type="button"
+              className={periodType === type ? "active" : ""}
+              onClick={() => changePeriod(type)}
+            >
+              {type === "FULL_LEDGER"
+                ? "Full Ledger"
+                : type === "THIS_MONTH"
+                  ? "This Month"
+                  : type === "LAST_MONTH"
+                    ? "Last Month"
+                    : "Custom"}
             </button>
           ))}
         </div>
-        <label>From Date<input type="date" value={fromDate} onChange={(e) => { setPeriodType("CUSTOM"); setFromDate(e.target.value); refreshStatementIdentity(); }} /></label>
-        <label>To Date<input type="date" value={toDate} onChange={(e) => { setPeriodType("CUSTOM"); setToDate(e.target.value); refreshStatementIdentity(); }} /></label>
+        <label>
+          From Date
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => {
+              setPeriodType("CUSTOM");
+              setFromDate(e.target.value);
+              refreshStatementIdentity();
+            }}
+          />
+        </label>
+        <label>
+          To Date
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => {
+              setPeriodType("CUSTOM");
+              setToDate(e.target.value);
+              refreshStatementIdentity();
+            }}
+          />
+        </label>
       </div>
 
       <div className="module-summary-row statement-summary-row">
-        <div><small>OPENING BALANCE</small><b>{money(openingBalance)}</b></div>
-        <div><small>{bookedLabel}</small><b>{money(bookingsDuringPeriod)}</b></div>
-        <div><small>PAYMENTS</small><b>{money(paymentsDuringPeriod)}</b></div>
-        <div><small>{balanceLabel}</small><b>{money(closingBalance)}</b></div>
-        <div><small>PENDING SAR</small><b>{sar(pendingSarBalance)}</b></div>
+        <div>
+          <small>OPENING BALANCE</small>
+          <b>{money(openingBalance)}</b>
+        </div>
+        <div>
+          <small>{bookedLabel}</small>
+          <b>{money(bookingsDuringPeriod)}</b>
+        </div>
+        <div>
+          <small>PAYMENTS</small>
+          <b>{money(paymentsDuringPeriod)}</b>
+        </div>
+        <div>
+          <small>{balanceLabel}</small>
+          <b>{money(closingBalance)}</b>
+        </div>
+        <div>
+          <small>PENDING SAR</small>
+          <b>{sar(pendingSarBalance)}</b>
+        </div>
       </div>
 
       <div className="statement-accounting-note">
         <b>{selectedParty ? `${selectedParty.name} · ${accountDirection}` : "Select an account"}</b>
-        <span>{selectedParty?.account_type === "VENDOR" ? "Purchase bookings increase payable; payments reduce payable." : "Sale bookings increase receivable; payments reduce receivable."} Pending SAR is shown separately until ROE converts it to PKR.</span>
+        <span>
+          {selectedParty?.account_type === "VENDOR"
+            ? "Purchase bookings increase payable; payments reduce payable."
+            : "Sale bookings increase receivable; payments reduce receivable."}{" "}
+          Pending SAR is shown separately until ROE converts it to PKR.
+        </span>
       </div>
 
       <div className="statement-preview-shell">
         <div className="statement-preview-head">
-          <div><b>PDF Preview</b><span>{loading ? "Loading service-wise booking data..." : buildingPdf ? "Building preview..." : `${periodBookingCount} booking(s) · ${periodPayments.length} payment(s)`}</span></div>
-          <button className="primary statement-primary" disabled={!pdfBlob || savingPdf || buildingPdf} onClick={() => void savePdf()}>{savingPdf ? "Saving..." : "Save PDF"}</button>
+          <div>
+            <b>PDF Preview</b>
+            <span>
+              {loading
+                ? "Loading service-wise booking data..."
+                : buildingPdf
+                  ? "Building preview..."
+                  : `${periodBookingCount} booking(s) · ${periodPayments.length} payment(s)`}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button className="secondary" disabled={!pdfData} onClick={handleExport}>
+              Export to Excel
+            </button>
+            <button
+              className="primary statement-primary"
+              disabled={!pdfBlob || savingPdf || buildingPdf}
+              onClick={() => void savePdf()}
+            >
+              {savingPdf ? "Saving..." : "Save PDF"}
+            </button>
+          </div>
         </div>
-        {previewUrl ? <iframe className="statement-pdf-preview" src={previewUrl} title="Statement PDF Preview" /> : <div className="empty-state"><h3>No statement preview yet</h3><p>Select an account with booking or payment activity.</p></div>}
+        {previewUrl ? (
+          <iframe className="statement-pdf-preview" src={previewUrl} title="Statement PDF Preview" />
+        ) : (
+          <div className="empty-state">
+            <h3>No statement preview yet</h3>
+            <p>Select an account with booking or payment activity.</p>
+          </div>
+        )}
       </div>
     </section>
   );

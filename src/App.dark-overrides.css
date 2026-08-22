@@ -1,0 +1,4153 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR App.css */
+
+:root[data-theme="midnight"] :root {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .center {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .card {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .panel {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .panel-head h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .panel-head > strong {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] input,
+:root[data-theme="midnight"] textarea,
+:root[data-theme="midnight"] select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .secondary {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .preview {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .logo,
+:root[data-theme="midnight"] .header-logo {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .logo img,
+:root[data-theme="midnight"] .header-logo img {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .preview h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .doc-preview {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .doc-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .login h1 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .offline {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .offline b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .company-choice {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .workspace {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .header-logo {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .minimal-user-row {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .workspace-nav {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .workspace-nav a:hover {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .workspace-nav a.active {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ready {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .welcome h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .stats > div {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .module-card h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .module-card > button:not(.primary) {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .page-title h2,
+:root[data-theme="midnight"] .ledger-top h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .search-box {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .party-count {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .party-count b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .empty-state {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .empty-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .empty-state h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .party-table-wrap {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .party-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .party-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .party-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .party-table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .party-name {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .amount {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .row-actions button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .back-link {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ledger-summary .purchase {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ledger-summary .paid {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ledger-summary .balance {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ledger-section {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .coming-data {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .modal-card {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .modal-head h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .close-btn {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .module-summary-row > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .void-row {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .danger-action {
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .calculation-preview {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .calculation-preview > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .calculation-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .calculation-preview .highlight {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .calculation-preview .highlight b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ledger-table-wrap {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-accommodation-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ledger-accommodation-table td {
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ledger-accommodation-table tbody tr:nth-child(odd) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-accommodation-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-accommodation-table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-accommodation-table .total-pkr {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .void-label {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .green-text {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .phase4-stats .purchase-stat {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .green-highlight {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .green-highlight small,
+:root[data-theme="midnight"] .green-highlight b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .service-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .service-list-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .service-list-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .service-list-table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-service-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ledger-service-table td {
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ledger-service-table tbody tr:nth-child(odd) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-service-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-service-table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-service-table .total-pkr {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .purple-text {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .phase5-stats .purchase-stat {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .phase5-stats .paid-stat {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .phase5-stats .balance-stat.due {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .phase5-stats .balance-stat.clear {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .purple-highlight {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .purple-highlight small,
+:root[data-theme="midnight"] .purple-highlight b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-total-box b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-empty-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payment-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-table td {
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .payment-table tbody tr:nth-child(odd) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payment-paid-amount {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ledger-payment-table th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ledger-payment-table td {
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ledger-payment-table tbody tr:nth-child(odd) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-payment-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ledger-payment-table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .statement-controls {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .statement-control-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-control-grid input:disabled {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-period-chip {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-paper {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .statement-logo {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .statement-company-left h1 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-title-side h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-title-side b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-meta {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .statement-meta > div + div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .statement-meta b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-card.opening {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-card.purchases {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-card.payments {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-card.closing.due {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-card.closing.clear {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-table th,
+:root[data-theme="midnight"] .statement-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .statement-table th {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-table .money {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-table .stacked-cell b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .accommodation-statement-table thead th {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .accommodation-statement-table tbody tr:nth-child(odd) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .accommodation-statement-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .accommodation-statement-table tfoot td {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .services-statement-table thead th {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .services-statement-table tbody tr:nth-child(odd) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .services-statement-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .services-statement-table tfoot td {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .payments-statement-table thead th {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payments-statement-table tbody tr:nth-child(odd) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payments-statement-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .payments-statement-table tfoot td {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-footer {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] html,
+:root[data-theme="midnight"] body,
+:root[data-theme="midnight"] #root {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .workspace {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .statement-v6-controls {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .statement-v6-title-row h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-v6-form input:disabled {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-v6-period {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-v6-badge {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .statement-v6-preview-shell {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .statement-v6-pdf-viewer {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .statement-v6-loading {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .dashboard-subnav button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .dashboard-subnav button span {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .dashboard-subnav button.warning span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .dashboard-subnav button.active.warning span {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .account-type-chip.party {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .account-type-chip.vendor {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .account-type-chip.unassigned {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-foundation-badge {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .booking-step-label strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transaction-type-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .transaction-type-card b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transaction-type-card.sale > span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transaction-type-card.purchase > span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transaction-type-card.sale.selected {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .transaction-type-card.purchase.selected {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-service-tabs {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-service-tabs button {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-service-tabs button.active {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-form-foundation {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-context-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .booking-context-head h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .direction-badge.sale {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .direction-badge.purchase {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .direction-badge.neutral {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-selected-account b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-account-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-account-row select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-safety-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .booking-safety-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-next-phase {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .booking-next-phase strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .legacy-access {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-foundation-badge.active-engine {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .live-dot {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-module {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-module-head h3,
+:root[data-theme="midnight"] .package-history-title h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .editing-badge {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-common-fields label,
+:root[data-theme="midnight"] .package-line label,
+:root[data-theme="midnight"] .package-notes {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-common-fields input,
+:root[data-theme="midnight"] .package-line input,
+:root[data-theme="midnight"] .package-notes textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-context-box {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-context-box b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passenger-selector {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .passenger-selector-title b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passenger-toggle {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-line {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-passenger-label span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-line-total {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-line-total b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-total-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-total-card > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-total-card b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-total-card .grand {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-history-section {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-mini-stats > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-mini-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-mini-stats .sale {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-mini-stats .purchase {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-history-line {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-history-line b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passenger-chip.adult {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passenger-chip.child {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .passenger-chip.infant {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-screen-heading h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-direction-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-direction-card.sale .direction-card-icon {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-direction-card.purchase .direction-card-icon {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-direction-card b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-screen-toolbar {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .booking-back-button {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-back-button:hover {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-service-tile {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-service-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .service-ticket .booking-service-icon,
+:root[data-theme="midnight"] .booking-service-icon.service-ticket {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .service-hotel .booking-service-icon,
+:root[data-theme="midnight"] .booking-service-icon.service-hotel {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .service-visa .booking-service-icon,
+:root[data-theme="midnight"] .booking-service-icon.service-visa {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .service-transport .booking-service-icon,
+:root[data-theme="midnight"] .booking-service-icon.service-transport {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .service-misc .booking-service-icon,
+:root[data-theme="midnight"] .booking-service-icon.service-misc {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-service-tile b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-service-status.live {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-service-status.pending {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-register-button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-register-button:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-form-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-common-fields-v2 select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-lines-header {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-lines-header b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-add-row-buttons button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-add-row-buttons button:hover {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-entry-rows {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-entry-row {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-row-number {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-entry-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-entry-row input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package-remove-row {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-remove-row:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .pending-service-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .pending-service-card h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-register-title-v2 h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package-register-filter-tabs {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package-register-filter-tabs button.active {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-header-fields {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-header-fields label,
+:root[data-theme="midnight"] .package7d-row label,
+:root[data-theme="midnight"] .package7d-details-grid > label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-header-fields input,
+:root[data-theme="midnight"] .package7d-header-fields select,
+:root[data-theme="midnight"] .package7d-row input,
+:root[data-theme="midnight"] .package7d-details-grid input,
+:root[data-theme="midnight"] .package7d-details-grid textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-passenger-section {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-section-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-section-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-section-head span {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-passenger-section.adult .package7d-section-head span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-passenger-section.child .package7d-section-head span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-passenger-section.infant .package7d-section-head span {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-section-head button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-section-head button:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-row {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package7d-row-number {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-subtotal {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-subtotal b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-pax-summary,
+:root[data-theme="midnight"] .package7d-grand-total {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-pax-summary > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package7d-pax-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-grand-total span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-grand-total b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-details-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-details-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package7d-details-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-optional-badge {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-copy-field button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-ziarat {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .package7d-ziarat legend {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-ziarat label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .package7d-pax-summary > div:nth-child(-n + 2) {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package7e-summary-card > small {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .package7e-summary-card > small strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .auth-login-page-v8 {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .auth-login-card-v8 {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .auth-login-card-v8 form label:not(.remember-company-code) {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .created-company-code {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .created-company-code small {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .created-company-code b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .new-company-divider:before,
+:root[data-theme="midnight"] .new-company-divider:after {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .create-company-login-button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .create-company-login-button:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .auth-setup-v8 .hero-back-login {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .auth-owner-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .auth-owner-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .company-code-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .company-code-card b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .company-code-card button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .security-tabs {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .security-tabs button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .security-panel {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .security-panel h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .security-kv {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .security-kv b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .role-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .security-summary-row > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .security-summary-row b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .role-chip {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .role-chip.owner {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .role-chip.admin {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .role-chip.accounts {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .role-chip.data_entry {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .role-chip.view_only {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .permission-guide {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .permission-cards article {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .permission-cards b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .audit-action {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .role-preview {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .role-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .signup-code-preview-v8b {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .password-eye-v8b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .password-eye-v8b:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .password-rules-v8b {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .password-rules-v8b span {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .password-rules-v8b span.ok {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .signup-back-v8b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .platform-ready-note {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .platform-ready-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .account-created-modal {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .account-created-check {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .account-created-modal h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .account-created-details {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .account-created-details > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .account-created-details b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .account-created-details .confidential-code-row {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .account-created-details .confidential-code-row b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .confidential-warning {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .confidential-warning b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .confidential-warning.neutral {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-register-button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-register-button:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-title-row h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-section-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-section-head > em {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-header-grid label,
+:root[data-theme="midnight"] .ticket9-journey-grid label,
+:root[data-theme="midnight"] .ticket9-optional-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-header-grid input,
+:root[data-theme="midnight"] .ticket9-header-grid select,
+:root[data-theme="midnight"] .ticket9-journey-grid input,
+:root[data-theme="midnight"] .ticket9-optional-grid input,
+:root[data-theme="midnight"] .ticket9-optional-grid select,
+:root[data-theme="midnight"] .ticket9-optional-grid textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-add-buttons button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-add-buttons button:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-table-wrap {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket9-fare-table th {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket9-fare-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-fare-table input,
+:root[data-theme="midnight"] .ticket9-fare-table select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-row-number {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-row-total {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-remove {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-remove:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-qty-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-summary-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-category {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket9-category > b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-category > small {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket9-category > small strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-category.total > small {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket9-grand-total {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-grand-total > span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-grand-total > b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-register-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-mini-stats {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .ticket9-mini-stats > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket9-mini-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-mini-stats .sale b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-journey-cell b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-journey-cell span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-history-lines > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .ticket9-history-lines b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .ticket9-category {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-register-button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-register-button:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-title-row h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-section-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-section-head > em {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-header-grid label,
+:root[data-theme="midnight"] .hotel10-optional-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-header-grid input,
+:root[data-theme="midnight"] .hotel10-header-grid select,
+:root[data-theme="midnight"] .hotel10-optional-grid input,
+:root[data-theme="midnight"] .hotel10-optional-grid textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-add-stay {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-add-stay:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-table-wrap {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-rate-table th {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-rate-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-rate-table input,
+:root[data-theme="midnight"] .hotel10-rate-table select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-row-number {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-sar-input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-sar-input span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-row-total.converted b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-row-total.unconverted b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-remove {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-remove:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-calc-note {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-summary-counts {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-summary-counts > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-summary-counts b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-money-summary > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-money-summary > div.original {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-money-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-money-summary .converted {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-money-summary .converted b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-money-summary .unconverted {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-money-summary .unconverted b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-register-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-mini-stats {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .hotel10-mini-stats > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-mini-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-mini-stats .sale b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-mini-stats .pending b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-history-lines > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-history-lines b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-summary-counts > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-row-total b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-row-total strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .hotel10-grand-totals > div.original {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .hotel10-grand-totals > div.original b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-register-button,
+:root[data-theme="midnight"] .visa11-add-buttons button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-register-button:hover,
+:root[data-theme="midnight"] .visa11-add-buttons button:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11-title-row h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-card {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-section-head {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-section-head em {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-transport-card.active .visa11-section-head em {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-header-grid label,
+:root[data-theme="midnight"] .visa11-private-panel label,
+:root[data-theme="midnight"] .visa11-bus-panel label,
+:root[data-theme="midnight"] .visa11-vehicle-panel label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-header-grid input,
+:root[data-theme="midnight"] .visa11-header-grid select,
+:root[data-theme="midnight"] .visa11-rate-table input,
+:root[data-theme="midnight"] .visa11-rate-table select,
+:root[data-theme="midnight"] .visa11-private-panel input,
+:root[data-theme="midnight"] .visa11-private-panel select,
+:root[data-theme="midnight"] .visa11-bus-panel input,
+:root[data-theme="midnight"] .visa11-vehicle-panel select,
+:root[data-theme="midnight"] .visa11-notes-card textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-combined-note {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-rate-table th {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-rate-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11-rate-table td:first-child {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-row-number {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-sar-input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11-sar-input > span {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-total-sar b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-total-pkr b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-remove {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-empty-transport {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11-vehicle-panel,
+:root[data-theme="midnight"] .visa11-private-panel,
+:root[data-theme="midnight"] .visa11-bus-panel {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11-vehicle-visual {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-vehicle-copy b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-vehicle-copy span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-reset-suggested {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-bus-panel.inactive {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11-transport-title {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-transport-number {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-transport-number b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-allocation {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11-allocation small {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-allocation b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-count-summary > div {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-count-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-financial-summary > div {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-financial-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-financial-summary .grand-sar {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-financial-summary .grand-sar b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-financial-summary .grand-pkr {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-financial-summary .grand-pkr b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-register-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-mini-stats > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11-mini-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-mini-stats .sale b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-mini-stats .purchase b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-history-lines > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11-history-lines span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11-register-transport b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-suggestion,
+:root[data-theme="midnight"] .visa11c-fleet,
+:root[data-theme="midnight"] .visa11c-bus {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11c-vehicle-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11c-suggestion b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-suggestion span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-suggestion button,
+:root[data-theme="midnight"] .visa11c-fleet-head button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-fleet-head {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-fleet th {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11c-fleet td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11c-fleet input,
+:root[data-theme="midnight"] .visa11c-fleet select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11c-capacity.ok {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-capacity.warn {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-private-totals {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-private-totals b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-bus > b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-bus label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-passport-stats span {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-passport-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11c-passport-stats em {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11c-passport-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11c-passport-table td:first-child {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11c-passport-table input,
+:root[data-theme="midnight"] .visa11c-passport-table select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11d-entry-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-entry-row input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-entry-help {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-entry-help b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-passenger-stats .valid-count {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-passenger-stats .warning-count {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-passenger-stats .invalid-count {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-sr-cell b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity.valid {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity.reminder {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity.close {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity.invalid {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity.guidance {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-booking-notes {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .visa11d-booking-notes b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-booking-notes textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11d-modal-close {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-modal-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal.reminder .visa11d-modal-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal.close .visa11d-modal-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal.invalid .visa11d-modal-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal.valid .visa11d-modal-icon {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-eligibility-headline {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal.invalid .visa11d-eligibility-headline {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal.close .visa11d-eligibility-headline,
+:root[data-theme="midnight"] .visa11d-validity-modal.reminder .visa11d-eligibility-headline {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-validity-modal.valid .visa11d-eligibility-headline {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-modal-grid > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .visa11d-modal-grid b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-modal-message {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .visa11d-modal-disclaimer {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .transport12a-page {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-section {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .transport12a-section-title {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-header-grid label,
+:root[data-theme="midnight"] .transport12a-details-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-header-grid input,
+:root[data-theme="midnight"] .transport12a-header-grid select,
+:root[data-theme="midnight"] .transport12a-details-grid input,
+:root[data-theme="midnight"] .transport12a-details-grid textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-hint {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-table td {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .transport12a-table td:first-child {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .transport12a-table input,
+:root[data-theme="midnight"] .transport12a-table select {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-fixed {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-money-input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .transport12a-money-input span {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-total-sar {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-total-pkr {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-delete {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-chain {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-summary-grid > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .transport12a-summary-grid b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-summary-grid .money b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-summary-grid .grand {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .transport12a-summary-grid .grand.pkr {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .transport12a-summary-grid .grand.pkr b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-pending {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .transport12a-register-stats > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .transport12a-register-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-register-controls button {
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12a-register-controls input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .transport12a-register-lines > div {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] .transport12b-capacity {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .transport12b-capacity.bad {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] :root[data-layout="layout-1"] .app-header .header-logo,
+:root[data-theme="midnight"] :root[data-layout="layout-2"] .app-header .header-logo {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] :root[data-layout="layout-1"] .app-header .ghost-btn,
+:root[data-theme="midnight"] :root[data-layout="layout-2"] .app-header .ghost-btn {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+:root[data-theme="midnight"] :root[data-layout="layout-1"] .app-header .ghost-btn:hover,
+:root[data-theme="midnight"] :root[data-layout="layout-2"] .app-header .ghost-btn:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] :root[data-layout="layout-3"] .workspace-nav a:hover {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] :root[data-layout="layout-3"] .workspace-nav a.active {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+:root[data-theme="ocean"] :root {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .center {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .card {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .panel {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .panel-head h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .panel-head > strong {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] input,
+:root[data-theme="ocean"] textarea,
+:root[data-theme="ocean"] select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .secondary {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .preview {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .logo,
+:root[data-theme="ocean"] .header-logo {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .logo img,
+:root[data-theme="ocean"] .header-logo img {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .preview h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .doc-preview {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .doc-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .login h1 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .offline {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .offline b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .company-choice {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .workspace {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .header-logo {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .minimal-user-row {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .workspace-nav {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .workspace-nav a:hover {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .workspace-nav a.active {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ready {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .welcome h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .stats > div {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .module-card h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .module-card > button:not(.primary) {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .page-title h2,
+:root[data-theme="ocean"] .ledger-top h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .search-box {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .party-count {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .party-count b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .empty-state {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .empty-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .empty-state h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .party-table-wrap {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .party-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .party-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .party-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .party-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .party-name {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .amount {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .row-actions button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .back-link {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ledger-summary .purchase {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ledger-summary .paid {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ledger-summary .balance {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ledger-section {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .coming-data {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .modal-card {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .modal-head h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .close-btn {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .module-summary-row > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .void-row {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .danger-action {
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .calculation-preview {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .calculation-preview > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .calculation-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .calculation-preview .highlight {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .calculation-preview .highlight b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ledger-table-wrap {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-accommodation-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ledger-accommodation-table td {
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ledger-accommodation-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-accommodation-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-accommodation-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-accommodation-table .total-pkr {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .void-label {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .green-text {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .phase4-stats .purchase-stat {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .green-highlight {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .green-highlight small,
+:root[data-theme="ocean"] .green-highlight b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .service-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .service-list-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .service-list-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .service-list-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-service-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ledger-service-table td {
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ledger-service-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-service-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-service-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-service-table .total-pkr {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .purple-text {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .phase5-stats .purchase-stat {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .phase5-stats .paid-stat {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .phase5-stats .balance-stat.due {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .phase5-stats .balance-stat.clear {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .purple-highlight {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .purple-highlight small,
+:root[data-theme="ocean"] .purple-highlight b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-total-box b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-empty-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payment-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-table td {
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .payment-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payment-paid-amount {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ledger-payment-table th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ledger-payment-table td {
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ledger-payment-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-payment-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ledger-payment-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .statement-controls {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .statement-control-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-control-grid input:disabled {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-period-chip {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-paper {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .statement-logo {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .statement-company-left h1 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-title-side h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-title-side b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-meta {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .statement-meta > div + div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .statement-meta b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-card.opening {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-card.purchases {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-card.payments {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-card.closing.due {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-card.closing.clear {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-table th,
+:root[data-theme="ocean"] .statement-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .statement-table th {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-table .money {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-table .stacked-cell b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .accommodation-statement-table thead th {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .accommodation-statement-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .accommodation-statement-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .accommodation-statement-table tfoot td {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .services-statement-table thead th {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .services-statement-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .services-statement-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .services-statement-table tfoot td {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .payments-statement-table thead th {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payments-statement-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payments-statement-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .payments-statement-table tfoot td {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-footer {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] html,
+:root[data-theme="ocean"] body,
+:root[data-theme="ocean"] #root {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .workspace {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .statement-v6-controls {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .statement-v6-title-row h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-v6-form input:disabled {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-v6-period {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-v6-badge {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .statement-v6-preview-shell {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .statement-v6-pdf-viewer {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .statement-v6-loading {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .dashboard-subnav button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .dashboard-subnav button span {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .dashboard-subnav button.warning span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .dashboard-subnav button.active.warning span {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .account-type-chip.party {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .account-type-chip.vendor {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .account-type-chip.unassigned {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-foundation-badge {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .booking-step-label strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transaction-type-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .transaction-type-card b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transaction-type-card.sale > span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transaction-type-card.purchase > span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transaction-type-card.sale.selected {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .transaction-type-card.purchase.selected {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-service-tabs {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-service-tabs button {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-service-tabs button.active {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-form-foundation {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-context-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .booking-context-head h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .direction-badge.sale {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .direction-badge.purchase {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .direction-badge.neutral {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-selected-account b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-account-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-account-row select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-safety-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .booking-safety-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-next-phase {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .booking-next-phase strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .legacy-access {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-foundation-badge.active-engine {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .live-dot {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-module {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-module-head h3,
+:root[data-theme="ocean"] .package-history-title h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .editing-badge {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-common-fields label,
+:root[data-theme="ocean"] .package-line label,
+:root[data-theme="ocean"] .package-notes {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-common-fields input,
+:root[data-theme="ocean"] .package-line input,
+:root[data-theme="ocean"] .package-notes textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-context-box {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-context-box b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passenger-selector {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .passenger-selector-title b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passenger-toggle {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-line {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-passenger-label span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-line-total {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-line-total b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-total-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-total-card > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-total-card b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-total-card .grand {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-history-section {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-mini-stats > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-mini-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-mini-stats .sale {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-mini-stats .purchase {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-history-line {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-history-line b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passenger-chip.adult {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passenger-chip.child {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .passenger-chip.infant {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-screen-heading h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-direction-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-direction-card.sale .direction-card-icon {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-direction-card.purchase .direction-card-icon {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-direction-card b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-screen-toolbar {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .booking-back-button {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-back-button:hover {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-service-tile {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-service-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .service-ticket .booking-service-icon,
+:root[data-theme="ocean"] .booking-service-icon.service-ticket {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .service-hotel .booking-service-icon,
+:root[data-theme="ocean"] .booking-service-icon.service-hotel {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .service-visa .booking-service-icon,
+:root[data-theme="ocean"] .booking-service-icon.service-visa {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .service-transport .booking-service-icon,
+:root[data-theme="ocean"] .booking-service-icon.service-transport {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .service-misc .booking-service-icon,
+:root[data-theme="ocean"] .booking-service-icon.service-misc {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-service-tile b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-service-status.live {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-service-status.pending {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-register-button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-register-button:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-form-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-common-fields-v2 select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-lines-header {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-lines-header b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-add-row-buttons button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-add-row-buttons button:hover {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-entry-rows {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-entry-row {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-row-number {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-entry-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-entry-row input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package-remove-row {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-remove-row:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .pending-service-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .pending-service-card h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-register-title-v2 h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package-register-filter-tabs {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package-register-filter-tabs button.active {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-header-fields {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-header-fields label,
+:root[data-theme="ocean"] .package7d-row label,
+:root[data-theme="ocean"] .package7d-details-grid > label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-header-fields input,
+:root[data-theme="ocean"] .package7d-header-fields select,
+:root[data-theme="ocean"] .package7d-row input,
+:root[data-theme="ocean"] .package7d-details-grid input,
+:root[data-theme="ocean"] .package7d-details-grid textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-passenger-section {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-section-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-section-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-section-head span {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-passenger-section.adult .package7d-section-head span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-passenger-section.child .package7d-section-head span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-passenger-section.infant .package7d-section-head span {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-section-head button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-section-head button:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-row {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package7d-row-number {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-subtotal {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-subtotal b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-pax-summary,
+:root[data-theme="ocean"] .package7d-grand-total {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-pax-summary > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package7d-pax-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-grand-total span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-grand-total b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-details-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-details-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package7d-details-head b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-optional-badge {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-copy-field button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-ziarat {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .package7d-ziarat legend {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-ziarat label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .package7d-pax-summary > div:nth-child(-n + 2) {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package7e-summary-card > small {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .package7e-summary-card > small strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .auth-login-page-v8 {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .auth-login-card-v8 {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .auth-login-card-v8 form label:not(.remember-company-code) {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .created-company-code {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .created-company-code small {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .created-company-code b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .new-company-divider:before,
+:root[data-theme="ocean"] .new-company-divider:after {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .create-company-login-button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .create-company-login-button:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .auth-setup-v8 .hero-back-login {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .auth-owner-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .auth-owner-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .company-code-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .company-code-card b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .company-code-card button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .security-tabs {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .security-tabs button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .security-panel {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .security-panel h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .security-kv {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .security-kv b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .role-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .security-summary-row > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .security-summary-row b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .role-chip {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .role-chip.owner {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .role-chip.admin {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .role-chip.accounts {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .role-chip.data_entry {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .role-chip.view_only {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .permission-guide {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .permission-cards article {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .permission-cards b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .audit-action {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .role-preview {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .role-preview b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .signup-code-preview-v8b {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .password-eye-v8b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .password-eye-v8b:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .password-rules-v8b {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .password-rules-v8b span {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .password-rules-v8b span.ok {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .signup-back-v8b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .platform-ready-note {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .platform-ready-note b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .account-created-modal {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .account-created-check {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .account-created-modal h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .account-created-details {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .account-created-details > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .account-created-details b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .account-created-details .confidential-code-row {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .account-created-details .confidential-code-row b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .confidential-warning {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .confidential-warning b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .confidential-warning.neutral {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-register-button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-register-button:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-title-row h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-section-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-section-head > em {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-header-grid label,
+:root[data-theme="ocean"] .ticket9-journey-grid label,
+:root[data-theme="ocean"] .ticket9-optional-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-header-grid input,
+:root[data-theme="ocean"] .ticket9-header-grid select,
+:root[data-theme="ocean"] .ticket9-journey-grid input,
+:root[data-theme="ocean"] .ticket9-optional-grid input,
+:root[data-theme="ocean"] .ticket9-optional-grid select,
+:root[data-theme="ocean"] .ticket9-optional-grid textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-add-buttons button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-add-buttons button:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-table-wrap {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket9-fare-table th {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket9-fare-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-fare-table input,
+:root[data-theme="ocean"] .ticket9-fare-table select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-row-number {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-row-total {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-remove {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-remove:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-qty-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-summary-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-category {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket9-category > b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-category > small {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket9-category > small strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-category.total > small {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket9-grand-total {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-grand-total > span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-grand-total > b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-register-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-mini-stats {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .ticket9-mini-stats > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket9-mini-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-mini-stats .sale b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-journey-cell b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-journey-cell span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-history-lines > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .ticket9-history-lines b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .ticket9-category {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-register-button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-register-button:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-title-row h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-section-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-section-head > em {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-header-grid label,
+:root[data-theme="ocean"] .hotel10-optional-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-header-grid input,
+:root[data-theme="ocean"] .hotel10-header-grid select,
+:root[data-theme="ocean"] .hotel10-optional-grid input,
+:root[data-theme="ocean"] .hotel10-optional-grid textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-add-stay {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-add-stay:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-table-wrap {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-rate-table th {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-rate-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-rate-table input,
+:root[data-theme="ocean"] .hotel10-rate-table select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-row-number {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-sar-input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-sar-input span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-row-total.converted b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-row-total.unconverted b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-remove {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-remove:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-calc-note {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-summary-counts {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-summary-counts > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-summary-counts b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-money-summary > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-money-summary > div.original {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-money-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-money-summary .converted {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-money-summary .converted b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-money-summary .unconverted {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-money-summary .unconverted b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-register-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-mini-stats {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .hotel10-mini-stats > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-mini-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-mini-stats .sale b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-mini-stats .pending b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-history-lines > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-history-lines b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-summary-counts > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-row-total b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-row-total strong {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .hotel10-grand-totals > div.original {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .hotel10-grand-totals > div.original b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-register-button,
+:root[data-theme="ocean"] .visa11-add-buttons button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-register-button:hover,
+:root[data-theme="ocean"] .visa11-add-buttons button:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11-title-row h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-card {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-section-head {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-section-head em {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-transport-card.active .visa11-section-head em {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-header-grid label,
+:root[data-theme="ocean"] .visa11-private-panel label,
+:root[data-theme="ocean"] .visa11-bus-panel label,
+:root[data-theme="ocean"] .visa11-vehicle-panel label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-header-grid input,
+:root[data-theme="ocean"] .visa11-header-grid select,
+:root[data-theme="ocean"] .visa11-rate-table input,
+:root[data-theme="ocean"] .visa11-rate-table select,
+:root[data-theme="ocean"] .visa11-private-panel input,
+:root[data-theme="ocean"] .visa11-private-panel select,
+:root[data-theme="ocean"] .visa11-bus-panel input,
+:root[data-theme="ocean"] .visa11-vehicle-panel select,
+:root[data-theme="ocean"] .visa11-notes-card textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-combined-note {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-rate-table th {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-rate-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11-rate-table td:first-child {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-row-number {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-sar-input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11-sar-input > span {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-total-sar b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-total-pkr b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-remove {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-empty-transport {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11-vehicle-panel,
+:root[data-theme="ocean"] .visa11-private-panel,
+:root[data-theme="ocean"] .visa11-bus-panel {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11-vehicle-visual {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-vehicle-copy b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-vehicle-copy span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-reset-suggested {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-bus-panel.inactive {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11-transport-title {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-transport-number {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-transport-number b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-allocation {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11-allocation small {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-allocation b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-count-summary > div {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-count-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-financial-summary > div {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-financial-summary b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-financial-summary .grand-sar {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-financial-summary .grand-sar b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-financial-summary .grand-pkr {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-financial-summary .grand-pkr b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-register-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-mini-stats > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11-mini-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-mini-stats .sale b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-mini-stats .purchase b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-history-lines > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11-history-lines span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11-register-transport b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-suggestion,
+:root[data-theme="ocean"] .visa11c-fleet,
+:root[data-theme="ocean"] .visa11c-bus {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11c-vehicle-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11c-suggestion b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-suggestion span {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-suggestion button,
+:root[data-theme="ocean"] .visa11c-fleet-head button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-fleet-head {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-fleet th {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11c-fleet td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11c-fleet input,
+:root[data-theme="ocean"] .visa11c-fleet select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11c-capacity.ok {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-capacity.warn {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-private-totals {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-private-totals b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-bus > b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-bus label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-passport-stats span {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-passport-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11c-passport-stats em {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11c-passport-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11c-passport-table td:first-child {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11c-passport-table input,
+:root[data-theme="ocean"] .visa11c-passport-table select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11d-entry-row label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-entry-row input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-entry-help {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-entry-help b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-passenger-stats .valid-count {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-passenger-stats .warning-count {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-passenger-stats .invalid-count {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-sr-cell b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity.valid {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity.reminder {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity.close {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity.invalid {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity.guidance {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-booking-notes {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .visa11d-booking-notes b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-booking-notes textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11d-modal-close {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-modal-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal.reminder .visa11d-modal-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal.close .visa11d-modal-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal.invalid .visa11d-modal-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal.valid .visa11d-modal-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal h3 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-eligibility-headline {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal.invalid .visa11d-eligibility-headline {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal.close .visa11d-eligibility-headline,
+:root[data-theme="ocean"] .visa11d-validity-modal.reminder .visa11d-eligibility-headline {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-validity-modal.valid .visa11d-eligibility-headline {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-modal-grid > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .visa11d-modal-grid b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-modal-message {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .visa11d-modal-disclaimer {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .transport12a-page {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-title h2 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-section {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .transport12a-section-title {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-header-grid label,
+:root[data-theme="ocean"] .transport12a-details-grid label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-header-grid input,
+:root[data-theme="ocean"] .transport12a-header-grid select,
+:root[data-theme="ocean"] .transport12a-details-grid input,
+:root[data-theme="ocean"] .transport12a-details-grid textarea {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-hint {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-table td {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .transport12a-table td:first-child {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .transport12a-table input,
+:root[data-theme="ocean"] .transport12a-table select {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-fixed {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-money-input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .transport12a-money-input span {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-total-sar {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-total-pkr {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-delete {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-chain {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-summary-grid > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .transport12a-summary-grid b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-summary-grid .money b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-summary-grid .grand {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .transport12a-summary-grid .grand.pkr {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .transport12a-summary-grid .grand.pkr b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-pending {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .transport12a-register-stats > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .transport12a-register-stats b {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-register-controls button {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12a-register-controls input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .transport12a-register-lines > div {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .transport12b-capacity {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .transport12b-capacity.bad {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] :root[data-layout="layout-1"] .app-header .header-logo,
+:root[data-theme="ocean"] :root[data-layout="layout-2"] .app-header .header-logo {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] :root[data-layout="layout-1"] .app-header .ghost-btn,
+:root[data-theme="ocean"] :root[data-layout="layout-2"] .app-header .ghost-btn {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] :root[data-layout="layout-1"] .app-header .ghost-btn:hover,
+:root[data-theme="ocean"] :root[data-layout="layout-2"] .app-header .ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] :root[data-layout="layout-3"] .workspace-nav a:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] :root[data-layout="layout-3"] .workspace-nav a.active {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}

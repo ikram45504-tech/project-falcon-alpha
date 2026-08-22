@@ -15,7 +15,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem("app_mode") as ThemeMode;
-    return saved || "dark"; 
+    return saved || "dark";
   });
 
   const [layout, setLayoutState] = useState<LayoutType>(() => {
@@ -44,11 +44,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.setAttribute("data-layout", layout);
   }, [mode, layout]);
 
-  return (
-    <ThemeContext.Provider value={{ mode, layout, setMode, setLayout }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ mode, layout, setMode, setLayout }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

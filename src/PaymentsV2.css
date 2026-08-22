@@ -1,3 +1,7 @@
+@import "./PaymentsV2.dark-overrides.css";
+
+@import "./PaymentsV2.dark-overrides.css";
+
 .payments-v2 {
   overflow: visible;
 }
@@ -56,7 +60,7 @@
 
 .payment-v2-identity-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 1.45fr) minmax(180px, .8fr) minmax(220px, 1fr);
+  grid-template-columns: minmax(260px, 1.45fr) minmax(180px, 0.8fr) minmax(220px, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -109,7 +113,7 @@
 .payment-v2-setup-grid select:focus,
 .payment-v2-info-grid input:focus,
 .payment-v2-info-grid textarea:focus {
-  outline: 2px solid rgba(91, 54, 135, .14);
+  outline: 2px solid rgba(91, 54, 135, 0.14);
   border-color: #8f70b2;
 }
 
@@ -137,7 +141,7 @@
   background: transparent;
   color: #667085;
   font-weight: 800;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   cursor: pointer;
 }
 
@@ -164,7 +168,7 @@
 .payment-v2-document-preview b,
 .payment-v2-document-number {
   color: #573585;
-  letter-spacing: .03em;
+  letter-spacing: 0.03em;
 }
 
 .payment-v2-create-document,
@@ -194,7 +198,7 @@
 }
 
 .payment-v2-muted-field {
-  opacity: .58;
+  opacity: 0.58;
 }
 
 .payment-v2-muted-field input {
@@ -216,7 +220,7 @@
   color: #7a8696;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: .07em;
+  letter-spacing: 0.07em;
 }
 
 .payment-v2-flow b {
@@ -263,7 +267,7 @@
   color: #768395;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
 }
 
 .payment-v2-balance-preview b {
@@ -376,7 +380,7 @@
   border-radius: 999px;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: .03em;
+  letter-spacing: 0.03em;
   white-space: nowrap;
 }
 

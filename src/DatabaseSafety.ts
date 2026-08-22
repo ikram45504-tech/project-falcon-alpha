@@ -27,9 +27,7 @@ function toDbParam(value: unknown): DbParam {
   if (typeof value === "boolean") return { kind: "BOOL", value };
   if (typeof value === "number") {
     if (!Number.isFinite(value)) throw new Error("Database parameters cannot contain NaN or Infinity.");
-    return Number.isInteger(value)
-      ? { kind: "INTEGER", value }
-      : { kind: "REAL", value };
+    return Number.isInteger(value) ? { kind: "INTEGER", value } : { kind: "REAL", value };
   }
   throw new Error(`Unsupported database parameter type: ${typeof value}`);
 }

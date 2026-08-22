@@ -85,7 +85,6 @@ export type PartyInput = {
   accountType: "PARTY" | "VENDOR" | "UNASSIGNED";
 };
 
-
 export type AccommodationEntry = {
   id: string;
   company_id: string;
@@ -427,13 +426,9 @@ export type HotelBookingInput = {
   lines: HotelBookingLineInput[];
 };
 
-
 export type VisaPassengerType = "ADULT" | "CHILD" | "INFANT";
 export type VisaType =
-  | "ONLY_UMRAH_VISA"
-  | "UMRAH_VISA_TRANSPORT"
-  | "UMRAH_VISA_ONE_WAY_TRANSPORT"
-  | "UMRAH_VISA_FULL_TRANSPORT";
+  "ONLY_UMRAH_VISA" | "UMRAH_VISA_TRANSPORT" | "UMRAH_VISA_ONE_WAY_TRANSPORT" | "UMRAH_VISA_FULL_TRANSPORT";
 export type VisaVehicleType = "CAR" | "STARIA" | "HIACE" | "COASTER" | "BUS";
 
 export type VisaBookingLine = {
@@ -552,20 +547,11 @@ export type VisaBookingInput = {
   passports: VisaPassportDetailInput[];
 };
 
-
 // Phase 12A — independent Transport booking module.
 // Transport supplied/sold as its own service is separate from Visa-embedded transport logic.
 export type TransportType = "SHARING_BUS" | "PRIVATE_VEHICLE";
 export type TransportVehicleType =
-  | "SHARING_BUS"
-  | "CAR"
-  | "GMC_YUKON"
-  | "STARIA"
-  | "STAREX"
-  | "HIACE"
-  | "COASTER"
-  | "BUS"
-  | "OTHER";
+  "SHARING_BUS" | "CAR" | "GMC_YUKON" | "STARIA" | "STAREX" | "HIACE" | "COASTER" | "BUS" | "OTHER";
 
 export type TransportBookingLine = {
   id: string;
@@ -706,20 +692,14 @@ async function db() {
 
 async function ensureColumn(table: string, column: string, definition: string) {
   const database = await db();
-  const columns = await database.select<Record<string, unknown>[]>(
-    `PRAGMA table_info(${table})`
-  );
+  const columns = await database.select<Record<string, unknown>[]>(`PRAGMA table_info(${table})`);
 
-  const exists = columns.some(
-    (item) => String(item["name"] ?? "").toLowerCase() === column.toLowerCase()
-  );
+  const exists = columns.some((item) => String(item["name"] ?? "").toLowerCase() === column.toLowerCase());
 
   if (exists) return;
 
   try {
-    await database.execute(
-      `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`
-    );
+    await database.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   } catch (error) {
     const message = String(error).toLowerCase();
 
@@ -851,14 +831,14 @@ async function createAuditLog(
   action: string,
   module: string,
   recordId = "",
-  details = ""
+  details = "",
 ) {
   const database = await db();
   let userName = "SYSTEM";
   if (userId) {
     const rows = await database.select<Array<{ full_name: string }>>(
       `SELECT full_name FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-      [userId, companyId]
+      [userId, companyId],
     );
     userName = rows[0]?.full_name || "Unknown User";
   }
@@ -867,7 +847,7 @@ async function createAuditLog(
     `INSERT INTO audit_logs
      (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-    [crypto.randomUUID(), companyId, userId, userName, action, module, recordId, details, new Date().toISOString()]
+    [crypto.randomUUID(), companyId, userId, userName, action, module, recordId, details, new Date().toISOString()],
   );
 }
 
@@ -876,7 +856,7 @@ async function requirePermission(companyId: string, userId: string, permission: 
   const database = await db();
   const rows = await database.select<Array<{ role: UserRole; status: string }>>(
     `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
+    [userId, companyId],
   );
   const actor = rows[0];
   if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, permission)) {
@@ -1032,7 +1012,6 @@ async function initDatabaseOnce() {
   await database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_company_party_date
     ON payment_entries(company_id, party_id, transaction_date)`);
 
-
   // Phase 7B — new Package booking engine. Package amounts are PKR only.
   await database.execute(`CREATE TABLE IF NOT EXISTS package_bookings (
     id TEXT PRIMARY KEY,
@@ -1086,10 +1065,10 @@ async function initDatabaseOnce() {
   // Phase 7C — allow multiple Adult / Child / Infant rows inside one Package booking.
   // Phase 7B created a UNIQUE(booking_id, passenger_type) constraint, so SQLite needs
   // a one-time table rebuild to remove that old constraint safely.
-  const packageRowsV2Key = 'phase_7c_package_multiple_passenger_rows_v1';
+  const packageRowsV2Key = "phase_7c_package_multiple_passenger_rows_v1";
   const packageRowsV2Done = await database.select<CountRow[]>(
     `SELECT COUNT(*) AS count FROM app_migrations WHERE migration_key=$1`,
-    [packageRowsV2Key]
+    [packageRowsV2Key],
   );
 
   if (Number(packageRowsV2Done[0]?.count ?? 0) === 0) {
@@ -1112,10 +1091,10 @@ async function initDatabaseOnce() {
     await database.execute(`ALTER TABLE package_booking_lines_v2 RENAME TO package_booking_lines`);
     await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_lines_booking
       ON package_booking_lines(booking_id, sort_order)`);
-    await database.execute(
-      `INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`,
-      [packageRowsV2Key, new Date().toISOString()]
-    );
+    await database.execute(`INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`, [
+      packageRowsV2Key,
+      new Date().toISOString(),
+    ]);
   }
 
   // Phase 7D — richer Package entry details and optional quantity behavior.
@@ -1128,7 +1107,6 @@ async function initDatabaseOnce() {
   await ensureColumn("package_bookings", "customer_contact", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("package_booking_lines", "passenger_name", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("package_booking_lines", "qty_is_explicit", "INTEGER NOT NULL DEFAULT 1");
-
 
   // Phase 9A — dedicated Ticket booking engine.
   // Ticket Sale and Purchase records intentionally share the same UB linking reference.
@@ -1181,8 +1159,6 @@ async function initDatabaseOnce() {
     ON ticket_bookings(company_id, ub_number)`);
   await database.execute(`CREATE INDEX IF NOT EXISTS idx_ticket_lines_booking
     ON ticket_booking_lines(booking_id, sort_order)`);
-
-
 
   // Phase 10A — dedicated Hotel booking engine.
   // Hotel rates are stored in SAR; ROE is optional per stay row.
@@ -1239,7 +1215,6 @@ async function initDatabaseOnce() {
 
   // Phase 10B — booking-level guest count is informational and never changes hotel rate calculations.
   await ensureColumn("hotel_bookings", "guest_count", "INTEGER NOT NULL DEFAULT 0");
-
 
   // Phase 11A — dedicated Visa booking engine.
   // Visa rates are SAR-based. Private transport is shared at booking level for
@@ -1335,7 +1310,6 @@ async function initDatabaseOnce() {
   await ensureColumn("visa_passport_details", "given_name", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("visa_passport_details", "passport_issuance", "TEXT NOT NULL DEFAULT ''");
 
-
   // Phase 12A — independent Transport booking engine.
   // Sharing Bus = SAR per pax. Private Vehicle = SAR per vehicle.
   await database.execute(`CREATE TABLE IF NOT EXISTS transport_bookings (
@@ -1384,10 +1358,10 @@ async function initDatabaseOnce() {
   await database.execute(`CREATE INDEX IF NOT EXISTS idx_transport_lines_booking
     ON transport_booking_lines(booking_id, sort_order)`);
 
-  const cleanResetKey = 'phase_7b_clean_test_accounting_data_v1';
+  const cleanResetKey = "phase_7b_clean_test_accounting_data_v1";
   const cleanResetDone = await database.select<CountRow[]>(
     `SELECT COUNT(*) AS count FROM app_migrations WHERE migration_key=$1`,
-    [cleanResetKey]
+    [cleanResetKey],
   );
 
   if (Number(cleanResetDone[0]?.count ?? 0) === 0) {
@@ -1397,10 +1371,10 @@ async function initDatabaseOnce() {
     await database.execute(`DELETE FROM service_entries`);
     await database.execute(`DELETE FROM payment_entries`);
     await database.execute(`DELETE FROM parties`);
-    await database.execute(
-      `INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`,
-      [cleanResetKey, new Date().toISOString()]
-    );
+    await database.execute(`INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`, [
+      cleanResetKey,
+      new Date().toISOString(),
+    ]);
   }
 
   // SaaS-ready ownership/audit fields. These stay hidden from normal entry screens.
@@ -1423,7 +1397,7 @@ async function initDatabaseOnce() {
   const phase8AuthResetKey = "phase_8_company_scoped_auth_reset_v1";
   const phase8AuthResetDone = await database.select<CountRow[]>(
     `SELECT COUNT(*) AS count FROM app_migrations WHERE migration_key=$1`,
-    [phase8AuthResetKey]
+    [phase8AuthResetKey],
   );
 
   if (Number(phase8AuthResetDone[0]?.count ?? 0) === 0) {
@@ -1442,10 +1416,10 @@ async function initDatabaseOnce() {
 
     await createAuthTables(database);
 
-    await database.execute(
-      `INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`,
-      [phase8AuthResetKey, new Date().toISOString()]
-    );
+    await database.execute(`INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`, [
+      phase8AuthResetKey,
+      new Date().toISOString(),
+    ]);
   } else {
     await createAuthTables(database);
   }
@@ -1460,7 +1434,7 @@ async function initDatabaseOnce() {
   const phase8CFreshStartKey = "phase_8c_final_fresh_company_start_v1";
   const phase8CFreshStartDone = await database.select<CountRow[]>(
     `SELECT COUNT(*) AS count FROM app_migrations WHERE migration_key=$1`,
-    [phase8CFreshStartKey]
+    [phase8CFreshStartKey],
   );
 
   if (Number(phase8CFreshStartDone[0]?.count ?? 0) === 0) {
@@ -1485,10 +1459,10 @@ async function initDatabaseOnce() {
     await createAuthTables(database);
     await ensureColumn("companies", "dts_license", "TEXT NOT NULL DEFAULT ''");
 
-    await database.execute(
-      `INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`,
-      [phase8CFreshStartKey, new Date().toISOString()]
-    );
+    await database.execute(`INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`, [
+      phase8CFreshStartKey,
+      new Date().toISOString(),
+    ]);
   }
 
   // Phase 8D — final consolidated onboarding reset requested by the user.
@@ -1496,7 +1470,7 @@ async function initDatabaseOnce() {
   const phase8DFreshStartKey = "phase_8d_consolidated_account_fresh_start_v1";
   const phase8DFreshStartDone = await database.select<CountRow[]>(
     `SELECT COUNT(*) AS count FROM app_migrations WHERE migration_key=$1`,
-    [phase8DFreshStartKey]
+    [phase8DFreshStartKey],
   );
 
   if (Number(phase8DFreshStartDone[0]?.count ?? 0) === 0) {
@@ -1516,10 +1490,10 @@ async function initDatabaseOnce() {
     await createAuthTables(database);
     await ensureColumn("companies", "dts_license", "TEXT NOT NULL DEFAULT ''");
 
-    await database.execute(
-      `INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`,
-      [phase8DFreshStartKey, new Date().toISOString()]
-    );
+    await database.execute(`INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`, [
+      phase8DFreshStartKey,
+      new Date().toISOString(),
+    ]);
   }
 }
 
@@ -1549,7 +1523,7 @@ async function generateUniqueCompanyCode(companyName: string) {
     const candidate = prefix;
     const rows = await database.select<CountRow[]>(
       `SELECT COUNT(*) AS count FROM companies WHERE company_code=$1 COLLATE NOCASE`,
-      [candidate]
+      [candidate],
     );
     if (Number(rows[0]?.count ?? 0) === 0) return candidate;
   }
@@ -1558,7 +1532,7 @@ async function generateUniqueCompanyCode(companyName: string) {
     const candidate = randomLetters(3);
     const rows = await database.select<CountRow[]>(
       `SELECT COUNT(*) AS count FROM companies WHERE company_code=$1 COLLATE NOCASE`,
-      [candidate]
+      [candidate],
     );
     if (Number(rows[0]?.count ?? 0) === 0) return candidate;
   }
@@ -1606,7 +1580,7 @@ export async function createCompanyAccount(input: CreateCompanyAccountInput) {
       `INSERT INTO companies
        (id,company_code,name,dts_license,logo_data,address,phone,whatsapp,email,base_currency,foreign_currency,status,created_at,updated_at)
        VALUES ($1,$2,$3,$4,NULL,'',$5,$5,$6,'PKR','SAR','ACTIVE',$7,$7)`,
-      [companyId, companyCode, companyName, dtsLicense, ownerPhone, ownerEmail, now]
+      [companyId, companyCode, companyName, dtsLicense, ownerPhone, ownerEmail, now],
     );
 
     await database.execute(
@@ -1624,10 +1598,17 @@ export async function createCompanyAccount(input: CreateCompanyAccountInput) {
         password.salt,
         password.iterations,
         now,
-      ]
+      ],
     );
 
-    await createAuditLog(companyId, userId, "COMPANY_CREATED", "SECURITY", companyId, `Company ${companyName} created with Master account ${username}.`);
+    await createAuditLog(
+      companyId,
+      userId,
+      "COMPANY_CREATED",
+      "SECURITY",
+      companyId,
+      `Company ${companyName} created with Master account ${username}.`,
+    );
 
     return { companyId, companyCode, userId, username, email: ownerEmail, accountStatus: "ACTIVE" as const };
   } catch (error) {
@@ -1656,7 +1637,7 @@ export async function createInitialSetup(input: InitialSetupInput) {
 export async function loginUser(
   companyCode: string,
   identifier: string,
-  password: string
+  password: string,
 ): Promise<UserSession | null> {
   const database = await db();
   const cleanCode = companyCode.trim();
@@ -1668,7 +1649,7 @@ export async function loginUser(
      FROM companies
      WHERE company_code=$1 COLLATE NOCASE
      LIMIT 1`,
-    [cleanCode]
+    [cleanCode],
   );
   const company = companies[0];
   if (!company) return null;
@@ -1689,7 +1670,7 @@ export async function loginUser(
          email=$2 COLLATE NOCASE
        )
      LIMIT 1`,
-    [company.id, cleanIdentifier]
+    [company.id, cleanIdentifier],
   );
 
   const user = rows[0];
@@ -1700,12 +1681,16 @@ export async function loginUser(
     password,
     user.password_salt,
     user.password_hash,
-    Number(user.password_iterations)
+    Number(user.password_iterations),
   );
   if (!valid) return null;
 
   const now = new Date().toISOString();
-  await database.execute(`UPDATE users SET last_login_at=$1, updated_at=updated_at WHERE id=$2 AND company_id=$3`, [now, user.id, company.id]);
+  await database.execute(`UPDATE users SET last_login_at=$1, updated_at=updated_at WHERE id=$2 AND company_id=$3`, [
+    now,
+    user.id,
+    company.id,
+  ]);
   await createAuditLog(company.id, user.id, "LOGIN", "SECURITY", user.id, "User signed in.");
 
   return {
@@ -1739,7 +1724,7 @@ async function sessionForUser(companyId: string, userId: string): Promise<UserSe
   const companies = await database.select<Company[]>(
     `SELECT id,company_code,name,dts_license,logo_data,address,phone,whatsapp,email,base_currency,foreign_currency,status,created_at,updated_at
      FROM companies WHERE id=$1 LIMIT 1`,
-    [companyId]
+    [companyId],
   );
   const company = companies[0];
   if (!company || company.status !== "ACTIVE") return null;
@@ -1747,7 +1732,7 @@ async function sessionForUser(companyId: string, userId: string): Promise<UserSe
   const users = await database.select<UserRow[]>(
     `SELECT id,company_id,full_name,username,email,phone,phone_normalized,password_hash,password_salt,password_iterations,role,status
      FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
+    [userId, companyId],
   );
   const user = users[0];
   if (!user || user.status !== "ACTIVE") return null;
@@ -1777,14 +1762,22 @@ export async function createRememberedSession(session: UserSession, deviceId: st
   await database.execute(
     `UPDATE remembered_sessions SET status='REVOKED'
      WHERE company_id=$1 AND user_id=$2 AND device_id=$3 AND status='ACTIVE'`,
-    [session.companyId, session.userId, deviceId]
+    [session.companyId, session.userId, deviceId],
   );
 
   await database.execute(
     `INSERT INTO remembered_sessions
      (id,company_id,user_id,device_id,token_hash,status,created_at,last_used_at,expires_at)
      VALUES ($1,$2,$3,$4,$5,'ACTIVE',$6,$6,$7)`,
-    [crypto.randomUUID(), session.companyId, session.userId, deviceId, tokenHash, now.toISOString(), expires.toISOString()]
+    [
+      crypto.randomUUID(),
+      session.companyId,
+      session.userId,
+      deviceId,
+      tokenHash,
+      now.toISOString(),
+      expires.toISOString(),
+    ],
   );
 
   return token;
@@ -1795,18 +1788,20 @@ export async function restoreRememberedSession(token: string): Promise<UserSessi
   const database = await db();
   const tokenHash = await hashSessionToken(token);
 
-  const rows = await database.select<Array<{
-    id: string;
-    company_id: string;
-    user_id: string;
-    status: string;
-    expires_at: string;
-  }>>(
+  const rows = await database.select<
+    Array<{
+      id: string;
+      company_id: string;
+      user_id: string;
+      status: string;
+      expires_at: string;
+    }>
+  >(
     `SELECT id,company_id,user_id,status,expires_at
      FROM remembered_sessions
      WHERE token_hash=$1
      LIMIT 1`,
-    [tokenHash]
+    [tokenHash],
   );
 
   const remembered = rows[0];
@@ -1825,11 +1820,19 @@ export async function restoreRememberedSession(token: string): Promise<UserSessi
   }
 
   const renewedExpiry = new Date(now.getTime() + REMEMBERED_SESSION_DAYS * 24 * 60 * 60 * 1000);
-  await database.execute(
-    `UPDATE remembered_sessions SET last_used_at=$1, expires_at=$2 WHERE id=$3`,
-    [now.toISOString(), renewedExpiry.toISOString(), remembered.id]
+  await database.execute(`UPDATE remembered_sessions SET last_used_at=$1, expires_at=$2 WHERE id=$3`, [
+    now.toISOString(),
+    renewedExpiry.toISOString(),
+    remembered.id,
+  ]);
+  await createAuditLog(
+    session.companyId,
+    session.userId,
+    "SESSION_RESTORED",
+    "SECURITY",
+    session.userId,
+    "Remembered device session restored.",
   );
-  await createAuditLog(session.companyId, session.userId, "SESSION_RESTORED", "SECURITY", session.userId, "Remembered device session restored.");
 
   return session;
 }
@@ -1838,10 +1841,7 @@ export async function revokeRememberedSession(token: string) {
   if (!token) return;
   const database = await db();
   const tokenHash = await hashSessionToken(token);
-  await database.execute(
-    `UPDATE remembered_sessions SET status='REVOKED' WHERE token_hash=$1`,
-    [tokenHash]
-  );
+  await database.execute(`UPDATE remembered_sessions SET status='REVOKED' WHERE token_hash=$1`, [tokenHash]);
 }
 
 export async function getCompanyById(companyId: string) {
@@ -1849,7 +1849,7 @@ export async function getCompanyById(companyId: string) {
   const rows = await database.select<Company[]>(
     `SELECT id,company_code,name,dts_license,logo_data,address,phone,whatsapp,email,base_currency,foreign_currency,status,created_at,updated_at
      FROM companies WHERE id=$1 LIMIT 1`,
-    [companyId]
+    [companyId],
   );
   return rows[0] ?? null;
 }
@@ -1863,7 +1863,7 @@ export async function getCompaniesForUser(userId: string) {
      INNER JOIN users u ON u.company_id=c.id
      WHERE u.id=$1
      ORDER BY c.name`,
-    [userId]
+    [userId],
   );
 }
 
@@ -1875,7 +1875,7 @@ export async function getCompanyUsers(companyId: string) {
      WHERE company_id=$1
      ORDER BY CASE role WHEN 'OWNER' THEN 0 WHEN 'ADMIN' THEN 1 WHEN 'ACCOUNTS' THEN 2 WHEN 'DATA_ENTRY' THEN 3 ELSE 4 END,
               full_name COLLATE NOCASE`,
-    [companyId]
+    [companyId],
   );
 }
 
@@ -1884,12 +1884,12 @@ async function ensureUserIdentityAvailable(
   username: string,
   email: string,
   phoneNormalized: string,
-  excludeUserId = ""
+  excludeUserId = "",
 ) {
   const database = await db();
   const rows = await database.select<Array<{ id: string; username: string; email: string; phone_normalized: string }>>(
     `SELECT id,username,email,phone_normalized FROM users WHERE company_id=$1 AND ($2='' OR id<>$2)`,
-    [companyId, excludeUserId]
+    [companyId, excludeUserId],
   );
 
   if (rows.some((row) => row.username.toLowerCase() === username.toLowerCase())) {
@@ -1932,7 +1932,20 @@ export async function createCompanyUser(companyId: string, actorUserId: string, 
     `INSERT INTO users
      (id,company_id,full_name,username,email,phone,phone_normalized,password_hash,password_salt,password_iterations,role,status,created_at,updated_at,last_login_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'ACTIVE',$12,$12,'')`,
-    [id, companyId, fullName, username, email, phone, phoneNormalized, password.hash, password.salt, password.iterations, input.role, now]
+    [
+      id,
+      companyId,
+      fullName,
+      username,
+      email,
+      phone,
+      phoneNormalized,
+      password.hash,
+      password.salt,
+      password.iterations,
+      input.role,
+      now,
+    ],
   );
 
   await createAuditLog(companyId, actorUserId, "USER_CREATED", "SECURITY", id, `${fullName} created as ${input.role}.`);
@@ -1943,7 +1956,7 @@ export async function updateCompanyUser(
   companyId: string,
   actorUserId: string,
   targetUserId: string,
-  input: UpdateCompanyUserInput
+  input: UpdateCompanyUserInput,
 ) {
   await requirePermission(companyId, actorUserId, "manage_users");
   validateEmployeeRole(input.role);
@@ -1952,10 +1965,11 @@ export async function updateCompanyUser(
   const target = await database.select<CompanyUser[]>(
     `SELECT id,company_id,full_name,username,email,phone,role,status,created_at,updated_at,last_login_at
      FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [targetUserId, companyId]
+    [targetUserId, companyId],
   );
   if (!target[0]) throw new Error("User not found.");
-  if (target[0].role === "OWNER") throw new Error("The Owner / Master account cannot be changed from Employee Management.");
+  if (target[0].role === "OWNER")
+    throw new Error("The Owner / Master account cannot be changed from Employee Management.");
 
   const fullName = input.fullName.trim();
   const username = validateOwnerUsername(input.username);
@@ -1968,43 +1982,62 @@ export async function updateCompanyUser(
   await database.execute(
     `UPDATE users SET full_name=$1,username=$2,email=$3,phone=$4,phone_normalized=$5,role=$6,updated_at=$7
      WHERE id=$8 AND company_id=$9`,
-    [fullName, username, email, phone, phoneNormalized, input.role, new Date().toISOString(), targetUserId, companyId]
+    [fullName, username, email, phone, phoneNormalized, input.role, new Date().toISOString(), targetUserId, companyId],
   );
-  await createAuditLog(companyId, actorUserId, "USER_UPDATED", "SECURITY", targetUserId, `${fullName} updated; role ${input.role}.`);
+  await createAuditLog(
+    companyId,
+    actorUserId,
+    "USER_UPDATED",
+    "SECURITY",
+    targetUserId,
+    `${fullName} updated; role ${input.role}.`,
+  );
 }
 
 export async function setCompanyUserStatus(
   companyId: string,
   actorUserId: string,
   targetUserId: string,
-  status: "ACTIVE" | "DISABLED"
+  status: "ACTIVE" | "DISABLED",
 ) {
   await requirePermission(companyId, actorUserId, "manage_users");
   const database = await db();
   const rows = await database.select<Array<{ full_name: string; role: UserRole }>>(
     `SELECT full_name,role FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [targetUserId, companyId]
+    [targetUserId, companyId],
   );
   const target = rows[0];
   if (!target) throw new Error("User not found.");
   if (target.role === "OWNER") throw new Error("The Owner / Master account cannot be disabled.");
 
-  await database.execute(`UPDATE users SET status=$1,updated_at=$2 WHERE id=$3 AND company_id=$4`, [status, new Date().toISOString(), targetUserId, companyId]);
-  await createAuditLog(companyId, actorUserId, status === "ACTIVE" ? "USER_ENABLED" : "USER_DISABLED", "SECURITY", targetUserId, `${target.full_name} set to ${status}.`);
+  await database.execute(`UPDATE users SET status=$1,updated_at=$2 WHERE id=$3 AND company_id=$4`, [
+    status,
+    new Date().toISOString(),
+    targetUserId,
+    companyId,
+  ]);
+  await createAuditLog(
+    companyId,
+    actorUserId,
+    status === "ACTIVE" ? "USER_ENABLED" : "USER_DISABLED",
+    "SECURITY",
+    targetUserId,
+    `${target.full_name} set to ${status}.`,
+  );
 }
 
 export async function resetCompanyUserPassword(
   companyId: string,
   actorUserId: string,
   targetUserId: string,
-  newPassword: string
+  newPassword: string,
 ) {
   await requirePermission(companyId, actorUserId, "manage_users");
   validateStrongPassword(newPassword);
   const database = await db();
   const rows = await database.select<Array<{ full_name: string; role: UserRole }>>(
     `SELECT full_name,role FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [targetUserId, companyId]
+    [targetUserId, companyId],
   );
   const target = rows[0];
   if (!target) throw new Error("User not found.");
@@ -2013,42 +2046,50 @@ export async function resetCompanyUserPassword(
   const password = await createPasswordRecord(newPassword);
   await database.execute(
     `UPDATE users SET password_hash=$1,password_salt=$2,password_iterations=$3,updated_at=$4 WHERE id=$5 AND company_id=$6`,
-    [password.hash, password.salt, password.iterations, new Date().toISOString(), targetUserId, companyId]
+    [password.hash, password.salt, password.iterations, new Date().toISOString(), targetUserId, companyId],
   );
-  await createAuditLog(companyId, actorUserId, "PASSWORD_RESET", "SECURITY", targetUserId, `Password reset for ${target.full_name}.`);
+  await createAuditLog(
+    companyId,
+    actorUserId,
+    "PASSWORD_RESET",
+    "SECURITY",
+    targetUserId,
+    `Password reset for ${target.full_name}.`,
+  );
 }
 
 export async function changeOwnPassword(
   companyId: string,
   userId: string,
   currentPassword: string,
-  newPassword: string
+  newPassword: string,
 ) {
   validateStrongPassword(newPassword);
   const database = await db();
   const rows = await database.select<UserRow[]>(
     `SELECT id,company_id,full_name,username,email,phone,phone_normalized,password_hash,password_salt,password_iterations,role,status
      FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId]
+    [userId, companyId],
   );
   const user = rows[0];
   if (!user || user.status !== "ACTIVE") throw new Error("Active user account not found.");
-  const valid = await verifyPassword(currentPassword, user.password_salt, user.password_hash, Number(user.password_iterations));
+  const valid = await verifyPassword(
+    currentPassword,
+    user.password_salt,
+    user.password_hash,
+    Number(user.password_iterations),
+  );
   if (!valid) throw new Error("Current password is incorrect.");
 
   const password = await createPasswordRecord(newPassword);
   await database.execute(
     `UPDATE users SET password_hash=$1,password_salt=$2,password_iterations=$3,updated_at=$4 WHERE id=$5 AND company_id=$6`,
-    [password.hash, password.salt, password.iterations, new Date().toISOString(), userId, companyId]
+    [password.hash, password.salt, password.iterations, new Date().toISOString(), userId, companyId],
   );
   await createAuditLog(companyId, userId, "PASSWORD_CHANGED", "SECURITY", userId, "User changed their own password.");
 }
 
-export async function updateCompanyProfile(
-  companyId: string,
-  actorUserId: string,
-  input: CompanyProfileInput
-) {
+export async function updateCompanyProfile(companyId: string, actorUserId: string, input: CompanyProfileInput) {
   await requirePermission(companyId, actorUserId, "manage_company");
   if (!input.name.trim()) throw new Error("Company name is required.");
   const database = await db();
@@ -2056,10 +2097,18 @@ export async function updateCompanyProfile(
     `UPDATE companies SET name=$1,dts_license=$2,logo_data=$3,address=$4,phone=$5,whatsapp=$6,email=$7,base_currency=$8,foreign_currency=$9,updated_at=$10
      WHERE id=$11`,
     [
-      input.name.trim(), input.dtsLicense.trim(), input.logoData, input.address.trim(), input.phone.trim(), input.whatsapp.trim(),
-      validateEmail(input.email), input.baseCurrency || "PKR", input.foreignCurrency || "SAR",
-      new Date().toISOString(), companyId,
-    ]
+      input.name.trim(),
+      input.dtsLicense.trim(),
+      input.logoData,
+      input.address.trim(),
+      input.phone.trim(),
+      input.whatsapp.trim(),
+      validateEmail(input.email),
+      input.baseCurrency || "PKR",
+      input.foreignCurrency || "SAR",
+      new Date().toISOString(),
+      companyId,
+    ],
   );
   await createAuditLog(companyId, actorUserId, "COMPANY_UPDATED", "SECURITY", companyId, "Company profile updated.");
 }
@@ -2070,7 +2119,7 @@ export async function getAuditLogs(companyId: string, limit = 250) {
   return database.select<AuditLog[]>(
     `SELECT id,company_id,user_id,user_name,action,module,record_id,details,created_at
      FROM audit_logs WHERE company_id=$1 ORDER BY created_at DESC LIMIT ${safeLimit}`,
-    [companyId]
+    [companyId],
   );
 }
 
@@ -2084,7 +2133,7 @@ export async function getParties(companyId: string, search = "") {
        FROM parties
        WHERE company_id = $1
        ORDER BY CASE WHEN status='ACTIVE' THEN 0 ELSE 1 END, name COLLATE NOCASE`,
-      [companyId]
+      [companyId],
     );
   }
 
@@ -2100,7 +2149,7 @@ export async function getParties(companyId: string, search = "") {
          address LIKE $2 COLLATE NOCASE
        )
      ORDER BY CASE WHEN status='ACTIVE' THEN 0 ELSE 1 END, name COLLATE NOCASE`,
-    [companyId, term]
+    [companyId, term],
   );
 }
 
@@ -2113,7 +2162,7 @@ export async function createParty(companyId: string, input: PartyInput, actorUse
     `SELECT COUNT(*) AS count
      FROM parties
      WHERE company_id = $1 AND name = $2 COLLATE NOCASE`,
-    [companyId, input.name.trim()]
+    [companyId, input.name.trim()],
   );
 
   if (Number(duplicate[0]?.count ?? 0) > 0) {
@@ -2138,10 +2187,18 @@ export async function createParty(companyId: string, input: PartyInput, actorUse
       input.accountType,
       now,
       actorUserId,
-    ]
+    ],
   );
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "ACCOUNT_CREATED", "PARTIES", id, `${input.accountType}: ${input.name.trim()}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "ACCOUNT_CREATED",
+      "PARTIES",
+      id,
+      `${input.accountType}: ${input.name.trim()}`,
+    );
   return id;
 }
 
@@ -2155,7 +2212,7 @@ export async function updateParty(partyId: string, companyId: string, input: Par
      WHERE company_id = $1
        AND name = $2 COLLATE NOCASE
        AND id <> $3`,
-    [companyId, input.name.trim(), partyId]
+    [companyId, input.name.trim(), partyId],
   );
 
   if (Number(duplicate[0]?.count ?? 0) > 0) {
@@ -2179,9 +2236,17 @@ export async function updateParty(partyId: string, companyId: string, input: Par
       actorUserId,
       partyId,
       companyId,
-    ]
+    ],
   );
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "ACCOUNT_UPDATED", "PARTIES", partyId, `${input.accountType}: ${input.name.trim()}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "ACCOUNT_UPDATED",
+      "PARTIES",
+      partyId,
+      `${input.accountType}: ${input.name.trim()}`,
+    );
 }
 
 export async function getPartyById(companyId: string, partyId: string) {
@@ -2192,12 +2257,11 @@ export async function getPartyById(companyId: string, partyId: string) {
      FROM parties
      WHERE company_id=$1 AND id=$2
      LIMIT 1`,
-    [companyId, partyId]
+    [companyId, partyId],
   );
 
   return rows[0] ?? null;
 }
-
 
 function calculateAccommodation(input: AccommodationInput) {
   const nights = Math.max(0, Math.trunc(Number(input.nights) || 0));
@@ -2243,11 +2307,7 @@ function validateAccommodation(input: AccommodationInput) {
   }
 }
 
-export async function getAccommodations(
-  companyId: string,
-  search = "",
-  partyId = ""
-) {
+export async function getAccommodations(companyId: string, search = "", partyId = "") {
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
@@ -2274,14 +2334,11 @@ export async function getAccommodations(
          COALESCE(p.name, '') LIKE $4 COLLATE NOCASE
        )
      ORDER BY a.transaction_date DESC, a.created_at DESC`,
-    [companyId, partyId, clean, term]
+    [companyId, partyId, clean, term],
   );
 }
 
-export async function createAccommodation(
-  companyId: string,
-  input: AccommodationInput
-) {
+export async function createAccommodation(companyId: string, input: AccommodationInput) {
   validateAccommodation(input);
   const database = await db();
   const calculated = calculateAccommodation(input);
@@ -2315,17 +2372,13 @@ export async function createAccommodation(
       calculated.totalSar,
       calculated.totalPkr,
       now,
-    ]
+    ],
   );
 
   return id;
 }
 
-export async function updateAccommodation(
-  companyId: string,
-  entryId: string,
-  input: AccommodationInput
-) {
+export async function updateAccommodation(companyId: string, entryId: string, input: AccommodationInput) {
   validateAccommodation(input);
   const database = await db();
   const calculated = calculateAccommodation(input);
@@ -2368,7 +2421,7 @@ export async function updateAccommodation(
       new Date().toISOString(),
       entryId,
       companyId,
-    ]
+    ],
   );
 }
 
@@ -2379,7 +2432,7 @@ export async function voidAccommodation(companyId: string, entryId: string) {
     `UPDATE accommodation_entries
      SET status='VOID', updated_at=$1
      WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
-    [new Date().toISOString(), entryId, companyId]
+    [new Date().toISOString(), entryId, companyId],
   );
 }
 
@@ -2391,7 +2444,7 @@ export async function getPartyAccommodationTotals(companyId: string) {
      FROM accommodation_entries
      WHERE company_id=$1 AND status='ACTIVE'
      GROUP BY party_id`,
-    [companyId]
+    [companyId],
   );
 }
 
@@ -2400,7 +2453,7 @@ function calculateService(input: ServiceInput) {
   const pax = Math.max(0, Math.trunc(Number(input.pax) || 0));
   const spt = Math.max(0, Number(input.spt) || 0);
   const shr = Math.max(0, Number(input.shr) || 0);
-  const base = ((rate + shr) * pax) + spt;
+  const base = (rate + shr) * pax + spt;
 
   if (input.currency === "SAR") {
     const roe = Math.max(0, Number(input.roe) || 0);
@@ -2449,7 +2502,7 @@ export async function getServices(companyId: string, search = "", partyId = "") 
          COALESCE(p.name, '') LIKE $4 COLLATE NOCASE
        )
      ORDER BY s.transaction_date DESC, s.created_at DESC`,
-    [companyId, partyId, clean, term]
+    [companyId, partyId, clean, term],
   );
 }
 
@@ -2468,11 +2521,23 @@ export async function createService(companyId: string, input: ServiceInput) {
      VALUES
      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'ACTIVE',$16,$16)`,
     [
-      id, companyId, input.partyId, input.transactionDate, input.ubNumber.trim(),
-      input.bookingPartyName.trim(), input.serviceType.trim(), calculated.rate,
-      calculated.pax, calculated.spt, calculated.shr, input.currency,
-      calculated.roe, calculated.totalSar, calculated.totalPkr, now,
-    ]
+      id,
+      companyId,
+      input.partyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.bookingPartyName.trim(),
+      input.serviceType.trim(),
+      calculated.rate,
+      calculated.pax,
+      calculated.spt,
+      calculated.shr,
+      input.currency,
+      calculated.roe,
+      calculated.totalSar,
+      calculated.totalPkr,
+      now,
+    ],
   );
   return id;
 }
@@ -2489,12 +2554,23 @@ export async function updateService(companyId: string, entryId: string, input: S
          roe=$11, total_sar=$12, total_pkr=$13, updated_at=$14
      WHERE id=$15 AND company_id=$16 AND status='ACTIVE'`,
     [
-      input.partyId, input.transactionDate, input.ubNumber.trim(),
-      input.bookingPartyName.trim(), input.serviceType.trim(), calculated.rate,
-      calculated.pax, calculated.spt, calculated.shr, input.currency,
-      calculated.roe, calculated.totalSar, calculated.totalPkr,
-      new Date().toISOString(), entryId, companyId,
-    ]
+      input.partyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.bookingPartyName.trim(),
+      input.serviceType.trim(),
+      calculated.rate,
+      calculated.pax,
+      calculated.spt,
+      calculated.shr,
+      input.currency,
+      calculated.roe,
+      calculated.totalSar,
+      calculated.totalPkr,
+      new Date().toISOString(),
+      entryId,
+      companyId,
+    ],
   );
 }
 
@@ -2503,7 +2579,7 @@ export async function voidService(companyId: string, entryId: string) {
   await database.execute(
     `UPDATE service_entries SET status='VOID', updated_at=$1
      WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
-    [new Date().toISOString(), entryId, companyId]
+    [new Date().toISOString(), entryId, companyId],
   );
 }
 
@@ -2514,10 +2590,9 @@ export async function getPartyServiceTotals(companyId: string) {
      FROM service_entries
      WHERE company_id=$1 AND status='ACTIVE'
      GROUP BY party_id`,
-    [companyId]
+    [companyId],
   );
 }
-
 
 function calculatePayment(input: PaymentInput) {
   const amount = Math.max(0, Number(input.amount) || 0);
@@ -2565,7 +2640,7 @@ export async function getPayments(companyId: string, search = "", partyId = "") 
          COALESCE(p.name, '') LIKE $4 COLLATE NOCASE
        )
      ORDER BY pay.transaction_date DESC, pay.created_at DESC`,
-    [companyId, partyId, clean, term]
+    [companyId, partyId, clean, term],
   );
 }
 
@@ -2581,10 +2656,23 @@ export async function createPayment(companyId: string, input: PaymentInput) {
       from_account, to_account, description, payment_type, currency,
       amount_entered, sar, roe, paid_amount, status, created_at, updated_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15)`,
-    [id, companyId, input.partyId, input.transactionDate, input.receiptNo.trim(),
-     input.fromAccount.trim(), input.toAccount.trim(), input.description.trim(),
-     input.paymentType, input.currency, calculated.amount, calculated.sar,
-     calculated.roe, calculated.paidAmount, now]
+    [
+      id,
+      companyId,
+      input.partyId,
+      input.transactionDate,
+      input.receiptNo.trim(),
+      input.fromAccount.trim(),
+      input.toAccount.trim(),
+      input.description.trim(),
+      input.paymentType,
+      input.currency,
+      calculated.amount,
+      calculated.sar,
+      calculated.roe,
+      calculated.paidAmount,
+      now,
+    ],
   );
   return id;
 }
@@ -2600,10 +2688,23 @@ export async function updatePayment(companyId: string, entryId: string, input: P
          payment_type=$7, currency=$8, amount_entered=$9,
          sar=$10, roe=$11, paid_amount=$12, updated_at=$13
      WHERE id=$14 AND company_id=$15 AND status='ACTIVE'`,
-    [input.partyId, input.transactionDate, input.receiptNo.trim(),
-     input.fromAccount.trim(), input.toAccount.trim(), input.description.trim(),
-     input.paymentType, input.currency, calculated.amount, calculated.sar,
-     calculated.roe, calculated.paidAmount, new Date().toISOString(), entryId, companyId]
+    [
+      input.partyId,
+      input.transactionDate,
+      input.receiptNo.trim(),
+      input.fromAccount.trim(),
+      input.toAccount.trim(),
+      input.description.trim(),
+      input.paymentType,
+      input.currency,
+      calculated.amount,
+      calculated.sar,
+      calculated.roe,
+      calculated.paidAmount,
+      new Date().toISOString(),
+      entryId,
+      companyId,
+    ],
   );
 }
 
@@ -2612,7 +2713,7 @@ export async function voidPayment(companyId: string, entryId: string) {
   await database.execute(
     `UPDATE payment_entries SET status='VOID', updated_at=$1
      WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
-    [new Date().toISOString(), entryId, companyId]
+    [new Date().toISOString(), entryId, companyId],
   );
 }
 
@@ -2623,7 +2724,7 @@ export async function getPartyPaymentTotals(companyId: string) {
      FROM payment_entries
      WHERE company_id=$1 AND status='ACTIVE'
      GROUP BY party_id`,
-    [companyId]
+    [companyId],
   );
 }
 
@@ -2679,19 +2780,21 @@ async function validateUniquePackageUb(companyId: string, ubNumber: string, edit
   const normalized = normalizePackageUb(ubNumber);
   const rows = await database.select<Array<{ id: string; ub_number: string }>>(
     `SELECT id, ub_number FROM package_bookings WHERE company_id=$1`,
-    [companyId]
+    [companyId],
   );
 
   const duplicate = rows.find((row) => row.id !== editingBookingId && normalizePackageUb(row.ub_number) === normalized);
   if (duplicate) {
-    throw new Error(`UB # / Booking "${ubNumber.trim()}" already exists in Package Booking Register. Use a unique UB #.`);
+    throw new Error(
+      `UB # / Booking "${ubNumber.trim()}" already exists in Package Booking Register. Use a unique UB #.`,
+    );
   }
 }
 
 async function validatePackageCounterparty(
   companyId: string,
   transactionType: BookingTransactionType,
-  counterpartyId: string
+  counterpartyId: string,
 ) {
   if (!counterpartyId) {
     throw new Error(transactionType === "SALE" ? "Select a Party." : "Select a Vendor.");
@@ -2703,7 +2806,7 @@ async function validatePackageCounterparty(
      FROM parties
      WHERE id=$1 AND company_id=$2
      LIMIT 1`,
-    [counterpartyId, companyId]
+    [counterpartyId, companyId],
   );
 
   const account = rows[0];
@@ -2713,7 +2816,7 @@ async function validatePackageCounterparty(
     throw new Error(
       transactionType === "SALE"
         ? "Sale bookings can only be saved against an active Party."
-        : "Purchase bookings can only be saved against an active Vendor."
+        : "Purchase bookings can only be saved against an active Vendor.",
     );
   }
 }
@@ -2769,7 +2872,7 @@ export async function getPackageBookings(companyId: string, search = "") {
          )
        )
      ORDER BY b.transaction_date DESC, b.created_at DESC`,
-    [companyId, clean, term]
+    [companyId, clean, term],
   );
 
   const lines = await database.select<PackageBookingLine[]>(
@@ -2779,7 +2882,7 @@ export async function getPackageBookings(companyId: string, search = "") {
      INNER JOIN package_bookings b ON b.id=l.booking_id
      WHERE b.company_id=$1
      ORDER BY l.sort_order ASC`,
-    [companyId]
+    [companyId],
   );
 
   const grouped = new Map<string, PackageBookingLine[]>();
@@ -2809,11 +2912,23 @@ export async function createPackageBooking(companyId: string, input: PackageBook
       total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15,$16,$16)`,
     [
-      id, companyId, input.transactionType, input.counterpartyId, input.transactionDate,
-      input.ubNumber.trim(), input.packageDescription.trim(), input.departureDate, input.returnDate,
-      Math.max(0, Math.trunc(Number(input.noOfDays) || 0)), input.ziaratIncluded,
-      input.customerContact.trim(), input.notes.trim(), totalPkr, now, actorUserId,
-    ]
+      id,
+      companyId,
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.packageDescription.trim(),
+      input.departureDate,
+      input.returnDate,
+      Math.max(0, Math.trunc(Number(input.noOfDays) || 0)),
+      input.ziaratIncluded,
+      input.customerContact.trim(),
+      input.notes.trim(),
+      totalPkr,
+      now,
+      actorUserId,
+    ],
   );
 
   for (const line of calculated) {
@@ -2822,13 +2937,29 @@ export async function createPackageBooking(companyId: string, input: PackageBook
        (id,booking_id,passenger_type,passenger_name,package_type,rate_per_person,person_count,qty_is_explicit,line_total_pkr,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [
-        crypto.randomUUID(), id, line.passengerType, line.passengerName, line.packageType,
-        line.ratePerPerson, line.personCount, line.qtyIsExplicit, line.lineTotalPkr, line.sortOrder,
-      ]
+        crypto.randomUUID(),
+        id,
+        line.passengerType,
+        line.passengerName,
+        line.packageType,
+        line.ratePerPerson,
+        line.personCount,
+        line.qtyIsExplicit,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
     );
   }
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_CREATED", "PACKAGE", id, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${totalPkr}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_CREATED",
+      "PACKAGE",
+      id,
+      `${input.transactionType} ${input.ubNumber.trim()} - PKR ${totalPkr}`,
+    );
   return id;
 }
 
@@ -2836,7 +2967,7 @@ export async function updatePackageBooking(
   companyId: string,
   bookingId: string,
   input: PackageBookingInput,
-  actorUserId = ""
+  actorUserId = "",
 ) {
   await requirePermission(companyId, actorUserId, "edit_bookings");
   const { calculated, totalPkr } = await validatePackageBooking(companyId, input, bookingId);
@@ -2850,17 +2981,26 @@ export async function updatePackageBooking(
          ziarat_included=$9, customer_contact=$10, notes=$11, total_pkr=$12, updated_at=$13, updated_by_user_id=$14
      WHERE id=$15 AND company_id=$16 AND status='ACTIVE'`,
     [
-      input.transactionType, input.counterpartyId, input.transactionDate, input.ubNumber.trim(),
-      input.packageDescription.trim(), input.departureDate, input.returnDate,
-      Math.max(0, Math.trunc(Number(input.noOfDays) || 0)), input.ziaratIncluded,
-      input.customerContact.trim(), input.notes.trim(), totalPkr, now, actorUserId, bookingId, companyId,
-    ]
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.packageDescription.trim(),
+      input.departureDate,
+      input.returnDate,
+      Math.max(0, Math.trunc(Number(input.noOfDays) || 0)),
+      input.ziaratIncluded,
+      input.customerContact.trim(),
+      input.notes.trim(),
+      totalPkr,
+      now,
+      actorUserId,
+      bookingId,
+      companyId,
+    ],
   );
 
-  await database.execute(
-    `DELETE FROM package_booking_lines WHERE booking_id=$1`,
-    [bookingId]
-  );
+  await database.execute(`DELETE FROM package_booking_lines WHERE booking_id=$1`, [bookingId]);
 
   for (const line of calculated) {
     await database.execute(
@@ -2868,13 +3008,29 @@ export async function updatePackageBooking(
        (id,booking_id,passenger_type,passenger_name,package_type,rate_per_person,person_count,qty_is_explicit,line_total_pkr,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [
-        crypto.randomUUID(), bookingId, line.passengerType, line.passengerName, line.packageType,
-        line.ratePerPerson, line.personCount, line.qtyIsExplicit, line.lineTotalPkr, line.sortOrder,
-      ]
+        crypto.randomUUID(),
+        bookingId,
+        line.passengerType,
+        line.passengerName,
+        line.packageType,
+        line.ratePerPerson,
+        line.personCount,
+        line.qtyIsExplicit,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
     );
   }
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_UPDATED", "PACKAGE", bookingId, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${totalPkr}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_UPDATED",
+      "PACKAGE",
+      bookingId,
+      `${input.transactionType} ${input.ubNumber.trim()} - PKR ${totalPkr}`,
+    );
 }
 
 export async function voidPackageBooking(companyId: string, bookingId: string, actorUserId = "") {
@@ -2882,15 +3038,23 @@ export async function voidPackageBooking(companyId: string, bookingId: string, a
   const database = await db();
   const rows = await database.select<Array<{ ub_number: string }>>(
     `SELECT ub_number FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId]
+    [bookingId, companyId],
   );
   await database.execute(
     `UPDATE package_bookings
      SET status='VOID', updated_at=$1, updated_by_user_id=$2
      WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-    [new Date().toISOString(), actorUserId, bookingId, companyId]
+    [new Date().toISOString(), actorUserId, bookingId, companyId],
   );
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_VOIDED", "PACKAGE", bookingId, `Package booking ${rows[0]?.ub_number || bookingId} voided.`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_VOIDED",
+      "PACKAGE",
+      bookingId,
+      `Package booking ${rows[0]?.ub_number || bookingId} voided.`,
+    );
 }
 
 export async function getCompanyPackageSummary(companyId: string) {
@@ -2902,7 +3066,7 @@ export async function getCompanyPackageSummary(companyId: string) {
        COUNT(*) AS active_count
      FROM package_bookings
      WHERE company_id=$1 AND status='ACTIVE'`,
-    [companyId]
+    [companyId],
   );
   return rows[0] || { sale_total: 0, purchase_total: 0, active_count: 0 };
 }
@@ -2917,7 +3081,7 @@ export async function getCounterpartyPackageTotals(companyId: string) {
      FROM package_bookings
      WHERE company_id=$1 AND status='ACTIVE'
      GROUP BY counterparty_id`,
-    [companyId]
+    [companyId],
   );
 }
 
@@ -2980,15 +3144,17 @@ async function validateUniqueTicketUb(
   transactionType: BookingTransactionType,
   counterpartyId: string,
   ubNumber: string,
-  editingBookingId = ""
+  editingBookingId = "",
 ) {
   const normalized = normalizeTicketUb(ubNumber);
   const database = await db();
-  const rows = await database.select<Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>>(
+  const rows = await database.select<
+    Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>
+  >(
     `SELECT id,transaction_type,counterparty_id,ub_number
      FROM ticket_bookings
      WHERE company_id=$1`,
-    [companyId]
+    [companyId],
   );
 
   const duplicate = rows.find((row) => {
@@ -2999,9 +3165,13 @@ async function validateUniqueTicketUb(
 
   if (duplicate) {
     if (transactionType === "SALE") {
-      throw new Error(`UB # / Booking "${ubNumber.trim()}" already has a Ticket Sale booking. Use the existing Ticket booking or another UB #.`);
+      throw new Error(
+        `UB # / Booking "${ubNumber.trim()}" already has a Ticket Sale booking. Use the existing Ticket booking or another UB #.`,
+      );
     }
-    throw new Error(`This Vendor already has a Ticket Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`);
+    throw new Error(
+      `This Vendor already has a Ticket Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`,
+    );
   }
 }
 
@@ -3010,7 +3180,13 @@ async function validateTicketBooking(companyId: string, input: TicketBookingInpu
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   if (!input.ubNumber.trim()) throw new Error("UB # / Booking is required.");
   await validatePackageCounterparty(companyId, input.transactionType, input.counterpartyId);
-  await validateUniqueTicketUb(companyId, input.transactionType, input.counterpartyId, input.ubNumber, editingBookingId);
+  await validateUniqueTicketUb(
+    companyId,
+    input.transactionType,
+    input.counterpartyId,
+    input.ubNumber,
+    editingBookingId,
+  );
 
   if (!input.airlineName.trim()) throw new Error("Airline Name is required.");
   if (!input.sector.trim()) throw new Error("Sector / Route is required.");
@@ -3058,7 +3234,7 @@ export async function getTicketBookings(companyId: string, search = "") {
          )
        )
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term]
+    [companyId, clean, term],
   );
 
   const lines = await database.select<TicketBookingLine[]>(
@@ -3068,7 +3244,7 @@ export async function getTicketBookings(companyId: string, search = "") {
      INNER JOIN ticket_bookings b ON b.id=l.booking_id
      WHERE b.company_id=$1
      ORDER BY l.sort_order ASC`,
-    [companyId]
+    [companyId],
   );
 
   const grouped = new Map<string, TicketBookingLine[]>();
@@ -3095,11 +3271,28 @@ export async function createTicketBooking(companyId: string, input: TicketBookin
       baggage,ticket_status,customer_contact,notes,total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'ACTIVE',$20,$20,$21,$21)`,
     [
-      id,companyId,input.transactionType,input.counterpartyId,input.transactionDate,input.ubNumber.trim(),
-      input.airlineName.trim(),input.pnr.trim(),input.sector.trim(),input.departureDate,input.returnDate,
-      input.flightNo.trim(),input.departureTime,input.arrivalTime,input.baggage.trim(),input.ticketStatus,
-      input.customerContact.trim(),input.notes.trim(),totalPkr,now,actorUserId,
-    ]
+      id,
+      companyId,
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.airlineName.trim(),
+      input.pnr.trim(),
+      input.sector.trim(),
+      input.departureDate,
+      input.returnDate,
+      input.flightNo.trim(),
+      input.departureTime,
+      input.arrivalTime,
+      input.baggage.trim(),
+      input.ticketStatus,
+      input.customerContact.trim(),
+      input.notes.trim(),
+      totalPkr,
+      now,
+      actorUserId,
+    ],
   );
 
   for (const line of calculated) {
@@ -3107,15 +3300,39 @@ export async function createTicketBooking(companyId: string, input: TicketBookin
       `INSERT INTO ticket_booking_lines
        (id,booking_id,passenger_type,passenger_name,eticket_reference,rate_per_ticket,ticket_count,qty_is_explicit,line_total_pkr,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [crypto.randomUUID(),id,line.passengerType,line.passengerName,line.eticketReference,line.ratePerTicket,line.ticketCount,line.qtyIsExplicit,line.lineTotalPkr,line.sortOrder]
+      [
+        crypto.randomUUID(),
+        id,
+        line.passengerType,
+        line.passengerName,
+        line.eticketReference,
+        line.ratePerTicket,
+        line.ticketCount,
+        line.qtyIsExplicit,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
     );
   }
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_CREATED", "TICKET", id, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${totalPkr}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_CREATED",
+      "TICKET",
+      id,
+      `${input.transactionType} ${input.ubNumber.trim()} - PKR ${totalPkr}`,
+    );
   return id;
 }
 
-export async function updateTicketBooking(companyId: string, bookingId: string, input: TicketBookingInput, actorUserId = "") {
+export async function updateTicketBooking(
+  companyId: string,
+  bookingId: string,
+  input: TicketBookingInput,
+  actorUserId = "",
+) {
   await requirePermission(companyId, actorUserId, "edit_bookings");
   const { calculated, totalPkr } = await validateTicketBooking(companyId, input, bookingId);
   const database = await db();
@@ -3129,11 +3346,28 @@ export async function updateTicketBooking(companyId: string, bookingId: string, 
          notes=$16,total_pkr=$17,updated_at=$18,updated_by_user_id=$19
      WHERE id=$20 AND company_id=$21 AND status='ACTIVE'`,
     [
-      input.transactionType,input.counterpartyId,input.transactionDate,input.ubNumber.trim(),
-      input.airlineName.trim(),input.pnr.trim(),input.sector.trim(),input.departureDate,input.returnDate,
-      input.flightNo.trim(),input.departureTime,input.arrivalTime,input.baggage.trim(),input.ticketStatus,
-      input.customerContact.trim(),input.notes.trim(),totalPkr,now,actorUserId,bookingId,companyId,
-    ]
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.airlineName.trim(),
+      input.pnr.trim(),
+      input.sector.trim(),
+      input.departureDate,
+      input.returnDate,
+      input.flightNo.trim(),
+      input.departureTime,
+      input.arrivalTime,
+      input.baggage.trim(),
+      input.ticketStatus,
+      input.customerContact.trim(),
+      input.notes.trim(),
+      totalPkr,
+      now,
+      actorUserId,
+      bookingId,
+      companyId,
+    ],
   );
 
   await database.execute(`DELETE FROM ticket_booking_lines WHERE booking_id=$1`, [bookingId]);
@@ -3142,11 +3376,30 @@ export async function updateTicketBooking(companyId: string, bookingId: string, 
       `INSERT INTO ticket_booking_lines
        (id,booking_id,passenger_type,passenger_name,eticket_reference,rate_per_ticket,ticket_count,qty_is_explicit,line_total_pkr,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [crypto.randomUUID(),bookingId,line.passengerType,line.passengerName,line.eticketReference,line.ratePerTicket,line.ticketCount,line.qtyIsExplicit,line.lineTotalPkr,line.sortOrder]
+      [
+        crypto.randomUUID(),
+        bookingId,
+        line.passengerType,
+        line.passengerName,
+        line.eticketReference,
+        line.ratePerTicket,
+        line.ticketCount,
+        line.qtyIsExplicit,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
     );
   }
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_UPDATED", "TICKET", bookingId, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${totalPkr}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_UPDATED",
+      "TICKET",
+      bookingId,
+      `${input.transactionType} ${input.ubNumber.trim()} - PKR ${totalPkr}`,
+    );
 }
 
 export async function voidTicketBooking(companyId: string, bookingId: string, actorUserId = "") {
@@ -3154,18 +3407,24 @@ export async function voidTicketBooking(companyId: string, bookingId: string, ac
   const database = await db();
   const rows = await database.select<Array<{ ub_number: string }>>(
     `SELECT ub_number FROM ticket_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId]
+    [bookingId, companyId],
   );
   await database.execute(
     `UPDATE ticket_bookings
      SET status='VOID',updated_at=$1,updated_by_user_id=$2
      WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-    [new Date().toISOString(),actorUserId,bookingId,companyId]
+    [new Date().toISOString(), actorUserId, bookingId, companyId],
   );
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_VOIDED", "TICKET", bookingId, `Ticket booking ${rows[0]?.ub_number || bookingId} voided.`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_VOIDED",
+      "TICKET",
+      bookingId,
+      `Ticket booking ${rows[0]?.ub_number || bookingId} voided.`,
+    );
 }
-
-
 
 function normalizeHotelUb(value: string) {
   return value.trim().replace(/\s+/g, " ").toUpperCase();
@@ -3211,11 +3470,15 @@ function calculateHotelLines(lines: HotelBookingLineInput[]) {
     if (!line.checkIn) throw new Error(`Hotel row ${rowNo}: Check-In date is required.`);
     if (!line.checkOut) throw new Error(`Hotel row ${rowNo}: Check-Out date is required.`);
     if (line.checkOut <= line.checkIn) throw new Error(`Hotel row ${rowNo}: Check-Out must be after Check-In.`);
-    if (!Number.isFinite(nights) || nights < 1 || nights > 99) throw new Error(`Hotel row ${rowNo}: No. of Nights must be between 1 and 99.`);
+    if (!Number.isFinite(nights) || nights < 1 || nights > 99)
+      throw new Error(`Hotel row ${rowNo}: No. of Nights must be between 1 and 99.`);
     if (!allowedRoomTypes.includes(line.roomType)) throw new Error(`Hotel row ${rowNo}: select a Room Type.`);
-    if (!Number.isFinite(ratePerNightSar) || ratePerNightSar <= 0) throw new Error(`Hotel row ${rowNo}: enter a valid Per Night SAR rate.`);
+    if (!Number.isFinite(ratePerNightSar) || ratePerNightSar <= 0)
+      throw new Error(`Hotel row ${rowNo}: enter a valid Per Night SAR rate.`);
     if (!Number.isFinite(quantity) || quantity < 1 || quantity > 99) {
-      throw new Error(`Hotel row ${rowNo}: ${line.roomType === "SHARING" ? "No. of Beds" : "No. of Rooms"} must be between 1 and 99.`);
+      throw new Error(
+        `Hotel row ${rowNo}: ${line.roomType === "SHARING" ? "No. of Beds" : "No. of Rooms"} must be between 1 and 99.`,
+      );
     }
     if (!Number.isFinite(roe) || roe < 0) throw new Error(`Hotel row ${rowNo}: enter a valid ROE or leave it blank.`);
 
@@ -3242,9 +3505,7 @@ function calculateHotelLines(lines: HotelBookingLineInput[]) {
 
   const totalSar = calculated.reduce((sum, line) => sum + line.lineTotalSar, 0);
   const totalPkr = calculated.reduce((sum, line) => sum + line.lineTotalPkr, 0);
-  const unconvertedSar = calculated
-    .filter((line) => line.roe <= 0)
-    .reduce((sum, line) => sum + line.lineTotalSar, 0);
+  const unconvertedSar = calculated.filter((line) => line.roe <= 0).reduce((sum, line) => sum + line.lineTotalSar, 0);
 
   return { calculated, totalSar, totalPkr, unconvertedSar };
 }
@@ -3254,15 +3515,17 @@ async function validateUniqueHotelUb(
   transactionType: BookingTransactionType,
   counterpartyId: string,
   ubNumber: string,
-  editingBookingId = ""
+  editingBookingId = "",
 ) {
   const normalized = normalizeHotelUb(ubNumber);
   const database = await db();
-  const rows = await database.select<Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>>(
+  const rows = await database.select<
+    Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>
+  >(
     `SELECT id,transaction_type,counterparty_id,ub_number
      FROM hotel_bookings
      WHERE company_id=$1`,
-    [companyId]
+    [companyId],
   );
 
   const duplicate = rows.find((row) => {
@@ -3273,9 +3536,13 @@ async function validateUniqueHotelUb(
 
   if (duplicate) {
     if (transactionType === "SALE") {
-      throw new Error(`UB # / Booking "${ubNumber.trim()}" already has a Hotel Sale booking. Edit the existing Hotel booking or use another UB #.`);
+      throw new Error(
+        `UB # / Booking "${ubNumber.trim()}" already has a Hotel Sale booking. Edit the existing Hotel booking or use another UB #.`,
+      );
     }
-    throw new Error(`This Vendor already has a Hotel Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`);
+    throw new Error(
+      `This Vendor already has a Hotel Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`,
+    );
   }
 }
 
@@ -3284,7 +3551,8 @@ async function validateHotelBooking(companyId: string, input: HotelBookingInput,
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   if (!input.ubNumber.trim()) throw new Error("UB # / Booking is required.");
   const guestCount = Math.trunc(Number(input.guestCount || 0));
-  if (!Number.isFinite(guestCount) || guestCount < 0 || guestCount > 99) throw new Error("No. of Guests must be between 1 and 99, or left blank.");
+  if (!Number.isFinite(guestCount) || guestCount < 0 || guestCount > 99)
+    throw new Error("No. of Guests must be between 1 and 99, or left blank.");
   await validatePackageCounterparty(companyId, input.transactionType, input.counterpartyId);
   await validateUniqueHotelUb(companyId, input.transactionType, input.counterpartyId, input.ubNumber, editingBookingId);
   return calculateHotelLines(input.lines);
@@ -3322,7 +3590,7 @@ export async function getHotelBookings(companyId: string, search = "") {
          )
        )
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term]
+    [companyId, clean, term],
   );
 
   const lines = await database.select<HotelBookingLine[]>(
@@ -3332,7 +3600,7 @@ export async function getHotelBookings(companyId: string, search = "") {
      INNER JOIN hotel_bookings b ON b.id=l.booking_id
      WHERE b.company_id=$1
      ORDER BY l.sort_order ASC`,
-    [companyId]
+    [companyId],
   );
 
   const grouped = new Map<string, HotelBookingLine[]>();
@@ -3359,10 +3627,25 @@ export async function createHotelBooking(companyId: string, input: HotelBookingI
       total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'ACTIVE',$17,$17,$18,$18)`,
     [
-      id,companyId,input.transactionType,input.counterpartyId,input.transactionDate,input.ubNumber.trim(),
-      input.confirmationVoucher.trim(),input.mealPlan.trim(),input.guestFamilyName.trim(),Math.trunc(Number(input.guestCount || 0)),input.customerContact.trim(),
-      input.specialRequests.trim(),input.notes.trim(),totalSar,totalPkr,unconvertedSar,now,actorUserId,
-    ]
+      id,
+      companyId,
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.confirmationVoucher.trim(),
+      input.mealPlan.trim(),
+      input.guestFamilyName.trim(),
+      Math.trunc(Number(input.guestCount || 0)),
+      input.customerContact.trim(),
+      input.specialRequests.trim(),
+      input.notes.trim(),
+      totalSar,
+      totalPkr,
+      unconvertedSar,
+      now,
+      actorUserId,
+    ],
   );
 
   for (const line of calculated) {
@@ -3370,15 +3653,43 @@ export async function createHotelBooking(companyId: string, input: HotelBookingI
       `INSERT INTO hotel_booking_lines
        (id,booking_id,city,hotel_name,check_in,check_out,nights,room_type,rate_per_night_sar,quantity,roe,line_total_sar,line_total_pkr,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [crypto.randomUUID(),id,line.city,line.hotelName,line.checkIn,line.checkOut,line.nights,line.roomType,line.ratePerNightSar,line.quantity,line.roe,line.lineTotalSar,line.lineTotalPkr,line.sortOrder]
+      [
+        crypto.randomUUID(),
+        id,
+        line.city,
+        line.hotelName,
+        line.checkIn,
+        line.checkOut,
+        line.nights,
+        line.roomType,
+        line.ratePerNightSar,
+        line.quantity,
+        line.roe,
+        line.lineTotalSar,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
     );
   }
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_CREATED", "HOTEL", id, `${input.transactionType} ${input.ubNumber.trim()} - SAR ${totalSar} / PKR ${totalPkr}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_CREATED",
+      "HOTEL",
+      id,
+      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${totalSar} / PKR ${totalPkr}`,
+    );
   return id;
 }
 
-export async function updateHotelBooking(companyId: string, bookingId: string, input: HotelBookingInput, actorUserId = "") {
+export async function updateHotelBooking(
+  companyId: string,
+  bookingId: string,
+  input: HotelBookingInput,
+  actorUserId = "",
+) {
   await requirePermission(companyId, actorUserId, "edit_bookings");
   const { calculated, totalSar, totalPkr, unconvertedSar } = await validateHotelBooking(companyId, input, bookingId);
   const database = await db();
@@ -3392,10 +3703,25 @@ export async function updateHotelBooking(companyId: string, bookingId: string, i
          updated_at=$15,updated_by_user_id=$16
      WHERE id=$17 AND company_id=$18 AND status='ACTIVE'`,
     [
-      input.transactionType,input.counterpartyId,input.transactionDate,input.ubNumber.trim(),
-      input.confirmationVoucher.trim(),input.mealPlan.trim(),input.guestFamilyName.trim(),Math.trunc(Number(input.guestCount || 0)),input.customerContact.trim(),
-      input.specialRequests.trim(),input.notes.trim(),totalSar,totalPkr,unconvertedSar,now,actorUserId,bookingId,companyId,
-    ]
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.confirmationVoucher.trim(),
+      input.mealPlan.trim(),
+      input.guestFamilyName.trim(),
+      Math.trunc(Number(input.guestCount || 0)),
+      input.customerContact.trim(),
+      input.specialRequests.trim(),
+      input.notes.trim(),
+      totalSar,
+      totalPkr,
+      unconvertedSar,
+      now,
+      actorUserId,
+      bookingId,
+      companyId,
+    ],
   );
 
   await database.execute(`DELETE FROM hotel_booking_lines WHERE booking_id=$1`, [bookingId]);
@@ -3404,11 +3730,34 @@ export async function updateHotelBooking(companyId: string, bookingId: string, i
       `INSERT INTO hotel_booking_lines
        (id,booking_id,city,hotel_name,check_in,check_out,nights,room_type,rate_per_night_sar,quantity,roe,line_total_sar,line_total_pkr,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [crypto.randomUUID(),bookingId,line.city,line.hotelName,line.checkIn,line.checkOut,line.nights,line.roomType,line.ratePerNightSar,line.quantity,line.roe,line.lineTotalSar,line.lineTotalPkr,line.sortOrder]
+      [
+        crypto.randomUUID(),
+        bookingId,
+        line.city,
+        line.hotelName,
+        line.checkIn,
+        line.checkOut,
+        line.nights,
+        line.roomType,
+        line.ratePerNightSar,
+        line.quantity,
+        line.roe,
+        line.lineTotalSar,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
     );
   }
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_UPDATED", "HOTEL", bookingId, `${input.transactionType} ${input.ubNumber.trim()} - SAR ${totalSar} / PKR ${totalPkr}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_UPDATED",
+      "HOTEL",
+      bookingId,
+      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${totalSar} / PKR ${totalPkr}`,
+    );
 }
 
 export async function voidHotelBooking(companyId: string, bookingId: string, actorUserId = "") {
@@ -3416,15 +3765,23 @@ export async function voidHotelBooking(companyId: string, bookingId: string, act
   const database = await db();
   const rows = await database.select<Array<{ ub_number: string }>>(
     `SELECT ub_number FROM hotel_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId]
+    [bookingId, companyId],
   );
   await database.execute(
     `UPDATE hotel_bookings
      SET status='VOID',updated_at=$1,updated_by_user_id=$2
      WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-    [new Date().toISOString(),actorUserId,bookingId,companyId]
+    [new Date().toISOString(), actorUserId, bookingId, companyId],
   );
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_VOIDED", "HOTEL", bookingId, `Hotel booking ${rows[0]?.ub_number || bookingId} voided.`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_VOIDED",
+      "HOTEL",
+      bookingId,
+      `Hotel booking ${rows[0]?.ub_number || bookingId} voided.`,
+    );
 }
 
 // ===== PHASE 11B — VISA BOOKING ENGINE =====
@@ -3461,14 +3818,17 @@ function calculateVisaBooking(input: VisaBookingInput) {
 
   const baseRows = input.lines.map((line, index) => {
     const rowNo = index + 1;
-    if (!allowedPassengerTypes.includes(line.passengerType)) throw new Error(`Visa row ${rowNo}: select Adult, Child or Infant.`);
+    if (!allowedPassengerTypes.includes(line.passengerType))
+      throw new Error(`Visa row ${rowNo}: select Adult, Child or Infant.`);
     if (!allowedVisaTypes.includes(line.visaType)) throw new Error(`Visa row ${rowNo}: select a Visa Type.`);
     const passengerName = line.passengerName.trim();
     if (!passengerName) throw new Error(`Visa row ${rowNo}: Passenger / Family Head Name is required.`);
     const visaRateSar = Number(line.visaRateSar);
-    if (!Number.isFinite(visaRateSar) || visaRateSar < 0) throw new Error(`Visa row ${rowNo}: enter a valid Visa Rate (SAR).`);
+    if (!Number.isFinite(visaRateSar) || visaRateSar < 0)
+      throw new Error(`Visa row ${rowNo}: enter a valid Visa Rate (SAR).`);
     const paxCount = Math.trunc(Number(line.paxCount));
-    if (!Number.isFinite(paxCount) || paxCount < 1 || paxCount > 999) throw new Error(`Visa row ${rowNo}: No. of Pax must be between 1 and 999.`);
+    if (!Number.isFinite(paxCount) || paxCount < 1 || paxCount > 999)
+      throw new Error(`Visa row ${rowNo}: No. of Pax must be between 1 and 999.`);
     const roe = line.roe == null ? 0 : Number(line.roe);
     if (!Number.isFinite(roe) || roe < 0) throw new Error(`Visa row ${rowNo}: enter a valid ROE or leave it blank.`);
     return {
@@ -3485,35 +3845,44 @@ function calculateVisaBooking(input: VisaBookingInput) {
 
   if (!baseRows.length) throw new Error("Add at least one Visa row.");
 
-  const applicablePrivatePax = baseRows.filter((row) => visaNeedsPrivateTransport(row.visaType)).reduce((sum, row) => sum + row.paxCount, 0);
-  const applicableFullBusPax = baseRows.filter((row) => visaNeedsFullBus(row.visaType)).reduce((sum, row) => sum + row.paxCount, 0);
+  const applicablePrivatePax = baseRows
+    .filter((row) => visaNeedsPrivateTransport(row.visaType))
+    .reduce((sum, row) => sum + row.paxCount, 0);
+  const applicableFullBusPax = baseRows
+    .filter((row) => visaNeedsFullBus(row.visaType))
+    .reduce((sum, row) => sum + row.paxCount, 0);
 
-  const fleet = applicablePrivatePax > 0
-    ? input.fleet.map((item, index) => {
-        if (!allowedVehicles.includes(item.vehicleType)) throw new Error(`Transport fleet row ${index + 1}: select a valid vehicle.`);
-        const quantity = Math.trunc(Number(item.quantity));
-        if (!Number.isFinite(quantity) || quantity < 1 || quantity > 99) throw new Error(`Transport fleet row ${index + 1}: Qty must be between 1 and 99.`);
-        const ratePerVehicleSar = Number(item.ratePerVehicleSar || 0);
-        if (!Number.isFinite(ratePerVehicleSar) || ratePerVehicleSar < 0) throw new Error(`Transport fleet row ${index + 1}: enter a valid SAR rate.`);
-        const capacityPerVehicle = visaVehicleCapacity(item.vehicleType);
-        return {
-          vehicleType: item.vehicleType,
-          quantity,
-          capacityPerVehicle,
-          totalCapacity: capacityPerVehicle * quantity,
-          ratePerVehicleSar,
-          lineTotalSar: ratePerVehicleSar * quantity,
-          sortOrder: index,
-        };
-      })
-    : [];
+  const fleet =
+    applicablePrivatePax > 0
+      ? input.fleet.map((item, index) => {
+          if (!allowedVehicles.includes(item.vehicleType))
+            throw new Error(`Transport fleet row ${index + 1}: select a valid vehicle.`);
+          const quantity = Math.trunc(Number(item.quantity));
+          if (!Number.isFinite(quantity) || quantity < 1 || quantity > 99)
+            throw new Error(`Transport fleet row ${index + 1}: Qty must be between 1 and 99.`);
+          const ratePerVehicleSar = Number(item.ratePerVehicleSar || 0);
+          if (!Number.isFinite(ratePerVehicleSar) || ratePerVehicleSar < 0)
+            throw new Error(`Transport fleet row ${index + 1}: enter a valid SAR rate.`);
+          const capacityPerVehicle = visaVehicleCapacity(item.vehicleType);
+          return {
+            vehicleType: item.vehicleType,
+            quantity,
+            capacityPerVehicle,
+            totalCapacity: capacityPerVehicle * quantity,
+            ratePerVehicleSar,
+            lineTotalSar: ratePerVehicleSar * quantity,
+            sortOrder: index,
+          };
+        })
+      : [];
 
   const privateTransportTotalSar = fleet.reduce((sum, item) => sum + item.lineTotalSar, 0);
   const privateFleetCapacity = fleet.reduce((sum, item) => sum + item.totalCapacity, 0);
   const privateVehicleType: VisaVehicleType | "" = fleet[0]?.vehicleType || "";
 
   const intercityBusRateSar = applicableFullBusPax > 0 ? Number(input.intercityBusRateSar || 0) : 0;
-  if (!Number.isFinite(intercityBusRateSar) || intercityBusRateSar < 0) throw new Error("Enter a valid Inter-City Bus SAR / Pax rate.");
+  if (!Number.isFinite(intercityBusRateSar) || intercityBusRateSar < 0)
+    throw new Error("Enter a valid Inter-City Bus SAR / Pax rate.");
 
   const privatePerPax = applicablePrivatePax > 0 ? privateTransportTotalSar / applicablePrivatePax : 0;
   const intercityBusTotalSar = intercityBusRateSar * applicableFullBusPax;
@@ -3533,7 +3902,8 @@ function calculateVisaBooking(input: VisaBookingInput) {
   });
 
   const passports = input.passports.map((item, index) => {
-    if (!allowedPassengerTypes.includes(item.passengerType)) throw new Error(`Passenger row ${index + 1}: invalid passenger type.`);
+    if (!allowedPassengerTypes.includes(item.passengerType))
+      throw new Error(`Passenger row ${index + 1}: invalid passenger type.`);
     if (!allowedVisaTypes.includes(item.visaType)) throw new Error(`Passenger row ${index + 1}: invalid Visa Type.`);
     const surname = item.surname.trim();
     const givenName = item.givenName.trim();
@@ -3583,14 +3953,13 @@ async function validateUniqueVisaUb(
   transactionType: BookingTransactionType,
   counterpartyId: string,
   ubNumber: string,
-  editingBookingId = ""
+  editingBookingId = "",
 ) {
   const normalized = normalizeVisaUb(ubNumber);
   const database = await db();
-  const rows = await database.select<Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>>(
-    `SELECT id,transaction_type,counterparty_id,ub_number FROM visa_bookings WHERE company_id=$1`,
-    [companyId]
-  );
+  const rows = await database.select<
+    Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>
+  >(`SELECT id,transaction_type,counterparty_id,ub_number FROM visa_bookings WHERE company_id=$1`, [companyId]);
 
   const duplicate = rows.find((row) => {
     if (row.id === editingBookingId || normalizeVisaUb(row.ub_number) !== normalized) return false;
@@ -3599,8 +3968,13 @@ async function validateUniqueVisaUb(
   });
 
   if (duplicate) {
-    if (transactionType === "SALE") throw new Error(`UB # / Booking "${ubNumber.trim()}" already has a Visa Sale booking. Edit the existing Visa booking or use another UB #.`);
-    throw new Error(`This Vendor already has a Visa Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`);
+    if (transactionType === "SALE")
+      throw new Error(
+        `UB # / Booking "${ubNumber.trim()}" already has a Visa Sale booking. Edit the existing Visa booking or use another UB #.`,
+      );
+    throw new Error(
+      `This Vendor already has a Visa Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`,
+    );
   }
 }
 
@@ -3647,7 +4021,7 @@ export async function getVisaBookings(companyId: string, search = "") {
          )
        )
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term]
+    [companyId, clean, term],
   );
 
   const lines = await database.select<VisaBookingLine[]>(
@@ -3657,7 +4031,7 @@ export async function getVisaBookings(companyId: string, search = "") {
      INNER JOIN visa_bookings b ON b.id=l.booking_id
      WHERE b.company_id=$1
      ORDER BY l.sort_order ASC`,
-    [companyId]
+    [companyId],
   );
 
   const fleet = await database.select<VisaTransportFleetLine[]>(
@@ -3667,7 +4041,7 @@ export async function getVisaBookings(companyId: string, search = "") {
      INNER JOIN visa_bookings b ON b.id=f.booking_id
      WHERE b.company_id=$1
      ORDER BY f.sort_order ASC`,
-    [companyId]
+    [companyId],
   );
 
   const passports = await database.select<VisaPassportDetail[]>(
@@ -3677,7 +4051,7 @@ export async function getVisaBookings(companyId: string, search = "") {
      INNER JOIN visa_bookings b ON b.id=d.booking_id
      WHERE b.company_id=$1
      ORDER BY d.sort_order ASC`,
-    [companyId]
+    [companyId],
   );
 
   const groupedLines = new Map<string, VisaBookingLine[]>();
@@ -3709,15 +4083,33 @@ export async function getVisaBookings(companyId: string, search = "") {
   })) as VisaBooking[];
 }
 
-async function insertVisaChildren(database: Awaited<ReturnType<typeof db>>, bookingId: string, result: ReturnType<typeof calculateVisaBooking>) {
+async function insertVisaChildren(
+  database: Awaited<ReturnType<typeof db>>,
+  bookingId: string,
+  result: ReturnType<typeof calculateVisaBooking>,
+) {
   for (const line of result.calculated) {
     await database.execute(
       `INSERT INTO visa_booking_lines
        (id,booking_id,passenger_type,passenger_name,visa_type,visa_rate_sar,pax_count,roe,visa_total_sar,
         private_transport_allocated_sar,intercity_bus_total_sar,line_total_sar,line_total_pkr,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [crypto.randomUUID(),bookingId,line.passengerType,line.passengerName,line.visaType,line.visaRateSar,line.paxCount,line.roe,
-       line.visaTotalSar,line.privateTransportAllocatedSar,line.intercityBusTotalSar,line.lineTotalSar,line.lineTotalPkr,line.sortOrder]
+      [
+        crypto.randomUUID(),
+        bookingId,
+        line.passengerType,
+        line.passengerName,
+        line.visaType,
+        line.visaRateSar,
+        line.paxCount,
+        line.roe,
+        line.visaTotalSar,
+        line.privateTransportAllocatedSar,
+        line.intercityBusTotalSar,
+        line.lineTotalSar,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
     );
   }
 
@@ -3726,7 +4118,17 @@ async function insertVisaChildren(database: Awaited<ReturnType<typeof db>>, book
       `INSERT INTO visa_transport_fleet
        (id,booking_id,vehicle_type,quantity,capacity_per_vehicle,total_capacity,rate_per_vehicle_sar,line_total_sar,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [crypto.randomUUID(),bookingId,item.vehicleType,item.quantity,item.capacityPerVehicle,item.totalCapacity,item.ratePerVehicleSar,item.lineTotalSar,item.sortOrder]
+      [
+        crypto.randomUUID(),
+        bookingId,
+        item.vehicleType,
+        item.quantity,
+        item.capacityPerVehicle,
+        item.totalCapacity,
+        item.ratePerVehicleSar,
+        item.lineTotalSar,
+        item.sortOrder,
+      ],
     );
   }
 
@@ -3735,8 +4137,22 @@ async function insertVisaChildren(database: Awaited<ReturnType<typeof db>>, book
       `INSERT INTO visa_passport_details
        (id,booking_id,source_family_name,passenger_name,passenger_type,visa_type,surname,given_name,passport_number,nationality,date_of_birth,passport_issuance,passport_expiry,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [crypto.randomUUID(),bookingId,item.sourceFamilyName,item.passengerName,item.passengerType,item.visaType,
-       item.surname,item.givenName,item.passportNumber,item.nationality,item.dateOfBirth,item.passportIssuance,item.passportExpiry,item.sortOrder]
+      [
+        crypto.randomUUID(),
+        bookingId,
+        item.sourceFamilyName,
+        item.passengerName,
+        item.passengerType,
+        item.visaType,
+        item.surname,
+        item.givenName,
+        item.passportNumber,
+        item.nationality,
+        item.dateOfBirth,
+        item.passportIssuance,
+        item.passportExpiry,
+        item.sortOrder,
+      ],
     );
   }
 }
@@ -3755,19 +4171,50 @@ export async function createVisaBooking(companyId: string, input: VisaBookingInp
       visa_total_sar,transport_total_sar,total_sar,total_pkr,unconverted_sar,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'ACTIVE',$20,$20,$21,$21)`,
     [
-      id,companyId,input.transactionType,input.counterpartyId,input.transactionDate,input.ubNumber.trim(),input.expectedEntryDate.trim(),result.privateVehicleType,
-      result.privateTransportTotalSar,result.intercityBusRateSar,result.intercityBusTotalSar,result.applicablePrivatePax,result.applicableFullBusPax,
-      result.visaTotalSar,result.transportTotalSar,result.totalSar,result.totalPkr,result.unconvertedSar,input.notes.trim(),now,actorUserId,
-    ]
+      id,
+      companyId,
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.expectedEntryDate.trim(),
+      result.privateVehicleType,
+      result.privateTransportTotalSar,
+      result.intercityBusRateSar,
+      result.intercityBusTotalSar,
+      result.applicablePrivatePax,
+      result.applicableFullBusPax,
+      result.visaTotalSar,
+      result.transportTotalSar,
+      result.totalSar,
+      result.totalPkr,
+      result.unconvertedSar,
+      input.notes.trim(),
+      now,
+      actorUserId,
+    ],
   );
 
   await insertVisaChildren(database, id, result);
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_CREATED", "VISA", id, `${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_CREATED",
+      "VISA",
+      id,
+      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`,
+    );
   return id;
 }
 
-export async function updateVisaBooking(companyId: string, bookingId: string, input: VisaBookingInput, actorUserId = "") {
+export async function updateVisaBooking(
+  companyId: string,
+  bookingId: string,
+  input: VisaBookingInput,
+  actorUserId = "",
+) {
   await requirePermission(companyId, actorUserId, "edit_bookings");
   const result = await validateVisaBooking(companyId, input, bookingId);
   const database = await db();
@@ -3780,9 +4227,29 @@ export async function updateVisaBooking(companyId: string, bookingId: string, in
          applicable_private_pax=$10,applicable_full_bus_pax=$11,visa_total_sar=$12,transport_total_sar=$13,
          total_sar=$14,total_pkr=$15,unconverted_sar=$16,notes=$17,updated_at=$18,updated_by_user_id=$19
      WHERE id=$20 AND company_id=$21 AND status='ACTIVE'`,
-    [input.transactionType,input.counterpartyId,input.transactionDate,input.ubNumber.trim(),input.expectedEntryDate.trim(),result.privateVehicleType,
-     result.privateTransportTotalSar,result.intercityBusRateSar,result.intercityBusTotalSar,result.applicablePrivatePax,result.applicableFullBusPax,
-     result.visaTotalSar,result.transportTotalSar,result.totalSar,result.totalPkr,result.unconvertedSar,input.notes.trim(),now,actorUserId,bookingId,companyId]
+    [
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.expectedEntryDate.trim(),
+      result.privateVehicleType,
+      result.privateTransportTotalSar,
+      result.intercityBusRateSar,
+      result.intercityBusTotalSar,
+      result.applicablePrivatePax,
+      result.applicableFullBusPax,
+      result.visaTotalSar,
+      result.transportTotalSar,
+      result.totalSar,
+      result.totalPkr,
+      result.unconvertedSar,
+      input.notes.trim(),
+      now,
+      actorUserId,
+      bookingId,
+      companyId,
+    ],
   );
 
   await database.execute(`DELETE FROM visa_booking_lines WHERE booking_id=$1`, [bookingId]);
@@ -3791,7 +4258,15 @@ export async function updateVisaBooking(companyId: string, bookingId: string, in
 
   await insertVisaChildren(database, bookingId, result);
 
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_UPDATED", "VISA", bookingId, `${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_UPDATED",
+      "VISA",
+      bookingId,
+      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`,
+    );
 }
 
 export async function voidVisaBooking(companyId: string, bookingId: string, actorUserId = "") {
@@ -3799,16 +4274,22 @@ export async function voidVisaBooking(companyId: string, bookingId: string, acto
   const database = await db();
   const rows = await database.select<Array<{ ub_number: string }>>(
     `SELECT ub_number FROM visa_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId]
+    [bookingId, companyId],
   );
   await database.execute(
     `UPDATE visa_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-    [new Date().toISOString(),actorUserId,bookingId,companyId]
+    [new Date().toISOString(), actorUserId, bookingId, companyId],
   );
-  if (actorUserId) await createAuditLog(companyId, actorUserId, "BOOKING_VOIDED", "VISA", bookingId, `Visa booking ${rows[0]?.ub_number || bookingId} voided.`);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_VOIDED",
+      "VISA",
+      bookingId,
+      `Visa booking ${rows[0]?.ub_number || bookingId} voided.`,
+    );
 }
-
-
 
 // -----------------------------------------------------------------------------
 // PHASE 12A — TRANSPORT BOOKING ENGINE
@@ -3819,7 +4300,16 @@ function normalizeTransportUb(value: string) {
 
 function calculateTransportLines(lines: TransportBookingLineInput[]) {
   const allowedTypes: TransportType[] = ["SHARING_BUS", "PRIVATE_VEHICLE"];
-  const privateVehicles: TransportVehicleType[] = ["CAR", "GMC_YUKON", "STARIA", "STAREX", "HIACE", "COASTER", "BUS", "OTHER"];
+  const privateVehicles: TransportVehicleType[] = [
+    "CAR",
+    "GMC_YUKON",
+    "STARIA",
+    "STAREX",
+    "HIACE",
+    "COASTER",
+    "BUS",
+    "OTHER",
+  ];
   const calculated: Array<{
     transportDate: string;
     transportType: TransportType;
@@ -3846,13 +4336,17 @@ function calculateTransportLines(lines: TransportBookingLineInput[]) {
     const roe = line.roe == null ? 0 : Number(line.roe);
 
     if (!transportDate) throw new Error(`Transport row ${rowNo}: Transport Date is required.`);
-    if (!allowedTypes.includes(line.transportType)) throw new Error(`Transport row ${rowNo}: select Sharing Bus or Private Vehicle.`);
+    if (!allowedTypes.includes(line.transportType))
+      throw new Error(`Transport row ${rowNo}: select Sharing Bus or Private Vehicle.`);
     if (!fromLocation) throw new Error(`Transport row ${rowNo}: From route is required.`);
     if (!toLocation) throw new Error(`Transport row ${rowNo}: To route is required.`);
-    if (fromLocation.toLowerCase() === toLocation.toLowerCase()) throw new Error(`Transport row ${rowNo}: From and To cannot be the same.`);
+    if (fromLocation.toLowerCase() === toLocation.toLowerCase())
+      throw new Error(`Transport row ${rowNo}: From and To cannot be the same.`);
     if (!Number.isFinite(rateSar) || rateSar <= 0) throw new Error(`Transport row ${rowNo}: enter a valid SAR rate.`);
-    if (!Number.isFinite(paxCount) || paxCount < 1 || paxCount > 999) throw new Error(`Transport row ${rowNo}: No. of Pax must be between 1 and 999.`);
-    if (!Number.isFinite(roe) || roe < 0) throw new Error(`Transport row ${rowNo}: enter a valid ROE or leave it blank.`);
+    if (!Number.isFinite(paxCount) || paxCount < 1 || paxCount > 999)
+      throw new Error(`Transport row ${rowNo}: No. of Pax must be between 1 and 999.`);
+    if (!Number.isFinite(roe) || roe < 0)
+      throw new Error(`Transport row ${rowNo}: enter a valid ROE or leave it blank.`);
 
     let vehicleType: TransportVehicleType = "SHARING_BUS";
     let customVehicleName = "";
@@ -3860,12 +4354,15 @@ function calculateTransportLines(lines: TransportBookingLineInput[]) {
     let lineTotalSar = rateSar * paxCount;
 
     if (line.transportType === "PRIVATE_VEHICLE") {
-      if (!privateVehicles.includes(line.vehicleType)) throw new Error(`Transport row ${rowNo}: select a Private Vehicle type.`);
+      if (!privateVehicles.includes(line.vehicleType))
+        throw new Error(`Transport row ${rowNo}: select a Private Vehicle type.`);
       vehicleType = line.vehicleType;
       customVehicleName = line.customVehicleName.trim();
-      if (vehicleType === "OTHER" && !customVehicleName) throw new Error(`Transport row ${rowNo}: enter the Custom Vehicle name.`);
+      if (vehicleType === "OTHER" && !customVehicleName)
+        throw new Error(`Transport row ${rowNo}: enter the Custom Vehicle name.`);
       vehicleCount = Math.trunc(Number(line.vehicleCount));
-      if (!Number.isFinite(vehicleCount) || vehicleCount < 1 || vehicleCount > 99) throw new Error(`Transport row ${rowNo}: No. of Vehicles must be between 1 and 99.`);
+      if (!Number.isFinite(vehicleCount) || vehicleCount < 1 || vehicleCount > 99)
+        throw new Error(`Transport row ${rowNo}: No. of Vehicles must be between 1 and 99.`);
       lineTotalSar = rateSar * vehicleCount;
     }
 
@@ -3899,22 +4396,26 @@ async function validateUniqueTransportUb(
   transactionType: BookingTransactionType,
   counterpartyId: string,
   ubNumber: string,
-  editingBookingId = ""
+  editingBookingId = "",
 ) {
   const normalized = normalizeTransportUb(ubNumber);
   const database = await db();
-  const rows = await database.select<Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>>(
-    `SELECT id,transaction_type,counterparty_id,ub_number FROM transport_bookings WHERE company_id=$1`,
-    [companyId]
-  );
+  const rows = await database.select<
+    Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>
+  >(`SELECT id,transaction_type,counterparty_id,ub_number FROM transport_bookings WHERE company_id=$1`, [companyId]);
   const duplicate = rows.find((row) => {
     if (row.id === editingBookingId || normalizeTransportUb(row.ub_number) !== normalized) return false;
     if (transactionType === "SALE") return row.transaction_type === "SALE";
     return row.transaction_type === "PURCHASE" && row.counterparty_id === counterpartyId;
   });
   if (duplicate) {
-    if (transactionType === "SALE") throw new Error(`UB # / Booking "${ubNumber.trim()}" already has a Transport Sale booking. Edit the existing Transport booking or use another UB #.`);
-    throw new Error(`This Vendor already has a Transport Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`);
+    if (transactionType === "SALE")
+      throw new Error(
+        `UB # / Booking "${ubNumber.trim()}" already has a Transport Sale booking. Edit the existing Transport booking or use another UB #.`,
+      );
+    throw new Error(
+      `This Vendor already has a Transport Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`,
+    );
   }
 }
 
@@ -3923,7 +4424,13 @@ async function validateTransportBooking(companyId: string, input: TransportBooki
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   if (!input.ubNumber.trim()) throw new Error("UB # / Booking is required.");
   await validatePackageCounterparty(companyId, input.transactionType, input.counterpartyId);
-  await validateUniqueTransportUb(companyId, input.transactionType, input.counterpartyId, input.ubNumber, editingBookingId);
+  await validateUniqueTransportUb(
+    companyId,
+    input.transactionType,
+    input.counterpartyId,
+    input.ubNumber,
+    editingBookingId,
+  );
   return calculateTransportLines(input.lines);
 }
 
@@ -3945,7 +4452,7 @@ export async function getTransportBookings(companyId: string, search = "") {
                l.transport_type LIKE $3 COLLATE NOCASE OR l.vehicle_type LIKE $3 COLLATE NOCASE OR
                l.custom_vehicle_name LIKE $3 COLLATE NOCASE)))
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId,clean,term]
+    [companyId, clean, term],
   );
   const lines = await database.select<TransportBookingLine[]>(
     `SELECT l.id,l.booking_id,l.transport_date,l.transport_type,l.from_location,l.to_location,l.vehicle_type,
@@ -3953,33 +4460,52 @@ export async function getTransportBookings(companyId: string, search = "") {
      FROM transport_booking_lines l
      INNER JOIN transport_bookings b ON b.id=l.booking_id
      WHERE b.company_id=$1 ORDER BY l.sort_order ASC`,
-    [companyId]
+    [companyId],
   );
   const grouped = new Map<string, TransportBookingLine[]>();
   for (const line of lines) {
     const current = grouped.get(line.booking_id) || [];
     current.push(line);
-    grouped.set(line.booking_id,current);
+    grouped.set(line.booking_id, current);
   }
   return headers.map((header) => ({ ...header, lines: grouped.get(header.id) || [] })) as TransportBooking[];
 }
 
-async function insertTransportLines(database: Awaited<ReturnType<typeof db>>, bookingId: string, calculated: ReturnType<typeof calculateTransportLines>["calculated"]) {
+async function insertTransportLines(
+  database: Awaited<ReturnType<typeof db>>,
+  bookingId: string,
+  calculated: ReturnType<typeof calculateTransportLines>["calculated"],
+) {
   for (const line of calculated) {
     await database.execute(
       `INSERT INTO transport_booking_lines
        (id,booking_id,transport_date,transport_type,from_location,to_location,vehicle_type,custom_vehicle_name,
         vehicle_count,rate_sar,pax_count,roe,line_total_sar,line_total_pkr,sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-      [crypto.randomUUID(),bookingId,line.transportDate,line.transportType,line.fromLocation,line.toLocation,line.vehicleType,
-       line.customVehicleName,line.vehicleCount,line.rateSar,line.paxCount,line.roe,line.lineTotalSar,line.lineTotalPkr,line.sortOrder]
+      [
+        crypto.randomUUID(),
+        bookingId,
+        line.transportDate,
+        line.transportType,
+        line.fromLocation,
+        line.toLocation,
+        line.vehicleType,
+        line.customVehicleName,
+        line.vehicleCount,
+        line.rateSar,
+        line.paxCount,
+        line.roe,
+        line.lineTotalSar,
+        line.lineTotalPkr,
+        line.sortOrder,
+      ],
     );
   }
 }
 
 export async function createTransportBooking(companyId: string, input: TransportBookingInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "create_bookings");
-  const result = await validateTransportBooking(companyId,input);
+  const result = await validateTransportBooking(companyId, input);
   const database = await db();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -3988,64 +4514,160 @@ export async function createTransportBooking(companyId: string, input: Transport
      (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,pax_saudi_number,notes,
       total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'ACTIVE',$12,$12,$13,$13)`,
-    [id,companyId,input.transactionType,input.counterpartyId,input.transactionDate,input.ubNumber.trim(),input.paxSaudiNumber.trim(),
-     input.notes.trim(),result.totalSar,result.totalPkr,result.unconvertedSar,now,actorUserId]
+    [
+      id,
+      companyId,
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.paxSaudiNumber.trim(),
+      input.notes.trim(),
+      result.totalSar,
+      result.totalPkr,
+      result.unconvertedSar,
+      now,
+      actorUserId,
+    ],
   );
-  await insertTransportLines(database,id,result.calculated);
-  if (actorUserId) await createAuditLog(companyId,actorUserId,"BOOKING_CREATED","TRANSPORT",id,`${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`);
+  await insertTransportLines(database, id, result.calculated);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_CREATED",
+      "TRANSPORT",
+      id,
+      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`,
+    );
   return id;
 }
 
-export async function updateTransportBooking(companyId: string, bookingId: string, input: TransportBookingInput, actorUserId = "") {
+export async function updateTransportBooking(
+  companyId: string,
+  bookingId: string,
+  input: TransportBookingInput,
+  actorUserId = "",
+) {
   await requirePermission(companyId, actorUserId, "edit_bookings");
-  const result = await validateTransportBooking(companyId,input,bookingId);
+  const result = await validateTransportBooking(companyId, input, bookingId);
   const database = await db();
   const now = new Date().toISOString();
   await database.execute(
     `UPDATE transport_bookings SET transaction_type=$1,counterparty_id=$2,transaction_date=$3,ub_number=$4,
        pax_saudi_number=$5,notes=$6,total_sar=$7,total_pkr=$8,unconverted_sar=$9,updated_at=$10,updated_by_user_id=$11
      WHERE id=$12 AND company_id=$13 AND status='ACTIVE'`,
-    [input.transactionType,input.counterpartyId,input.transactionDate,input.ubNumber.trim(),input.paxSaudiNumber.trim(),input.notes.trim(),
-     result.totalSar,result.totalPkr,result.unconvertedSar,now,actorUserId,bookingId,companyId]
+    [
+      input.transactionType,
+      input.counterpartyId,
+      input.transactionDate,
+      input.ubNumber.trim(),
+      input.paxSaudiNumber.trim(),
+      input.notes.trim(),
+      result.totalSar,
+      result.totalPkr,
+      result.unconvertedSar,
+      now,
+      actorUserId,
+      bookingId,
+      companyId,
+    ],
   );
-  await database.execute(`DELETE FROM transport_booking_lines WHERE booking_id=$1`,[bookingId]);
-  await insertTransportLines(database,bookingId,result.calculated);
-  if (actorUserId) await createAuditLog(companyId,actorUserId,"BOOKING_UPDATED","TRANSPORT",bookingId,`${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`);
+  await database.execute(`DELETE FROM transport_booking_lines WHERE booking_id=$1`, [bookingId]);
+  await insertTransportLines(database, bookingId, result.calculated);
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_UPDATED",
+      "TRANSPORT",
+      bookingId,
+      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`,
+    );
 }
 
 export async function voidTransportBooking(companyId: string, bookingId: string, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "void_bookings");
   const database = await db();
-  const rows = await database.select<Array<{ ub_number: string }>>(`SELECT ub_number FROM transport_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,[bookingId,companyId]);
-  await database.execute(`UPDATE transport_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,[new Date().toISOString(),actorUserId,bookingId,companyId]);
-  if (actorUserId) await createAuditLog(companyId,actorUserId,"BOOKING_VOIDED","TRANSPORT",bookingId,`Transport booking ${rows[0]?.ub_number || bookingId} voided.`);
+  const rows = await database.select<Array<{ ub_number: string }>>(
+    `SELECT ub_number FROM transport_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+    [bookingId, companyId],
+  );
+  await database.execute(
+    `UPDATE transport_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
+    [new Date().toISOString(), actorUserId, bookingId, companyId],
+  );
+  if (actorUserId)
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_VOIDED",
+      "TRANSPORT",
+      bookingId,
+      `Transport booking ${rows[0]?.ub_number || bookingId} voided.`,
+    );
 }
 
 export async function dangerouslyEraseAllData(companyId: string) {
   const database = await db();
-  
+
   const tables = [
-    "package_bookings", "package_booking_lines", "package_booking_lines_v2", 
-    "package_operational_meta", "package_operational_passengers", "package_operational_hotels", 
-    "package_operational_flights", "package_operational_flight_stopovers", "package_movement_events", "package_booking_adjustments",
-    
-    "ticket_bookings", "ticket_booking_lines", "ticket_operational_meta", "ticket_operational_passengers", "ticket_operational_flights",
-    
-    "hotel_bookings", "hotel_booking_lines", "hotel_commercial_guest_refs", "hotel_operational_reservations", "hotel_operational_guests", "hotel_operational_meta",
-    
-    "visa_bookings", "visa_booking_lines", "visa_transport_fleet", "visa_passport_details", "visa_operational_meta", "visa_operational_passengers",
-    
-    "transport_bookings", "transport_booking_lines", "transport_operational_sectors", "transport_operational_meta",
-    
-    "misc_bookings", "misc_booking_lines", "misc_commercial_family_refs", "misc_operational_services", "misc_operational_meta",
-    
+    "package_bookings",
+    "package_booking_lines",
+    "package_booking_lines_v2",
+    "package_operational_meta",
+    "package_operational_passengers",
+    "package_operational_hotels",
+    "package_operational_flights",
+    "package_operational_flight_stopovers",
+    "package_movement_events",
+    "package_booking_adjustments",
+
+    "ticket_bookings",
+    "ticket_booking_lines",
+    "ticket_operational_meta",
+    "ticket_operational_passengers",
+    "ticket_operational_flights",
+
+    "hotel_bookings",
+    "hotel_booking_lines",
+    "hotel_commercial_guest_refs",
+    "hotel_operational_reservations",
+    "hotel_operational_guests",
+    "hotel_operational_meta",
+
+    "visa_bookings",
+    "visa_booking_lines",
+    "visa_transport_fleet",
+    "visa_passport_details",
+    "visa_operational_meta",
+    "visa_operational_passengers",
+
+    "transport_bookings",
+    "transport_booking_lines",
+    "transport_operational_sectors",
+    "transport_operational_meta",
+
+    "misc_bookings",
+    "misc_booking_lines",
+    "misc_commercial_family_refs",
+    "misc_operational_services",
+    "misc_operational_meta",
+
     "booking_adjustments",
-    
-    "payments", "payment_entries", "payment_v2_meta",
-    
-    "parties", "accommodation_entries", "service_entries",
-    
-    "audit_logs", "remembered_sessions", "users", "companies"
+
+    "payments",
+    "payment_entries",
+    "payment_v2_meta",
+
+    "parties",
+    "accommodation_entries",
+    "service_entries",
+
+    "audit_logs",
+    "remembered_sessions",
+    "users",
+    "companies",
   ];
 
   for (const table of tables) {

@@ -1,0 +1,43 @@
+/* AUTO-GENERATED THEME OVERRIDES FOR BookingLifecycleActions.css */
+
+:root[data-theme="midnight"] .booking-lifecycle-actions button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-lifecycle-actions button.open {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .booking-lifecycle-actions button.adjustment {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-lifecycle-actions button.history {
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+:root[data-theme="midnight"] .booking-lifecycle-actions button.void {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: var(--text-main) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+:root[data-theme="ocean"] .booking-lifecycle-actions button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-lifecycle-actions button.open {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-lifecycle-actions button.adjustment {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-lifecycle-actions button.history {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .booking-lifecycle-actions button.void {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}

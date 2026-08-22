@@ -8,7 +8,10 @@ export function bookingUbFromDigits(value: string) {
 }
 
 export function bookingDigitsFromUb(value: string) {
-  const match = value.trim().toUpperCase().match(/^UB-(\d{1,4})$/);
+  const match = value
+    .trim()
+    .toUpperCase()
+    .match(/^UB-(\d{1,4})$/);
   return match ? String(Number(match[1])) : "";
 }
 

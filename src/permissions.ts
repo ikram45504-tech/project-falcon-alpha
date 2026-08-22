@@ -53,25 +53,9 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "edit_payments",
     "view_statements",
   ],
-  ACCOUNTS: [
-    "view_parties",
-    "view_bookings",
-    "view_payments",
-    "edit_payments",
-    "view_statements",
-  ],
-  DATA_ENTRY: [
-    "view_parties",
-    "edit_parties",
-    "view_bookings",
-    "create_bookings",
-    "edit_bookings",
-  ],
-  VIEW_ONLY: [
-    "view_parties",
-    "view_bookings",
-    "view_statements",
-  ],
+  ACCOUNTS: ["view_parties", "view_bookings", "view_payments", "edit_payments", "view_statements"],
+  DATA_ENTRY: ["view_parties", "edit_parties", "view_bookings", "create_bookings", "edit_bookings"],
+  VIEW_ONLY: ["view_parties", "view_bookings", "view_statements"],
 };
 
 export function hasPermission(role: string | null | undefined, permission: Permission) {

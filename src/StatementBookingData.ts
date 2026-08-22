@@ -1,21 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
-import type {
-  HotelBooking,
-  PackageBooking,
-  Party,
-  TransportBooking,
-  VisaBooking,
-} from "./db";
-import {
-  getHotelBookings,
-  getPackageBookings,
-  getTransportBookings,
-  getVisaBookings,
-} from "./db";
-import {
-  getTicketCommercialBookings,
-  type TicketCommercialBooking,
-} from "./TicketFlowDb";
+import type { HotelBooking, PackageBooking, Party, TransportBooking, VisaBooking } from "./db";
+import { getHotelBookings, getPackageBookings, getTransportBookings, getVisaBookings } from "./db";
+import { getTicketCommercialBookings, type TicketCommercialBooking } from "./TicketFlowDb";
 import { getHotelOperationalDetails } from "./HotelOperationalDb";
 import { getMiscBookings, type MiscBooking } from "./miscDb";
 import { getMiscOperationalDetails } from "./MiscOperationalDb";
@@ -98,10 +84,7 @@ async function statementDb() {
 }
 
 async function getStatementAdjustments(companyId: string) {
-  await Promise.all([
-    initPackageAdjustmentDatabase(),
-    initUniversalBookingAdjustmentDatabase(),
-  ]);
+  await Promise.all([initPackageAdjustmentDatabase(), initUniversalBookingAdjustmentDatabase()]);
   const database = await statementDb();
   return database.select<StatementAdjustmentRecord[]>(
     `SELECT id,company_id,'PACKAGE' AS service_type,booking_id,adjustment_type,adjustment_date,
@@ -118,7 +101,7 @@ async function getStatementAdjustments(companyId: string) {
        FROM booking_adjustments
       WHERE company_id=$1
       ORDER BY service_type,booking_id,revision_no,created_at`,
-    [companyId]
+    [companyId],
   );
 }
 
@@ -128,14 +111,18 @@ function relevantDirection(accountType: Party["account_type"]) {
   return null;
 }
 
-function matchesAccount<T extends {
-  counterparty_id: string;
-  transaction_type: "SALE" | "PURCHASE";
-  status: "ACTIVE" | "VOID";
-}>(row: T, counterpartyId: string, direction: "SALE" | "PURCHASE" | null) {
-  return row.status === "ACTIVE" &&
+function matchesAccount<
+  T extends {
+    counterparty_id: string;
+    transaction_type: "SALE" | "PURCHASE";
+    status: "ACTIVE" | "VOID";
+  },
+>(row: T, counterpartyId: string, direction: "SALE" | "PURCHASE" | null) {
+  return (
+    row.status === "ACTIVE" &&
     row.counterparty_id === counterpartyId &&
-    (!direction || row.transaction_type === direction);
+    (!direction || row.transaction_type === direction)
+  );
 }
 
 function byDate<T extends { transaction_date: string; created_at: string }>(a: T, b: T) {
@@ -163,39 +150,43 @@ function groupAdjustments(rows: StatementAdjustmentRecord[]) {
       revision_no: Number(row.revision_no || 1),
     });
   });
-  Object.values(map).forEach((items) => items.sort((a, b) =>
-    Number(a.revision_no || 0) - Number(b.revision_no || 0) ||
-    a.created_at.localeCompare(b.created_at)
-  ));
+  Object.values(map).forEach((items) =>
+    items.sort(
+      (a, b) => Number(a.revision_no || 0) - Number(b.revision_no || 0) || a.created_at.localeCompare(b.created_at),
+    ),
+  );
   return map;
 }
 
-function enrichBooking<T extends {
-  id: string;
-  transaction_date: string;
-  total_pkr: number;
-}>(
+function enrichBooking<
+  T extends {
+    id: string;
+    transaction_date: string;
+    total_pkr: number;
+  },
+>(
   service: BookingServiceName,
   booking: T,
   adjustments: StatementAdjustmentRecord[],
-  unconvertedSar = 0
+  unconvertedSar = 0,
 ): T & StatementBookingMeta {
-  const sorted = [...adjustments].sort((a, b) =>
-    Number(a.revision_no || 0) - Number(b.revision_no || 0) ||
-    a.created_at.localeCompare(b.created_at)
+  const sorted = [...adjustments].sort(
+    (a, b) => Number(a.revision_no || 0) - Number(b.revision_no || 0) || a.created_at.localeCompare(b.created_at),
   );
   const first = sorted[0];
   const latest = sorted[sorted.length - 1];
   const originalTotal = first ? Number(first.previous_total_pkr || 0) : Number(booking.total_pkr || 0);
   const latestPendingSar = Number(unconvertedSar || 0);
-  const events: StatementBookingHeader[] = [{
-    transaction_date: booking.transaction_date,
-    total_pkr: originalTotal,
-    unconverted_sar: sorted.length ? 0 : latestPendingSar,
-    service_type: service,
-    booking_id: booking.id,
-    event_type: "BOOKING",
-  }];
+  const events: StatementBookingHeader[] = [
+    {
+      transaction_date: booking.transaction_date,
+      total_pkr: originalTotal,
+      unconverted_sar: sorted.length ? 0 : latestPendingSar,
+      service_type: service,
+      booking_id: booking.id,
+      event_type: "BOOKING",
+    },
+  ];
   sorted.forEach((adjustment, index) => {
     events.push({
       transaction_date: adjustment.adjustment_date,
@@ -224,7 +215,7 @@ function enrichBooking<T extends {
 export async function getStatementBookingSections(
   companyId: string,
   counterpartyId: string,
-  accountType: Party["account_type"]
+  accountType: Party["account_type"],
 ): Promise<StatementBookingSections> {
   const direction = relevantDirection(accountType);
   const [packages, tickets, hotels, visas, transports, misc, adjustmentRows] = await Promise.all([
@@ -249,32 +240,55 @@ export async function getStatementBookingSections(
     .map((row) => enrichBooking("TICKET", row, adjustments[adjustmentKey("TICKET", row.id)] || [], 0));
 
   const matchedHotels = hotels.filter((row) => matchesAccount(row, counterpartyId, direction)).sort(byDate);
-  const hotelBookings = await Promise.all(matchedHotels.map(async (booking) => {
-    const details = await getHotelOperationalDetails(companyId, booking.id);
-    return {
-      ...enrichBooking("HOTEL", booking, adjustments[adjustmentKey("HOTEL", booking.id)] || [], Number(booking.unconverted_sar || 0)),
-      guestRefs: details.guestRefs,
-    };
-  }));
+  const hotelBookings = await Promise.all(
+    matchedHotels.map(async (booking) => {
+      const details = await getHotelOperationalDetails(companyId, booking.id);
+      return {
+        ...enrichBooking(
+          "HOTEL",
+          booking,
+          adjustments[adjustmentKey("HOTEL", booking.id)] || [],
+          Number(booking.unconverted_sar || 0),
+        ),
+        guestRefs: details.guestRefs,
+      };
+    }),
+  );
 
   const visaBookings = visas
     .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
-    .map((row) => enrichBooking("VISA", row, adjustments[adjustmentKey("VISA", row.id)] || [], Number(row.unconverted_sar || 0)));
+    .map((row) =>
+      enrichBooking("VISA", row, adjustments[adjustmentKey("VISA", row.id)] || [], Number(row.unconverted_sar || 0)),
+    );
 
   const transportBookings = transports
     .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
-    .map((row) => enrichBooking("TRANSPORT", row, adjustments[adjustmentKey("TRANSPORT", row.id)] || [], Number(row.unconverted_sar || 0)));
+    .map((row) =>
+      enrichBooking(
+        "TRANSPORT",
+        row,
+        adjustments[adjustmentKey("TRANSPORT", row.id)] || [],
+        Number(row.unconverted_sar || 0),
+      ),
+    );
 
   const matchedMisc = misc.filter((row) => matchesAccount(row, counterpartyId, direction)).sort(byDate);
-  const miscBookings = await Promise.all(matchedMisc.map(async (booking) => {
-    const details = await getMiscOperationalDetails(companyId, booking.id);
-    return {
-      ...enrichBooking("MISC", booking, adjustments[adjustmentKey("MISC", booking.id)] || [], Number(booking.unconverted_sar || 0)),
-      familyHeads: details.familyHeads,
-    };
-  }));
+  const miscBookings = await Promise.all(
+    matchedMisc.map(async (booking) => {
+      const details = await getMiscOperationalDetails(companyId, booking.id);
+      return {
+        ...enrichBooking(
+          "MISC",
+          booking,
+          adjustments[adjustmentKey("MISC", booking.id)] || [],
+          Number(booking.unconverted_sar || 0),
+        ),
+        familyHeads: details.familyHeads,
+      };
+    }),
+  );
 
   return {
     packageBookings,
@@ -304,7 +318,7 @@ export function statementBookingHeaders(sections: StatementBookingSections): Sta
 function scopeBooking<T extends StatementBookingMeta & { transaction_date: string }>(
   row: T,
   fromDate: string,
-  toDate: string
+  toDate: string,
 ): T | null {
   const inPeriod = (date: string) => date >= fromDate && date <= toDate;
   const periodEvents = row.statementEvents.filter((event) => inPeriod(event.transaction_date));
@@ -315,20 +329,26 @@ function scopeBooking<T extends StatementBookingMeta & { transaction_date: strin
     ...row,
     statementDisplayAdjustments: displayAdjustments,
     statementEvents: periodEvents,
-    statementAsOfTotalPkr: latestAsOf ? Number(latestAsOf.effective_total_pkr || 0) : Number(row.statementOriginalTotalPkr || 0),
+    statementAsOfTotalPkr: latestAsOf
+      ? Number(latestAsOf.effective_total_pkr || 0)
+      : Number(row.statementOriginalTotalPkr || 0),
     statementPeriodActivityPkr: periodEvents.reduce((sum, event) => sum + Number(event.total_pkr || 0), 0),
     statementOriginalInPeriod: inPeriod(row.transaction_date),
   };
 }
 
-function scopeRows<T extends StatementBookingMeta & { transaction_date: string }>(rows: T[], fromDate: string, toDate: string) {
+function scopeRows<T extends StatementBookingMeta & { transaction_date: string }>(
+  rows: T[],
+  fromDate: string,
+  toDate: string,
+) {
   return rows.map((row) => scopeBooking(row, fromDate, toDate)).filter((row): row is T => Boolean(row));
 }
 
 export function filterStatementSections(
   sections: StatementBookingSections,
   fromDate: string,
-  toDate: string
+  toDate: string,
 ): StatementBookingSections {
   return {
     packageBookings: scopeRows(sections.packageBookings, fromDate, toDate),
@@ -345,10 +365,12 @@ export function statementSectionPeriodTotal(rows: StatementBookingMeta[]) {
 }
 
 export function countStatementBookings(sections: StatementBookingSections) {
-  return sections.packageBookings.length +
+  return (
+    sections.packageBookings.length +
     sections.ticketBookings.length +
     sections.hotelBookings.length +
     sections.visaBookings.length +
     sections.transportBookings.length +
-    sections.miscBookings.length;
+    sections.miscBookings.length
+  );
 }

@@ -85,13 +85,7 @@ export const bookingLifecycleConfigs: Record<BookingServiceName, BookingLifecycl
   MISC: {
     service: "MISC",
     label: "Misc",
-    amendmentTypes: [
-      "Service Change",
-      "Passenger / Pax Change",
-      "Rate Change",
-      "Currency / ROE Change",
-      "Other",
-    ],
+    amendmentTypes: ["Service Change", "Passenger / Pax Change", "Rate Change", "Currency / ROE Change", "Other"],
     partialCancellationLabel: "Service / passenger quantity",
   },
 };

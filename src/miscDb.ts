@@ -94,10 +94,16 @@ async function ensureTablesOnce() {
     sort_order INTEGER NOT NULL DEFAULT 0
   )`);
 
-  await database.execute(`CREATE INDEX IF NOT EXISTS idx_misc_company_date ON misc_bookings(company_id, transaction_date)`);
-  await database.execute(`CREATE INDEX IF NOT EXISTS idx_misc_company_counterparty ON misc_bookings(company_id, counterparty_id)`);
+  await database.execute(
+    `CREATE INDEX IF NOT EXISTS idx_misc_company_date ON misc_bookings(company_id, transaction_date)`,
+  );
+  await database.execute(
+    `CREATE INDEX IF NOT EXISTS idx_misc_company_counterparty ON misc_bookings(company_id, counterparty_id)`,
+  );
   await database.execute(`CREATE INDEX IF NOT EXISTS idx_misc_company_ub ON misc_bookings(company_id, ub_number)`);
-  await database.execute(`CREATE INDEX IF NOT EXISTS idx_misc_lines_booking ON misc_booking_lines(booking_id, sort_order)`);
+  await database.execute(
+    `CREATE INDEX IF NOT EXISTS idx_misc_lines_booking ON misc_booking_lines(booking_id, sort_order)`,
+  );
 }
 
 export function initMiscDatabase() {
@@ -114,12 +120,16 @@ function normalizeUb(value: string) {
   return value.trim().replace(/\s+/g, " ").toUpperCase();
 }
 
-async function requireBookingPermission(companyId: string, actorUserId: string, permission: "create_bookings" | "edit_bookings" | "void_bookings") {
+async function requireBookingPermission(
+  companyId: string,
+  actorUserId: string,
+  permission: "create_bookings" | "edit_bookings" | "void_bookings",
+) {
   if (!actorUserId) return;
   const database = await db();
   const rows = await database.select<Array<{ role: UserRole; status: string }>>(
     `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [actorUserId, companyId]
+    [actorUserId, companyId],
   );
   const user = rows[0];
   if (!user || user.status !== "ACTIVE" || !hasPermission(user.role, permission)) {
@@ -128,33 +138,44 @@ async function requireBookingPermission(companyId: string, actorUserId: string, 
 }
 
 async function validateCounterparty(companyId: string, transactionType: MiscTransactionType, counterpartyId: string) {
-  if (!counterpartyId) throw new Error(transactionType === "SALE" ? "Select a Party / Customer." : "Select a Vendor / Supplier.");
+  if (!counterpartyId)
+    throw new Error(transactionType === "SALE" ? "Select a Party / Customer." : "Select a Vendor / Supplier.");
   const database = await db();
   const rows = await database.select<Array<{ account_type: string; status: string }>>(
     `SELECT account_type,status FROM parties WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [counterpartyId, companyId]
+    [counterpartyId, companyId],
   );
   const account = rows[0];
   const expected = transactionType === "SALE" ? "PARTY" : "VENDOR";
   if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
-    throw new Error(transactionType === "SALE" ? "Misc Sale can only be saved against an active Party." : "Misc Purchase can only be saved against an active Vendor.");
+    throw new Error(
+      transactionType === "SALE"
+        ? "Misc Sale can only be saved against an active Party."
+        : "Misc Purchase can only be saved against an active Vendor.",
+    );
   }
 }
 
-async function validateUniqueUb(companyId: string, transactionType: MiscTransactionType, counterpartyId: string, ubNumber: string, editingId = "") {
+async function validateUniqueUb(
+  companyId: string,
+  transactionType: MiscTransactionType,
+  counterpartyId: string,
+  ubNumber: string,
+  editingId = "",
+) {
   const database = await db();
   const normalized = normalizeUb(ubNumber);
-  const rows = await database.select<Array<{ id: string; transaction_type: MiscTransactionType; counterparty_id: string; ub_number: string }>>(
-    `SELECT id,transaction_type,counterparty_id,ub_number FROM misc_bookings WHERE company_id=$1`,
-    [companyId]
-  );
+  const rows = await database.select<
+    Array<{ id: string; transaction_type: MiscTransactionType; counterparty_id: string; ub_number: string }>
+  >(`SELECT id,transaction_type,counterparty_id,ub_number FROM misc_bookings WHERE company_id=$1`, [companyId]);
   const duplicate = rows.find((row) => {
     if (row.id === editingId || normalizeUb(row.ub_number) !== normalized) return false;
     if (transactionType === "SALE") return row.transaction_type === "SALE";
     return row.transaction_type === "PURCHASE" && row.counterparty_id === counterpartyId;
   });
   if (duplicate) {
-    if (transactionType === "SALE") throw new Error(`UB # / Booking "${ubNumber.trim()}" already has a Misc Sale booking.`);
+    if (transactionType === "SALE")
+      throw new Error(`UB # / Booking "${ubNumber.trim()}" already has a Misc Sale booking.`);
     throw new Error(`This Vendor already has a Misc Purchase booking for UB # "${ubNumber.trim()}".`);
   }
 }
@@ -167,8 +188,10 @@ function calculateLines(lines: MiscBookingLineInput[]) {
     const ratePerPerson = Number(line.ratePerPerson);
     const roe = line.roe == null ? 0 : Number(line.roe);
     if (!serviceName) throw new Error(`Misc row ${index + 1}: Service Name is required.`);
-    if (!Number.isFinite(paxCount) || paxCount < 1 || paxCount > 9999) throw new Error(`Misc row ${index + 1}: No. of Pax must be at least 1.`);
-    if (!Number.isFinite(ratePerPerson)) throw new Error(`Misc row ${index + 1}: Rate / Person must be a valid number.`);
+    if (!Number.isFinite(paxCount) || paxCount < 1 || paxCount > 9999)
+      throw new Error(`Misc row ${index + 1}: No. of Pax must be at least 1.`);
+    if (!Number.isFinite(ratePerPerson))
+      throw new Error(`Misc row ${index + 1}: Rate / Person must be a valid number.`);
     if (!Number.isFinite(roe) || roe < 0) throw new Error(`Misc row ${index + 1}: ROE cannot be negative.`);
 
     const currencyMode: "PKR" | "SAR" = roe > 0 ? "SAR" : "PKR";
@@ -195,7 +218,14 @@ async function validateBooking(companyId: string, input: MiscBookingInput, editi
   return calculateLines(input.lines);
 }
 
-function auditStatement(companyId: string, actorUserId: string, action: string, recordId: string, details: string, now: string): AtomicSqlStatement | null {
+function auditStatement(
+  companyId: string,
+  actorUserId: string,
+  action: string,
+  recordId: string,
+  details: string,
+  now: string,
+): AtomicSqlStatement | null {
   if (!actorUserId) return null;
   return {
     sql: `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
@@ -211,7 +241,18 @@ function lineStatements(bookingId: string, calculated: ReturnType<typeof calcula
     sql: `INSERT INTO misc_booking_lines
       (id,booking_id,service_name,pax_count,rate_per_person,roe,currency_mode,line_total_sar,line_total_pkr,sort_order)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-    params: [crypto.randomUUID(), bookingId, line.serviceName, line.paxCount, line.ratePerPerson, line.roe, line.currencyMode, line.lineTotalSar, line.lineTotalPkr, line.sortOrder],
+    params: [
+      crypto.randomUUID(),
+      bookingId,
+      line.serviceName,
+      line.paxCount,
+      line.ratePerPerson,
+      line.roe,
+      line.currencyMode,
+      line.lineTotalSar,
+      line.lineTotalPkr,
+      line.sortOrder,
+    ],
   }));
 }
 
@@ -230,13 +271,13 @@ export async function getMiscBookings(companyId: string, search = "") {
        AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR
             EXISTS (SELECT 1 FROM misc_booking_lines l WHERE l.booking_id=b.id AND l.service_name LIKE $3 COLLATE NOCASE))
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term]
+    [companyId, clean, term],
   );
   const lines = await database.select<MiscBookingLine[]>(
     `SELECT l.id,l.booking_id,l.service_name,l.pax_count,l.rate_per_person,l.roe,l.currency_mode,l.line_total_sar,l.line_total_pkr,l.sort_order
      FROM misc_booking_lines l INNER JOIN misc_bookings b ON b.id=l.booking_id
      WHERE b.company_id=$1 ORDER BY l.sort_order ASC`,
-    [companyId]
+    [companyId],
   );
   const grouped = new Map<string, MiscBookingLine[]>();
   for (const line of lines) {
@@ -258,17 +299,41 @@ export async function createMiscBooking(companyId: string, input: MiscBookingInp
       sql: `INSERT INTO misc_bookings
         (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'ACTIVE',$10,$10,$11,$11)`,
-      params: [id, companyId, input.transactionType, input.counterpartyId, input.transactionDate, input.ubNumber.trim(), result.totalSar, result.totalPkr, result.unconvertedSar, now, actorUserId],
+      params: [
+        id,
+        companyId,
+        input.transactionType,
+        input.counterpartyId,
+        input.transactionDate,
+        input.ubNumber.trim(),
+        result.totalSar,
+        result.totalPkr,
+        result.unconvertedSar,
+        now,
+        actorUserId,
+      ],
     },
     ...lineStatements(id, result.calculated),
   ];
-  const audit = auditStatement(companyId, actorUserId, "BOOKING_CREATED", id, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${result.totalPkr}`, now);
+  const audit = auditStatement(
+    companyId,
+    actorUserId,
+    "BOOKING_CREATED",
+    id,
+    `${input.transactionType} ${input.ubNumber.trim()} - PKR ${result.totalPkr}`,
+    now,
+  );
   if (audit) statements.push(audit);
   await runAtomicTransaction(statements);
   return id;
 }
 
-export async function updateMiscBooking(companyId: string, bookingId: string, input: MiscBookingInput, actorUserId = "") {
+export async function updateMiscBooking(
+  companyId: string,
+  bookingId: string,
+  input: MiscBookingInput,
+  actorUserId = "",
+) {
   await initMiscDatabase();
   await requireBookingPermission(companyId, actorUserId, "edit_bookings");
   const result = await validateBooking(companyId, input, bookingId);
@@ -277,12 +342,31 @@ export async function updateMiscBooking(companyId: string, bookingId: string, in
     {
       sql: `UPDATE misc_bookings SET transaction_type=$1,counterparty_id=$2,transaction_date=$3,ub_number=$4,total_sar=$5,total_pkr=$6,unconverted_sar=$7,updated_at=$8,updated_by_user_id=$9
         WHERE id=$10 AND company_id=$11 AND status='ACTIVE'`,
-      params: [input.transactionType, input.counterpartyId, input.transactionDate, input.ubNumber.trim(), result.totalSar, result.totalPkr, result.unconvertedSar, now, actorUserId, bookingId, companyId],
+      params: [
+        input.transactionType,
+        input.counterpartyId,
+        input.transactionDate,
+        input.ubNumber.trim(),
+        result.totalSar,
+        result.totalPkr,
+        result.unconvertedSar,
+        now,
+        actorUserId,
+        bookingId,
+        companyId,
+      ],
     },
     { sql: `DELETE FROM misc_booking_lines WHERE booking_id=$1`, params: [bookingId] },
     ...lineStatements(bookingId, result.calculated),
   ];
-  const audit = auditStatement(companyId, actorUserId, "BOOKING_UPDATED", bookingId, `${input.transactionType} ${input.ubNumber.trim()} - PKR ${result.totalPkr}`, now);
+  const audit = auditStatement(
+    companyId,
+    actorUserId,
+    "BOOKING_UPDATED",
+    bookingId,
+    `${input.transactionType} ${input.ubNumber.trim()} - PKR ${result.totalPkr}`,
+    now,
+  );
   if (audit) statements.push(audit);
   await runAtomicTransaction(statements);
 }
@@ -291,7 +375,10 @@ export async function voidMiscBooking(companyId: string, bookingId: string, acto
   await initMiscDatabase();
   await requireBookingPermission(companyId, actorUserId, "void_bookings");
   const database = await db();
-  const rows = await database.select<Array<{ ub_number: string }>>(`SELECT ub_number FROM misc_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`, [bookingId, companyId]);
+  const rows = await database.select<Array<{ ub_number: string }>>(
+    `SELECT ub_number FROM misc_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+    [bookingId, companyId],
+  );
   const now = new Date().toISOString();
   const statements: AtomicSqlStatement[] = [
     {
@@ -299,7 +386,14 @@ export async function voidMiscBooking(companyId: string, bookingId: string, acto
       params: [now, actorUserId, bookingId, companyId],
     },
   ];
-  const audit = auditStatement(companyId, actorUserId, "BOOKING_VOIDED", bookingId, `Misc booking ${rows[0]?.ub_number || bookingId} voided.`, now);
+  const audit = auditStatement(
+    companyId,
+    actorUserId,
+    "BOOKING_VOIDED",
+    bookingId,
+    `Misc booking ${rows[0]?.ub_number || bookingId} voided.`,
+    now,
+  );
   if (audit) statements.push(audit);
   await runAtomicTransaction(statements);
 }

@@ -15,8 +15,8 @@ export type LedgerTransaction = {
   transaction_date: string;
   created_at: string;
   kind: "SALE_BOOKING" | "PURCHASE_BOOKING" | "PAYMENT";
-  service_type: string; 
-  ref_no: string; 
+  service_type: string;
+  ref_no: string;
   description: string;
   total_pkr: number;
   status: "ACTIVE" | "VOID";
@@ -101,7 +101,7 @@ export async function getChronologicalLedger(companyId: string, party: Party): P
       WHERE p.company_id = $1 AND p.party_id = $2
     ) q
     ORDER BY q.transaction_date ASC, q.created_at ASC`,
-    [companyId, party.id]
+    [companyId, party.id],
   );
 
   const isVendor = party.account_type === "VENDOR";
@@ -162,7 +162,10 @@ export async function getChronologicalLedger(companyId: string, party: Party): P
   });
 }
 
-export async function getGlobalUbSaleOwner(companyId: string, ubNumber: string): Promise<{ partyId: string; service: string } | null> {
+export async function getGlobalUbSaleOwner(
+  companyId: string,
+  ubNumber: string,
+): Promise<{ partyId: string; service: string } | null> {
   const database = await db();
   const owners = await database.select<{ party_id: string; service: string }[]>(
     `SELECT counterparty_id AS party_id, service_type AS service
@@ -172,7 +175,7 @@ export async function getGlobalUbSaleOwner(companyId: string, ubNumber: string):
        AND b.transaction_type = 'SALE'
        AND b.status = 'ACTIVE'
      LIMIT 1`,
-    [companyId, ubNumber]
+    [companyId, ubNumber],
   );
   return owners.length > 0 ? { partyId: owners[0].party_id, service: owners[0].service } : null;
 }

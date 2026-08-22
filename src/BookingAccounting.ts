@@ -100,7 +100,7 @@ export async function getBookingAccountingEntries(companyId: string, counterpart
     `SELECT * FROM (${bookingUnion}) q
      WHERE ($2='' OR q.counterparty_id=$2)
      ORDER BY q.transaction_date ASC,q.created_at ASC,q.service_type ASC`,
-    [companyId, counterpartyId]
+    [companyId, counterpartyId],
   );
 }
 
@@ -118,7 +118,7 @@ export async function getPartyBookingTotals(companyId: string) {
      FROM (${bookingUnion}) q
      WHERE q.status='ACTIVE'
      GROUP BY q.counterparty_id`,
-    [companyId]
+    [companyId],
   );
 }
 
@@ -139,7 +139,7 @@ export async function getCompanyBookingSummary(companyId: string): Promise<Compa
 
 export function accountBookingAmount(
   accountType: "PARTY" | "VENDOR" | "UNASSIGNED",
-  totals?: { sale_total?: number; purchase_total?: number } | null
+  totals?: { sale_total?: number; purchase_total?: number } | null,
 ) {
   if (!totals) return 0;
   if (accountType === "PARTY") return Number(totals.sale_total || 0);

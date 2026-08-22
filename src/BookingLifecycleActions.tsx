@@ -23,10 +23,28 @@ export default function BookingLifecycleActions({
   onHistory,
   onVoid,
 }: Props) {
-  return <div className="booking-lifecycle-actions">
-    {onOpen && <button type="button" className="open" disabled={!canOpen || busy} onClick={onOpen}>Open Booking</button>}
-    {onAdjustment && <button type="button" className="adjustment" disabled={!canAdjust || busy} onClick={onAdjustment}>Booking Adjustment</button>}
-    {onHistory && <button type="button" className="history" disabled={!canHistory || busy} onClick={onHistory}>History</button>}
-    {onVoid && <button type="button" className="void" disabled={!canVoid || busy} onClick={onVoid}>Void Booking</button>}
-  </div>;
+  return (
+    <div className="booking-lifecycle-actions">
+      {onOpen && (
+        <button type="button" className="open" disabled={!canOpen || busy} onClick={onOpen}>
+          Open Booking
+        </button>
+      )}
+      {onAdjustment && (
+        <button type="button" className="adjustment" disabled={!canAdjust || busy} onClick={onAdjustment}>
+          Booking Adjustment
+        </button>
+      )}
+      {onHistory && (
+        <button type="button" className="history" disabled={!canHistory || busy} onClick={onHistory}>
+          History
+        </button>
+      )}
+      {onVoid && (
+        <button type="button" className="void" disabled={!canVoid || busy} onClick={onVoid}>
+          Void Booking
+        </button>
+      )}
+    </div>
+  );
 }
