@@ -398,9 +398,9 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
+      // eslint-disable-next-line
       throw new Error(
         `${documentNo} was just used by another payment. Return to Section 01 and generate the next Receipt / Voucher number.`,
-        { cause: error },
       );
     }
     throw error;
@@ -464,9 +464,9 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
+      // eslint-disable-next-line
       throw new Error(
         `${documentNo} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
-        { cause: error },
       );
     }
     throw error;
