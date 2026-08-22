@@ -13,10 +13,7 @@ export default async function handler(req, res) {
     });
 
     if (!releaseRes.ok) {
-      const text = await releaseRes.text();
-      return res
-        .status(400)
-        .json({ error: "GitHub API failed", status: releaseRes.status, body: text, token_exists: !!GITHUB_TOKEN });
+      return res.status(204).end(); // No release found
     }
 
     const release = await releaseRes.json();
@@ -24,7 +21,7 @@ export default async function handler(req, res) {
     // 2. Find latest.json asset
     const latestJsonAsset = release.assets.find((a) => a.name === "latest.json");
     if (!latestJsonAsset) {
-      return res.status(400).json({ error: "latest.json missing", assets: release.assets.map((a) => a.name) });
+      return res.status(204).end(); // No updater artifacts in this release
     }
 
     // 3. Fetch latest.json content
@@ -37,10 +34,7 @@ export default async function handler(req, res) {
     });
 
     if (!jsonContentRes.ok) {
-      const text = await jsonContentRes.text();
-      return res
-        .status(400)
-        .json({ error: "Failed to fetch latest.json content", status: jsonContentRes.status, body: text });
+      return res.status(204).end();
     }
 
     const updateData = await jsonContentRes.json();
