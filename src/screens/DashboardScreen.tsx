@@ -2,9 +2,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { getDashboardMetrics, getRecentActivity, DashboardMetrics, RecentActivity } from "../DashboardDb";
 import { useNavigate } from "react-router-dom";
-import { check } from "@tauri-apps/plugin-updater";
-import { ask, message } from "@tauri-apps/plugin-dialog";
-
 // Helper to format currency
 const pkr = (val: number) =>
   new Intl.NumberFormat("en-PK", {
