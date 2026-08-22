@@ -22,29 +22,6 @@ export default function DashboardScreen() {
   const [recent, setRecent] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const checkForUpdates = async () => {
-    try {
-      const update = await check();
-      if (update) {
-        const yes = await ask(`Update to ${update.version} is available!\n\nRelease notes: ${update.body}`, {
-          title: "Update Available",
-          kind: "info",
-        });
-        if (yes) {
-          await update.downloadAndInstall();
-          await message("Update installed successfully! Please restart the application to apply changes.", {
-            title: "Update Complete",
-            kind: "info",
-          });
-        }
-      } else {
-        await message("You are already on the latest version!", { title: "No Update Available", kind: "info" });
-      }
-    } catch (error) {
-      await message(`Error checking for updates: ${error}`, { title: "Update Error", kind: "error" });
-    }
-  };
-
   useEffect(() => {
     if (!company) return;
     let active = true;
@@ -89,21 +66,6 @@ export default function DashboardScreen() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
-          <button
-            onClick={checkForUpdates}
-            style={{
-              padding: "10px 20px",
-              borderRadius: "8px",
-              border: "1px solid var(--border-glass)",
-              background: "var(--bg-app)",
-              color: "var(--brand-primary)",
-              fontWeight: 600,
-              cursor: "pointer",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            🔄 Check for Updates
-          </button>
           <button
             onClick={() => navigate("/payments")}
             style={{
