@@ -1,0 +1,751 @@
+src\Accommodation.tsx: * intentionally read-only so an old workspace route cannot create a second,
+src\Accommodation.tsx:        <div className="alert info">Accommodation transactions must now be created from Bookings → Hotel.</div>
+src\App.tsx:                  canCreate={can("create_bookings")}
+src\App.tsx:  const [accountCreatedNotice, setAccountCreatedNotice] = useState<any>(null);
+src\App.tsx:        <Route path="/setup" element={<SetupScreen onAccountCreated={setAccountCreatedNotice} />} />
+src\App.tsx:              accountCreatedNotice={accountCreatedNotice}
+src\App.tsx:              setAccountCreatedNotice={setAccountCreatedNotice}
+src\AuthContext.tsx:import React, { createContext, useContext, useEffect, useState } from "react";
+src\AuthContext.tsx:const AuthContext = createContext<AuthContextType | undefined>(undefined);
+src\BookingAccounting.ts:  created_at: string;
+src\BookingAccounting.ts:         0 AS total_sar,b.total_pkr,0 AS unconverted_sar,b.status,b.created_at
+src\BookingAccounting.ts:         0 AS total_sar,b.total_pkr,0 AS unconverted_sar,b.status,b.created_at
+src\BookingAccounting.ts:         b.total_sar,b.total_pkr,b.unconverted_sar,b.status,b.created_at
+src\BookingAccounting.ts:         b.total_sar,b.total_pkr,b.unconverted_sar,b.status,b.created_at
+src\BookingAccounting.ts:         b.total_sar,b.total_pkr,b.unconverted_sar,b.status,b.created_at
+src\BookingAccounting.ts:         b.total_sar,b.total_pkr,b.unconverted_sar,b.status,b.created_at
+src\BookingAccounting.ts:     ORDER BY q.transaction_date ASC,q.created_at ASC,q.service_type ASC`,
+src\BookingAccounting.ts:  // Load all entries once — avoids running the 6-table UNION twice.
+src\BookingLifecycleCenter.tsx:function createRowFor(service: SupportedService): UniversalAdjustmentRow {
+src\BookingLifecycleCenter.tsx:            <p>Create a booking or change the filter/search.</p>
+src\BookingLifecycleCenter.tsx:          <div className="party-table-wrap package14-register-wrap lifecycle-table-wrap">
+src\BookingLifecycleCenter.tsx:            <table className="party-table package14-register-table lifecycle-table">
+src\BookingLifecycleCenter.tsx:            </table>
+src\BookingLifecycleCenter.tsx:              <div className="adj-lines-table-wrap">
+src\BookingLifecycleCenter.tsx:                <table className="adj-lines-table">
+src\BookingLifecycleCenter.tsx:                </table>
+src\BookingLifecycleCenter.tsx:          createRow={() => createRowFor(service)}
+src\Bookings.tsx:  canCreate?: boolean;
+src\Bookings.tsx:  canCreate = true,
+src\Bookings.tsx:              <p>Create a booking sold to a Party / customer account.</p>
+src\Bookings.tsx:    ? { companyId, parties, transactionType, userId, canCreate, canEdit, canVoid, onBack: backToServices, onChanged }
+src\DashboardDb.ts:  SELECT id, company_id, 'PACKAGE' AS service_type, transaction_type, counterparty_id, transaction_date, ub_number AS ref_no, total_pkr, status, created_at FROM package_bookings
+src\DashboardDb.ts:  SELECT id, company_id, 'TICKET' AS service_type, transaction_type, counterparty_id, transaction_date, ub_number AS ref_no, total_pkr, status, created_at FROM ticket_bookings
+src\DashboardDb.ts:  SELECT id, company_id, 'HOTEL' AS service_type, transaction_type, counterparty_id, transaction_date, ub_number AS ref_no, total_pkr, status, created_at FROM hotel_bookings
+src\DashboardDb.ts:  SELECT id, company_id, 'VISA' AS service_type, transaction_type, counterparty_id, transaction_date, ub_number AS ref_no, total_pkr, status, created_at FROM visa_bookings
+src\DashboardDb.ts:  SELECT id, company_id, 'TRANSPORT' AS service_type, transaction_type, counterparty_id, transaction_date, ub_number AS ref_no, total_pkr, status, created_at FROM transport_bookings
+src\DashboardDb.ts:  SELECT id, company_id, 'MISC' AS service_type, transaction_type, counterparty_id, transaction_date, ub_number AS ref_no, total_pkr, status, created_at FROM misc_bookings
+src\DashboardDb.ts:    ORDER BY created_at DESC
+src\DatabaseSafety.ts:export async function createDatabaseBackup(label = "manual") {
+src\DatabaseSafety.ts:  return invoke<string | null>("create_database_backup", { label });
+src\db.ts:import { createPasswordRecord, verifyPassword } from "./security";
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:  created_at: string;
+src\db.ts:export type CreateCompanyAccountInput = {
+src\db.ts:async function ensureColumn(table: string, column: string, definition: string) {
+src\db.ts:  const columns = await database.select<Record<string, unknown>[]>(`PRAGMA table_info(${table})`);
+src\db.ts:    await database.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+src\db.ts:async function createAuthTables(database: Database) {
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS companies (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS users (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:  await database.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_company_email_unique
+src\db.ts:  await database.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_company_phone_unique
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_users_company_status
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS remembered_sessions (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_remembered_sessions_user
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_remembered_sessions_device
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS audit_logs (
+src\db.ts:    created_at TEXT NOT NULL
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_audit_company_created
+src\db.ts:    ON audit_logs(company_id, created_at DESC)`);
+src\db.ts:async function createAuditLog(
+src\db.ts:     (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\db.ts:  // Authentication tables are created/rebuilt at the end of this initializer.
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS parties (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:  // Safe migration for databases created by Phase 1.
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_parties_company_name
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_parties_company_type_name
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS accommodation_entries (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_accommodation_company_party_date
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS service_entries (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_service_company_party_date
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS payment_entries (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:  // Safe migration for databases created before the Payments module.
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_company_party_date
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS package_bookings (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS package_booking_lines (
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_company_date
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_company_counterparty
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_company_ub
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_lines_booking
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS app_migrations (
+src\db.ts:  // Phase 7B created a UNIQUE(booking_id, passenger_type) constraint, so SQLite needs
+src\db.ts:  // a one-time table rebuild to remove that old constraint safely.
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS package_booking_lines_v2`);
+src\db.ts:    await database.execute(`CREATE TABLE package_booking_lines_v2 (
+src\db.ts:    await database.execute(`DROP TABLE package_booking_lines`);
+src\db.ts:    await database.execute(`ALTER TABLE package_booking_lines_v2 RENAME TO package_booking_lines`);
+src\db.ts:    await database.execute(`CREATE INDEX IF NOT EXISTS idx_package_lines_booking
+src\db.ts:  // This table is additive only: it does NOT reset current company/account data.
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS ticket_bookings (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:    created_by_user_id TEXT NOT NULL DEFAULT '',
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS ticket_booking_lines (
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_ticket_company_date
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_ticket_company_counterparty
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_ticket_company_ub
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_ticket_lines_booking
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS hotel_bookings (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:    created_by_user_id TEXT NOT NULL DEFAULT '',
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS hotel_booking_lines (
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_hotel_company_date
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_hotel_company_counterparty
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_hotel_company_ub
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_hotel_lines_booking
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS visa_bookings (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:    created_by_user_id TEXT NOT NULL DEFAULT '',
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS visa_booking_lines (
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_visa_company_date
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_visa_company_counterparty
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_visa_company_ub
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_visa_lines_booking
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS visa_transport_fleet (
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS visa_passport_details (
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_visa_fleet_booking
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_visa_passports_booking
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS transport_bookings (
+src\db.ts:    created_at TEXT NOT NULL,
+src\db.ts:    created_by_user_id TEXT NOT NULL DEFAULT '',
+src\db.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS transport_booking_lines (
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_transport_company_date
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_transport_company_counterparty
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_transport_company_ub
+src\db.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_transport_lines_booking
+src\db.ts:  await ensureColumn("parties", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+src\db.ts:  await ensureColumn("accommodation_entries", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+src\db.ts:  await ensureColumn("service_entries", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+src\db.ts:  await ensureColumn("payment_entries", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+src\db.ts:  await ensureColumn("package_bookings", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS remembered_sessions`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS audit_logs`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS company_users`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS users`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS companies`);
+src\db.ts:    await createAuthTables(database);
+src\db.ts:    await createAuthTables(database);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS remembered_sessions`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS audit_logs`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS company_users`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS users`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS companies`);
+src\db.ts:    // Recreate only the empty SaaS-ready account/security structure.
+src\db.ts:    await createAuthTables(database);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS remembered_sessions`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS audit_logs`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS company_users`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS users`);
+src\db.ts:    await database.execute(`DROP TABLE IF EXISTS companies`);
+src\db.ts:    await createAuthTables(database);
+src\db.ts:export async function createCompanyAccount(input: CreateCompanyAccountInput) {
+src\db.ts:  const password = await createPasswordRecord(input.password);
+src\db.ts:       (id,company_code,name,dts_license,logo_data,address,phone,whatsapp,email,base_currency,foreign_currency,status,created_at,updated_at)
+src\db.ts:       (id,company_id,full_name,username,email,phone,phone_normalized,password_hash,password_salt,password_iterations,role,status,created_at,updated_at,last_login_at)
+src\db.ts:    await createAuditLog(
+src\db.ts:      "COMPANY_CREATED",
+src\db.ts:      `Company ${companyName} created with Master account ${username}.`,
+src\db.ts:export async function createInitialSetup(input: InitialSetupInput) {
+src\db.ts:  return createCompanyAccount({
+src\db.ts:    `SELECT id,company_code,name,dts_license,logo_data,address,phone,whatsapp,email,base_currency,foreign_currency,status,created_at,updated_at
+src\db.ts:  await createAuditLog(company.id, user.id, "LOGIN", "SECURITY", user.id, "User signed in.");
+src\db.ts:    `SELECT id,company_code,name,dts_license,logo_data,address,phone,whatsapp,email,base_currency,foreign_currency,status,created_at,updated_at
+src\db.ts:export async function createRememberedSession(session: UserSession, deviceId: string) {
+src\db.ts:     (id,company_id,user_id,device_id,token_hash,status,created_at,last_used_at,expires_at)
+src\db.ts:  await createAuditLog(
+src\db.ts:    `SELECT id,company_code,name,dts_license,logo_data,address,phone,whatsapp,email,base_currency,foreign_currency,status,created_at,updated_at
+src\db.ts:            c.base_currency,c.foreign_currency,c.status,c.created_at,c.updated_at
+src\db.ts:    `SELECT id,company_id,full_name,username,email,phone,role,status,created_at,updated_at,last_login_at
+src\db.ts:export async function createCompanyUser(companyId: string, actorUserId: string, input: CompanyUserInput) {
+src\db.ts:  const password = await createPasswordRecord(input.password);
+src\db.ts:     (id,company_id,full_name,username,email,phone,phone_normalized,password_hash,password_salt,password_iterations,role,status,created_at,updated_at,last_login_at)
+src\db.ts:  await createAuditLog(companyId, actorUserId, "USER_CREATED", "SECURITY", id, `${fullName} created as ${input.role}.`);
+src\db.ts:    `SELECT id,company_id,full_name,username,email,phone,role,status,created_at,updated_at,last_login_at
+src\db.ts:  await createAuditLog(
+src\db.ts:  await createAuditLog(
+src\db.ts:  const password = await createPasswordRecord(newPassword);
+src\db.ts:  await createAuditLog(
+src\db.ts:  const password = await createPasswordRecord(newPassword);
+src\db.ts:  await createAuditLog(companyId, userId, "PASSWORD_CHANGED", "SECURITY", userId, "User changed their own password.");
+src\db.ts:  await createAuditLog(companyId, actorUserId, "COMPANY_UPDATED", "SECURITY", companyId, "Company profile updated.");
+src\db.ts:    `SELECT id,company_id,user_id,user_name,action,module,record_id,details,created_at
+src\db.ts:     FROM audit_logs WHERE company_id=$1 ORDER BY created_at DESC LIMIT ${safeLimit}`,
+src\db.ts:      `SELECT id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at
+src\db.ts:    `SELECT id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at
+src\db.ts:export async function createParty(companyId: string, input: PartyInput, actorUserId = "") {
+src\db.ts:     (id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\db.ts:    await createAuditLog(
+src\db.ts:      "ACCOUNT_CREATED",
+src\db.ts:    await createAuditLog(
+src\db.ts:    `SELECT id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at
+src\db.ts:       a.created_at, a.updated_at
+src\db.ts:     ORDER BY a.transaction_date DESC, a.created_at DESC`,
+src\db.ts:export async function createAccommodation(companyId: string, input: AccommodationInput) {
+src\db.ts:      total_sar, total_pkr, status, created_at, updated_at)
+src\db.ts:       s.status, s.created_at, s.updated_at
+src\db.ts:     ORDER BY s.transaction_date DESC, s.created_at DESC`,
+src\db.ts:export async function createService(companyId: string, input: ServiceInput) {
+src\db.ts:      currency, roe, total_sar, total_pkr, status, created_at, updated_at)
+src\db.ts:            pay.paid_amount, pay.status, pay.created_at, pay.updated_at
+src\db.ts:     ORDER BY pay.transaction_date DESC, pay.created_at DESC`,
+src\db.ts:export async function createPayment(companyId: string, input: PaymentInput) {
+src\db.ts:      amount_entered, sar, roe, paid_amount, status, created_at, updated_at)
+src\db.ts:       b.status, b.created_at, b.updated_at
+src\db.ts:     ORDER BY b.transaction_date DESC, b.created_at DESC`,
+src\db.ts:export async function createPackageBooking(companyId: string, input: PackageBookingInput, actorUserId = "") {
+src\db.ts:  await requirePermission(companyId, actorUserId, "create_bookings");
+src\db.ts:      total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\db.ts:    await createAuditLog(
+src\db.ts:      "BOOKING_CREATED",
+src\db.ts:    await createAuditLog(
+src\db.ts:    await createAuditLog(
+src\db.ts:       b.status,b.created_at,b.updated_at
+src\db.ts:     ORDER BY b.transaction_date DESC,b.created_at DESC`,
+src\db.ts:export async function createTicketBooking(companyId: string, input: TicketBookingInput, actorUserId = "") {
+src\db.ts:  await requirePermission(companyId, actorUserId, "create_bookings");
+src\db.ts:      baggage,ticket_status,customer_contact,notes,total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\db.ts:    await createAuditLog(
+src\db.ts:      "BOOKING_CREATED",
+src\db.ts:    await createAuditLog(
+src\db.ts:    await createAuditLog(
+src\db.ts:       b.status,b.created_at,b.updated_at
+src\db.ts:     ORDER BY b.transaction_date DESC,b.created_at DESC`,
+src\db.ts:export async function createHotelBooking(companyId: string, input: HotelBookingInput, actorUserId = "") {
+src\db.ts:  await requirePermission(companyId, actorUserId, "create_bookings");
+src\db.ts:      total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\db.ts:    await createAuditLog(
+src\db.ts:      "BOOKING_CREATED",
+src\db.ts:    await createAuditLog(
+src\db.ts:    await createAuditLog(
+src\db.ts:       b.status,b.created_at,b.updated_at
+src\db.ts:     ORDER BY b.transaction_date DESC,b.created_at DESC`,
+src\db.ts:export async function createVisaBooking(companyId: string, input: VisaBookingInput, actorUserId = "") {
+src\db.ts:  await requirePermission(companyId, actorUserId, "create_bookings");
+src\db.ts:      visa_total_sar,transport_total_sar,total_sar,total_pkr,unconverted_sar,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\db.ts:    await createAuditLog(
+src\db.ts:      "BOOKING_CREATED",
+src\db.ts:    await createAuditLog(
+src\db.ts:    await createAuditLog(
+src\db.ts:            b.status,b.created_at,b.updated_at
+src\db.ts:     ORDER BY b.transaction_date DESC,b.created_at DESC`,
+src\db.ts:export async function createTransportBooking(companyId: string, input: TransportBookingInput, actorUserId = "") {
+src\db.ts:  await requirePermission(companyId, actorUserId, "create_bookings");
+src\db.ts:      total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\db.ts:    await createAuditLog(
+src\db.ts:      "BOOKING_CREATED",
+src\db.ts:    await createAuditLog(
+src\db.ts:    await createAuditLog(
+src\db.ts:  const tables = [
+src\db.ts:  for (const table of tables) {
+src\db.ts:      if (table === "users" || table === "companies" || table === "remembered_sessions") {
+src\db.ts:        await database.execute(`DELETE FROM ${table}`);
+src\db.ts:        await database.execute(`DELETE FROM ${table} WHERE company_id = $1`, [companyId]);
+src\db.ts:      console.warn(`Could not erase table ${table}`, e);
+src\HotelBookingFlowV3.tsx:import { createHotelBooking, getHotelBookings } from "./db";
+src\HotelBookingFlowV3.tsx:  canCreate?: boolean;
+src\HotelBookingFlowV3.tsx:  canCreate = true,
+src\HotelBookingFlowV3.tsx:    if (!assigned) return setError("Create / Assign the Booking UB first.");
+src\HotelBookingFlowV3.tsx:      const bookingId = await createHotelBooking(companyId, commercialInput(), userId);
+src\HotelBookingFlowV3.tsx:              : "Create the UB first, save Hotel accounting second, then add optional reservation / voucher details."}
+src\HotelBookingFlowV3.tsx:          <div className="bf-table-wrap">
+src\HotelBookingFlowV3.tsx:            <table className="bf-table hotel-v3-table">
+src\HotelBookingFlowV3.tsx:            </table>
+src\HotelBookingFlowV3.tsx:              <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>
+src\HotelBookingFlowV3.tsx:                <div className="bf-table-wrap">
+src\HotelBookingFlowV3.tsx:                  <table className="bf-table">
+src\HotelBookingFlowV3.tsx:                  </table>
+src\HotelBookingFlowV3.tsx:                <div className="bf-table-wrap">
+src\HotelBookingFlowV3.tsx:                  <table className="bf-table">
+src\HotelBookingFlowV3.tsx:                  </table>
+src\HotelBookingFlowV3.tsx:        <div className="package14-next-step">Create / Assign a Booking UB to unlock Hotel Details & Rates.</div>
+src\HotelOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS hotel_commercial_guest_refs (
+src\HotelOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS hotel_operational_reservations (
+src\HotelOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS hotel_operational_guests (
+src\HotelOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS hotel_operational_meta (
+src\HotelOperationalDb.ts:        created_at TEXT NOT NULL,
+src\HotelOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_hotel_operational_guests ON hotel_operational_guests(company_id,booking_id,sort_order)`,
+src\HotelOperationalDb.ts:    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\HotelOperationalDb.ts:    `INSERT INTO hotel_operational_meta (booking_id,company_id,customer_contact,special_requests,checkin_instructions,notes,created_at,updated_at)
+src\LedgerEngine.test.ts:      created_at: "2024-01-01",
+src\LedgerEngine.test.ts:        created_at: "2024-01-01",
+src\LedgerEngine.test.ts:        created_at: "2024-01-02",
+src\LedgerEngine.test.ts:      created_at: "2024-01-01",
+src\LedgerEngine.test.ts:        created_at: "2024-01-01",
+src\LedgerEngine.test.ts:        created_at: "2024-01-02",
+src\LedgerEngine.ts:  created_at: string;
+src\LedgerEngine.ts:         b.total_pkr,b.status,b.created_at
+src\LedgerEngine.ts:         b.total_pkr,b.status,b.created_at
+src\LedgerEngine.ts:         b.total_pkr,b.status,b.created_at
+src\LedgerEngine.ts:         b.total_pkr,b.status,b.created_at
+src\LedgerEngine.ts:         b.total_pkr,b.status,b.created_at
+src\LedgerEngine.ts:         b.total_pkr,b.status,b.created_at
+src\LedgerEngine.ts:        created_at,
+src\LedgerEngine.ts:        created_at,
+src\LedgerEngine.ts:    ORDER BY q.transaction_date ASC, q.created_at ASC`,
+src\main.tsx:  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+src\main.tsx:    ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+src\MiscBookingFlowV3.tsx:  createMiscBooking,
+src\MiscBookingFlowV3.tsx:  canCreate?: boolean;
+src\MiscBookingFlowV3.tsx:  canCreate = true,
+src\MiscBookingFlowV3.tsx:    if (!assigned) return setError("Create / Assign the Booking UB first.");
+src\MiscBookingFlowV3.tsx:      const id = await createMiscBooking(companyId, input(), userId);
+src\MiscBookingFlowV3.tsx:              : "Create the UB first, save Misc accounting second, then add optional service references / instructions."}
+src\MiscBookingFlowV3.tsx:          <div className="bf-table-wrap">
+src\MiscBookingFlowV3.tsx:            <table className="bf-table misc-v3-table">
+src\MiscBookingFlowV3.tsx:            </table>
+src\MiscBookingFlowV3.tsx:              <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>
+src\MiscBookingFlowV3.tsx:                <div className="bf-table-wrap">
+src\MiscBookingFlowV3.tsx:                  <table className="bf-table">
+src\MiscBookingFlowV3.tsx:                  </table>
+src\MiscBookingFlowV3.tsx:        <div className="package14-next-step">Create / Assign a Booking UB to unlock Misc Service Details & Rates.</div>
+src\miscDb.ts:  created_at: string;
+src\miscDb.ts:  created_by_user_id: string;
+src\miscDb.ts:async function ensureTablesOnce() {
+src\miscDb.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS misc_bookings (
+src\miscDb.ts:    created_at TEXT NOT NULL,
+src\miscDb.ts:    created_by_user_id TEXT NOT NULL DEFAULT '',
+src\miscDb.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS misc_booking_lines (
+src\miscDb.ts:    `CREATE INDEX IF NOT EXISTS idx_misc_company_date ON misc_bookings(company_id, transaction_date)`,
+src\miscDb.ts:    `CREATE INDEX IF NOT EXISTS idx_misc_company_counterparty ON misc_bookings(company_id, counterparty_id)`,
+src\miscDb.ts:  await database.execute(`CREATE INDEX IF NOT EXISTS idx_misc_company_ub ON misc_bookings(company_id, ub_number)`);
+src\miscDb.ts:    `CREATE INDEX IF NOT EXISTS idx_misc_lines_booking ON misc_booking_lines(booking_id, sort_order)`,
+src\miscDb.ts:    initPromise = ensureTablesOnce().catch((error) => {
+src\miscDb.ts:  permission: "create_bookings" | "edit_bookings" | "void_bookings",
+src\miscDb.ts:    sql: `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\miscDb.ts:            b.created_at,b.updated_at,b.created_by_user_id,b.updated_by_user_id
+src\miscDb.ts:     ORDER BY b.transaction_date DESC,b.created_at DESC`,
+src\miscDb.ts:export async function createMiscBooking(companyId: string, input: MiscBookingInput, actorUserId = "") {
+src\miscDb.ts:  await requireBookingPermission(companyId, actorUserId, "create_bookings");
+src\miscDb.ts:        (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\miscDb.ts:    "BOOKING_CREATED",
+src\MiscOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS misc_commercial_family_refs (
+src\MiscOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS misc_operational_services (
+src\MiscOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS misc_operational_meta (
+src\MiscOperationalDb.ts:        created_at TEXT NOT NULL,
+src\MiscOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_misc_operational_services ON misc_operational_services(company_id,booking_id,sort_order)`,
+src\MiscOperationalDb.ts:    (!hasPermission(actor.role, "edit_bookings") && !hasPermission(actor.role, "create_bookings"))
+src\MiscOperationalDb.ts:    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\MiscOperationalDb.ts:    `INSERT INTO misc_operational_meta (booking_id,company_id,notes,created_at,updated_at) VALUES ($1,$2,$3,$4,$4)
+src\PackageAdjustmentDb.ts:  created_by_user_id: string;
+src\PackageAdjustmentDb.ts:  created_at: string;
+src\PackageAdjustmentDb.ts:      `CREATE TABLE IF NOT EXISTS package_booking_adjustments (
+src\PackageAdjustmentDb.ts:      created_by_user_id TEXT NOT NULL DEFAULT '',
+src\PackageAdjustmentDb.ts:      created_at TEXT NOT NULL
+src\PackageAdjustmentDb.ts:      `CREATE INDEX IF NOT EXISTS idx_package_adjustments_booking_revision
+src\PackageAdjustmentDb.ts:      `CREATE INDEX IF NOT EXISTS idx_package_adjustments_date
+src\PackageAdjustmentDb.ts:     WHERE company_id=$1 AND booking_id=$2 ORDER BY revision_no DESC,created_at DESC LIMIT 1`,
+src\PackageAdjustmentDb.ts:       before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
+src\PackageAdjustmentDb.ts:      (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\PackageAdjustmentDb.ts:            before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at
+src\PackageAdjustmentDb.ts:     ORDER BY revision_no ASC,created_at ASC`,
+src\PackageAdjustmentDb.ts:            before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at
+src\PackageAdjustmentDb.ts:     WHERE company_id=$1 ORDER BY booking_id ASC,revision_no ASC,created_at ASC`,
+src\PackageBookingAdjustment.tsx:  function renderEditableRows() {
+src\PackageBookingAdjustment.tsx:        <div className="adj-lines-table-wrap">
+src\PackageBookingAdjustment.tsx:          <table className="adj-lines-table">
+src\PackageBookingAdjustment.tsx:          </table>
+src\PackageBookingAdjustment.tsx:      <div className="adj-lines-table-wrap">
+src\PackageBookingAdjustment.tsx:        <table className="adj-lines-table cancellation">
+src\PackageBookingAdjustment.tsx:        </table>
+src\PackageBookingAdjustment.tsx:                            ? "e.g. Incorrect rate entered when booking was created"
+src\PackageBookingAdjustment.tsx:                      <small>Review the commercial effect before saving. Payments/refunds are not created here.</small>
+src\PackageBookingAdjustment.tsx:                  {isCancellation ? renderCancellationRows() : renderEditableRows()}
+src\PackageBookingFlowV3.tsx:import { createParty, getPackageBookings, voidPackageBooking } from "./db";
+src\PackageBookingFlowV3.tsx:import { createPackageCommercialBooking } from "./PackageFlowDb";
+src\PackageBookingFlowV3.tsx:  canCreate?: boolean;
+src\PackageBookingFlowV3.tsx:  canCreate = true,
+src\PackageBookingFlowV3.tsx:    if (!ubAssigned) return setError("Create / Assign the Booking UB first.");
+src\PackageBookingFlowV3.tsx:    if (!canCreate) return setError("Your role does not allow creating bookings.");
+src\PackageBookingFlowV3.tsx:      const id = await createPackageCommercialBooking(
+src\PackageBookingFlowV3.tsx:      const id = await createParty(companyId, input, userId);
+src\PackageBookingFlowV3.tsx:      setMessage(`${activeTransactionType === "SALE" ? "Party" : "Vendor"} created and selected for this booking.`);
+src\PackageBookingFlowV3.tsx:                : "Create the UB first, save the accounting Package values second, then complete optional passenger/travel operations when required."}
+src\PackageBookingFlowV3.tsx:                <b>CREATE / ASSIGN BOOKING UB</b>
+src\PackageBookingFlowV3.tsx:                    + Create {activeTransactionType === "SALE" ? "Party" : "Vendor"}
+src\PackageBookingFlowV3.tsx:                <small>Quick-create keeps you inside this booking screen.</small>
+src\PackageBookingFlowV3.tsx:                <span>{previewUb ? "Ready to create / assign" : "Enter a booking number"}</span>
+src\PackageBookingFlowV3.tsx:                Create / Assign {previewUb || "UB"}
+src\PackageBookingFlowV3.tsx:              {!editingId && canCreate && (
+src\PackageBookingFlowV3.tsx:          <div className="package14-next-step">Create / Assign a Booking UB to unlock Package Details & Rates.</div>
+src\PackageBookingFlowV3.tsx:              <h2>Create {activeTransactionType === "SALE" ? "Party / Customer" : "Vendor / Supplier"}</h2>
+src\PackageBookingFlowV3.tsx:              <p>Create the account without leaving the Package booking. It will be selected automatically.</p>
+src\PackageBookingFlowV3.tsx:                  {quickAccountBusy ? "Creating..." : `Create ${activeTransactionType === "SALE" ? "Party" : "Vendor"}`}
+src\PackageBookingFlowV3.tsx:            <p>Create a Package booking or change the filter/search.</p>
+src\PackageBookingFlowV3.tsx:          <div className="party-table-wrap package14-register-wrap">
+src\PackageBookingFlowV3.tsx:            <table className="party-table package14-register-table">
+src\PackageBookingFlowV3.tsx:            </table>
+src\PackageFlowDb.ts:      (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\PackageFlowDb.ts:export async function createPackageCommercialBooking(
+src\PackageFlowDb.ts:  await requirePermission(companyId, actorUserId, "create_bookings");
+src\PackageFlowDb.ts:         total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\PackageFlowDb.ts:    "BOOKING_CREATED",
+src\PackageOperationalDb.ts:let tablesReady: Promise<void> | null = null;
+src\PackageOperationalDb.ts:async function ensureColumn(table: string, column: string, definition: string) {
+src\PackageOperationalDb.ts:  const rows = await database.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
+src\PackageOperationalDb.ts:    await database.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+src\PackageOperationalDb.ts:async function ensureTables() {
+src\PackageOperationalDb.ts:  if (!tablesReady) {
+src\PackageOperationalDb.ts:    tablesReady = (async () => {
+src\PackageOperationalDb.ts:        `CREATE TABLE IF NOT EXISTS package_operational_meta (booking_id TEXT PRIMARY KEY,company_id TEXT NOT NULL,notes TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL,updated_at TEXT NOT NULL)`,
+src\PackageOperationalDb.ts:        `CREATE TABLE IF NOT EXISTS package_operational_passengers (id TEXT PRIMARY KEY,company_id TEXT NOT NULL,booking_id TEXT NOT NULL,passenger_type TEXT NOT NULL,given_name TEXT NOT NULL DEFAULT '',surname TEXT NOT NULL DEFAULT '',passport_number TEXT NOT NULL DEFAULT '',visa_number TEXT NOT NULL DEFAULT '',passport_expiry TEXT NOT NULL DEFAULT '',sort_order INTEGER NOT NULL DEFAULT 0)`,
+src\PackageOperationalDb.ts:        `CREATE TABLE IF NOT EXISTS package_operational_hotels (id TEXT PRIMARY KEY,company_id TEXT NOT NULL,booking_id TEXT NOT NULL,city_name TEXT NOT NULL DEFAULT '',hotel_name TEXT NOT NULL DEFAULT '',check_in TEXT NOT NULL DEFAULT '',check_out TEXT NOT NULL DEFAULT '',nights INTEGER NOT NULL DEFAULT 0,sort_order INTEGER NOT NULL DEFAULT 0)`,
+src\PackageOperationalDb.ts:        `CREATE TABLE IF NOT EXISTS package_operational_flights (id TEXT PRIMARY KEY,company_id TEXT NOT NULL,booking_id TEXT NOT NULL,journey TEXT NOT NULL,flight_type TEXT NOT NULL DEFAULT 'DIRECT',departure_date TEXT NOT NULL DEFAULT '',pnr TEXT NOT NULL DEFAULT '',flight_no TEXT NOT NULL DEFAULT '',from_airport TEXT NOT NULL DEFAULT '',to_airport TEXT NOT NULL DEFAULT '',departure_time TEXT NOT NULL DEFAULT '',arrival_time TEXT NOT NULL DEFAULT '',sort_order INTEGER NOT NULL DEFAULT 0)`,
+src\PackageOperationalDb.ts:        `CREATE TABLE IF NOT EXISTS package_operational_flight_stopovers (id TEXT PRIMARY KEY,company_id TEXT NOT NULL,booking_id TEXT NOT NULL,journey TEXT NOT NULL,airport TEXT NOT NULL DEFAULT '',departure_date TEXT NOT NULL DEFAULT '',departure_time TEXT NOT NULL DEFAULT '',sort_order INTEGER NOT NULL DEFAULT 0)`,
+src\PackageOperationalDb.ts:        `CREATE TABLE IF NOT EXISTS package_movement_events (id TEXT PRIMARY KEY,company_id TEXT NOT NULL,booking_id TEXT NOT NULL,event_type TEXT NOT NULL DEFAULT '',event_date TEXT NOT NULL DEFAULT '',event_time TEXT NOT NULL DEFAULT '',from_location TEXT NOT NULL DEFAULT '',to_location TEXT NOT NULL DEFAULT '',description TEXT NOT NULL DEFAULT '',sort_order INTEGER NOT NULL DEFAULT 0)`,
+src\PackageOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_package_operational_passengers_booking ON package_operational_passengers(company_id,booking_id,sort_order)`,
+src\PackageOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_package_operational_hotels_booking ON package_operational_hotels(company_id,booking_id,sort_order)`,
+src\PackageOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_package_operational_flights_booking ON package_operational_flights(company_id,booking_id,sort_order)`,
+src\PackageOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_package_operational_stopovers_booking ON package_operational_flight_stopovers(company_id,booking_id,journey,sort_order)`,
+src\PackageOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_package_movement_booking ON package_movement_events(company_id,booking_id,event_date,event_time,sort_order)`,
+src\PackageOperationalDb.ts:      tablesReady = null;
+src\PackageOperationalDb.ts:  return tablesReady;
+src\PackageOperationalDb.ts:  await ensureTables();
+src\PackageOperationalDb.ts:  await ensureTables();
+src\PackageOperationalDb.ts:    `INSERT INTO package_operational_meta (booking_id,company_id,notes,created_at,updated_at) VALUES ($1,$2,$3,$4,$4) ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,notes=excluded.notes,updated_at=excluded.updated_at`,
+src\PackageOperationalDetails.tsx:        <div className="package15-table-wrap">
+src\PackageOperationalDetails.tsx:          <table className="package15-table package15-passenger-table">
+src\PackageOperationalDetails.tsx:          </table>
+src\PackageOperationalDetails.tsx:        <div className="package15-table-wrap">
+src\PackageOperationalDetails.tsx:          <table className="package15-table package15-hotel-table">
+src\PackageOperationalDetails.tsx:          </table>
+src\PackageOperationalDetails.tsx:        <div className="package15-table-wrap package16-compact-wrap">
+src\PackageOperationalDetails.tsx:          <table className="package15-table package16-compact-flight-table">
+src\PackageOperationalDetails.tsx:          </table>
+src\PackageOperationalDetails.tsx:          <b>Movement rule:</b> Stopovers stay inside the detailed flight journey and do not create separate main
+src\PartyLedger.tsx:            No booking transactions for this account yet. Create them from the Bookings module.
+src\PartyLedger.tsx:          <div className="ledger-table-wrap">
+src\PartyLedger.tsx:            <table className="ledger-service-table">
+src\PartyLedger.tsx:            </table>
+src\PartyLedger.tsx:          <div className="ledger-table-wrap">
+src\PartyLedger.tsx:            <table className="ledger-payment-table">
+src\PartyLedger.tsx:            </table>
+src\Payments.tsx:  createPaymentV2,
+src\Payments.tsx:    if (!headerAssigned) return setError("Create the Receipt / Voucher in Section 01 first.");
+src\Payments.tsx:        const id = await createPaymentV2(companyId, toInput(form), userId);
+src\Payments.tsx:              Create the payment identity first, save the financial settlement second, then record optional supporting
+src\Payments.tsx:                <b>CREATE {isParty ? "RECEIPT" : "PAYMENT VOUCHER"}</b>
+src\Payments.tsx:                className="primary payment-v2-create-document"
+src\Payments.tsx:                {headerBusy ? "Creating..." : `Create ${documentNoun}`}
+src\Payments.tsx:            Create the {documentNoun} in Section 01 to unlock Payment Setup.
+src\Payments.tsx:            <p>Create a Party receipt or Vendor payment, or change the register filter.</p>
+src\Payments.tsx:          <div className="party-table-wrap package14-register-wrap payment-v2-register-wrap">
+src\Payments.tsx:            <table className="party-table payment-v2-register-table">
+src\Payments.tsx:                        {!meta && <small className="table-note">Legacy payment</small>}
+src\Payments.tsx:                            <small className="table-note">ROE {number(entry.roe)}</small>
+src\Payments.tsx:                        {meta?.bank_name && <small className="table-note">{meta.bank_name}</small>}
+src\Payments.tsx:            </table>
+src\PaymentV2Db.ts:  created_by_user_id: string;
+src\PaymentV2Db.ts:  created_at: string;
+src\PaymentV2Db.ts:      database.execute(`CREATE TABLE IF NOT EXISTS payment_v2_meta (
+src\PaymentV2Db.ts:      created_by_user_id TEXT NOT NULL DEFAULT '',
+src\PaymentV2Db.ts:      created_at TEXT NOT NULL,
+src\PaymentV2Db.ts:      database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_v2_meta_company_kind
+src\PaymentV2Db.ts:      database.execute(`CREATE INDEX IF NOT EXISTS idx_payment_receipt_company_number
+src\PaymentV2Db.ts:            created_by_user_id,updated_by_user_id,created_at,updated_at
+src\PaymentV2Db.ts:            created_by_user_id,updated_by_user_id,created_at,updated_at
+src\PaymentV2Db.ts:       created_by_user_id,updated_by_user_id,created_at,updated_at)
+src\PaymentV2Db.ts:      (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\PaymentV2Db.ts:export async function createPaymentV2(companyId: string, input: PaymentV2Input, userId = "") {
+src\PaymentV2Db.ts:         description,payment_type,currency,amount_entered,sar,roe,paid_amount,status,created_at,updated_at,
+src\PaymentV2Db.ts:         created_by_user_id,updated_by_user_id)
+src\PaymentV2Db.ts:    "PAYMENT_CREATED",
+src\permissions.ts:  | "create_bookings"
+src\permissions.ts:  "create_bookings",
+src\permissions.ts:    "create_bookings",
+src\permissions.ts:  DATA_ENTRY: ["view_parties", "edit_parties", "view_bookings", "create_bookings", "edit_bookings"],
+src\permissions.ts:      return "Full day-to-day operations, but cannot create users or change master company security.";
+src\permissions.ts:      return "Can create/edit parties and bookings, but cannot void bookings or manage payments/security.";
+src\PnLPortfolio.tsx:          <div className="bf-table-wrap">
+src\PnLPortfolio.tsx:            <table className="bf-table">
+src\PnLPortfolio.tsx:            </table>
+src\PnLPortfolio.tsx:          <div className="bf-table-wrap">
+src\PnLPortfolio.tsx:            <table className="bf-table">
+src\PnLPortfolio.tsx:            </table>
+src\PnLPortfolio.tsx:          <div className="bf-table-wrap">
+src\PnLPortfolio.tsx:            <table className="bf-table">
+src\PnLPortfolio.tsx:            </table>
+src\ProgressiveBookingDb.ts:    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\ProgressiveBookingDb.ts:// DEPRECATED: The functions below target misc_booking_details, a legacy table
+src\ProgressiveBookingDb.ts:  await database.execute(`CREATE TABLE IF NOT EXISTS misc_booking_details (
+src\ProgressiveBookingDb.ts:    created_at TEXT NOT NULL,
+src\ProgressiveBookingDb.ts:    `INSERT INTO misc_booking_details (booking_id,company_id,notes,created_at,updated_at) VALUES ($1,$2,$3,$4,$4)
+src\ProgressiveBookingIdentity.tsx:import { createParty } from "./db";
+src\ProgressiveBookingIdentity.tsx:  canQuickCreate?: boolean;
+src\ProgressiveBookingIdentity.tsx:  canQuickCreate = true,
+src\ProgressiveBookingIdentity.tsx:      const id = await createParty(companyId, input, userId);
+src\ProgressiveBookingIdentity.tsx:        `${transactionType === "SALE" ? "Party" : "Vendor"} created and selected for this ${serviceLabel} booking.`,
+src\ProgressiveBookingIdentity.tsx:            <b>CREATE / ASSIGN BOOKING UB</b>
+src\ProgressiveBookingIdentity.tsx:              {canQuickCreate && (
+src\ProgressiveBookingIdentity.tsx:                  + Create {transactionType === "SALE" ? "Party" : "Vendor"}
+src\ProgressiveBookingIdentity.tsx:            <small>Quick-create keeps you inside this booking screen.</small>
+src\ProgressiveBookingIdentity.tsx:            <span>{preview ? "Ready to create / assign" : "Enter a booking number"}</span>
+src\ProgressiveBookingIdentity.tsx:            Create / Assign {preview || "UB"}
+src\ProgressiveBookingIdentity.tsx:            <h2>Create {accountNoun}</h2>
+src\ProgressiveBookingIdentity.tsx:            <p>Create the account without leaving this booking. It will be selected automatically.</p>
+src\ProgressiveBookingIdentity.tsx:                {busy ? "Creating..." : `Create ${transactionType === "SALE" ? "Party" : "Vendor"}`}
+src\screens\DashboardScreen.tsx:              background: "var(--table-th-bg)",
+src\screens\LoginScreen.tsx:import { loginUser, getCompanyById, createRememberedSession, revokeRememberedSession } from "../db";
+src\screens\LoginScreen.tsx:function getOrCreateDeviceId() {
+src\screens\LoginScreen.tsx:  const created = crypto.randomUUID();
+src\screens\LoginScreen.tsx:  localStorage.setItem(key, created);
+src\screens\LoginScreen.tsx:  return created;
+src\screens\LoginScreen.tsx:  accountCreatedNotice,
+src\screens\LoginScreen.tsx:  setAccountCreatedNotice,
+src\screens\LoginScreen.tsx:  accountCreatedNotice: any;
+src\screens\LoginScreen.tsx:  setAccountCreatedNotice: (n: any) => void;
+src\screens\LoginScreen.tsx:    () => localStorage.getItem("travelAccountingLastCompanyCode") || accountCreatedNotice?.companyCode || "",
+src\screens\LoginScreen.tsx:    () => localStorage.getItem("travelAccountingLastIdentifier") || accountCreatedNotice?.username || "",
+src\screens\LoginScreen.tsx:    if (accountCreatedNotice) {
+src\screens\LoginScreen.tsx:      setLoginCompanyCode(accountCreatedNotice.companyCode);
+src\screens\LoginScreen.tsx:      setLoginName(accountCreatedNotice.username);
+src\screens\LoginScreen.tsx:  }, [accountCreatedNotice]);
+src\screens\LoginScreen.tsx:        const rememberToken = await createRememberedSession(loggedIn, getOrCreateDeviceId());
+src\screens\LoginScreen.tsx:      setAccountCreatedNotice(null);
+src\screens\LoginScreen.tsx:  const closeAccountNotice = () => setAccountCreatedNotice(null);
+src\screens\LoginScreen.tsx:    if (!accountCreatedNotice || accountCreatedNotice.accountStatus !== "ACTIVE") return;
+src\screens\LoginScreen.tsx:      `Company Code: ${accountCreatedNotice.companyCode}`,
+src\screens\LoginScreen.tsx:      `Master Username: ${accountCreatedNotice.username}`,
+src\screens\LoginScreen.tsx:      `Email Address: ${accountCreatedNotice.email}`,
+src\screens\LoginScreen.tsx:          className="create-company-login-button"
+src\screens\LoginScreen.tsx:            setAccountCreatedNotice(null);
+src\screens\LoginScreen.tsx:          Create an Account
+src\screens\LoginScreen.tsx:      {accountCreatedNotice && (
+src\screens\LoginScreen.tsx:        <div className="modal-backdrop account-created-backdrop" onMouseDown={closeAccountNotice}>
+src\screens\LoginScreen.tsx:          <section className="modal-card account-created-modal" onMouseDown={(e) => e.stopPropagation()}>
+src\screens\LoginScreen.tsx:              className="close-btn account-created-close"
+src\screens\LoginScreen.tsx:            {accountCreatedNotice.accountStatus === "ACTIVE" ? (
+src\screens\LoginScreen.tsx:                <div className="account-created-check">✓</div>
+src\screens\LoginScreen.tsx:                <span className="eyebrow blue">ACCOUNT CREATED SUCCESSFULLY</span>
+src\screens\LoginScreen.tsx:                <p className="account-created-intro">Keep the following login details in a safe place.</p>
+src\screens\LoginScreen.tsx:                <div className="account-created-details">
+src\screens\LoginScreen.tsx:                    <b>{accountCreatedNotice.companyName}</b>
+src\screens\LoginScreen.tsx:                    <b>{accountCreatedNotice.companyCode}</b>
+src\screens\LoginScreen.tsx:                    <b>{accountCreatedNotice.username}</b>
+src\screens\LoginScreen.tsx:                    <b>{accountCreatedNotice.email}</b>
+src\screens\LoginScreen.tsx:                <div className="account-created-actions">
+src\screens\LoginScreen.tsx:                <div className="account-created-check">✓</div>
+src\screens\LoginScreen.tsx:                <p className="account-created-intro">Your company account creation has been successfully completed.</p>
+src\screens\LoginScreen.tsx:                <div className="account-created-actions single">
+src\screens\PartiesScreen.tsx:import { Party, PartyInput, createParty, updateParty } from "../db";
+src\screens\PartiesScreen.tsx:        await createParty(company.id, partyForm, session.userId);
+src\screens\PartiesScreen.tsx:        setMessage(`${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"} created successfully.`);
+src\screens\PartiesScreen.tsx:                : `No ${accountView === "PARTY" ? "parties" : "vendors"} created yet`}
+src\screens\PartiesScreen.tsx:                : `Create your first ${accountView === "PARTY" ? "Party" : "Vendor"} account.`}
+src\screens\PartiesScreen.tsx:                Create First {accountView === "PARTY" ? "Party" : "Vendor"}
+src\screens\PartiesScreen.tsx:          <div className="party-table-wrap">
+src\screens\PartiesScreen.tsx:            <table className="party-table">
+src\screens\PartiesScreen.tsx:                      {party.notes && <small className="table-note">{party.notes}</small>}
+src\screens\PartiesScreen.tsx:                      {party.whatsapp && <small className="table-note">WA: {party.whatsapp}</small>}
+src\screens\PartiesScreen.tsx:            </table>
+src\screens\PartiesScreen.tsx:                    : `Create ${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"}`}
+src\screens\SetupScreen.tsx:import { createCompanyAccount } from "../db";
+src\screens\SetupScreen.tsx:export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (notice: any) => void }) {
+src\screens\SetupScreen.tsx:      const created = await createCompanyAccount({
+src\screens\SetupScreen.tsx:      onAccountCreated({
+src\screens\SetupScreen.tsx:        companyCode: created.companyCode,
+src\screens\SetupScreen.tsx:        username: created.username,
+src\screens\SetupScreen.tsx:        email: created.email,
+src\screens\SetupScreen.tsx:        accountStatus: created.accountStatus,
+src\screens\SetupScreen.tsx:          <span className="eyebrow gold">CREATE ACCOUNT</span>
+src\screens\SetupScreen.tsx:          <h1>Create your company account and secure master access.</h1>
+src\screens\SetupScreen.tsx:            <h2>Create Account</h2>
+src\screens\SetupScreen.tsx:            <p>A unique Company Code will be issued after your account is successfully created.</p>
+src\screens\SetupScreen.tsx:                  placeholder="Create a strong password"
+src\screens\SetupScreen.tsx:            {busy ? "Creating Account..." : "Create an Account"}
+src\security.ts:export async function createPasswordRecord(password: string) {
+src\SecurityCenter.tsx:  createCompanyUser,
+src\SecurityCenter.tsx:        await createCompanyUser(company.id, session.userId, {
+src\SecurityCenter.tsx:        setMessage("Employee login created successfully.");
+src\SecurityCenter.tsx:          <div className="party-table-wrap security-user-table-wrap">
+src\SecurityCenter.tsx:            <table className="party-table security-user-table">
+src\SecurityCenter.tsx:                      <small className="table-note">{user.email || user.phone || "No email/phone"}</small>
+src\SecurityCenter.tsx:            </table>
+src\SecurityCenter.tsx:              password. The code is intentionally not editable.
+src\SecurityCenter.tsx:            <div className="party-table-wrap">
+src\SecurityCenter.tsx:              <table className="party-table audit-table">
+src\SecurityCenter.tsx:                      <td>{formatDateTime(row.created_at)}</td>
+src\SecurityCenter.tsx:              </table>
+src\SecurityCenter.tsx:                <h3>{editingUser ? "Edit Employee User" : "Create Employee Login"}</h3>
+src\SecurityCenter.tsx:                {busy ? "Saving..." : editingUser ? "Save User" : "Create User"}
+src\Services.tsx: * Package, Ticket, Visa, Transport and Misc are now created from the unified
+src\Services.tsx:        <div className="alert info">Service transactions must now be created from Bookings.</div>
+src\StatementBookingData.ts:  created_at: string;
+src\StatementBookingData.ts:            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+src\StatementBookingData.ts:            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+src\StatementBookingData.ts:      ORDER BY service_type,booking_id,revision_no,created_at`,
+src\StatementBookingData.ts:function byDate<T extends { transaction_date: string; created_at: string }>(a: T, b: T) {
+src\StatementBookingData.ts:  return a.transaction_date.localeCompare(b.transaction_date) || a.created_at.localeCompare(b.created_at);
+src\StatementBookingData.ts:      (a, b) => Number(a.revision_no || 0) - Number(b.revision_no || 0) || a.created_at.localeCompare(b.created_at),
+src\StatementBookingData.ts:    (a, b) => Number(a.revision_no || 0) - Number(b.revision_no || 0) || a.created_at.localeCompare(b.created_at),
+src\StatementJsPdf.ts:type TableRowKind = "normal" | "reference" | "adjustment";
+src\StatementJsPdf.ts:type TableRow = { cells: Cell[]; kind?: TableRowKind; strike?: boolean };
+src\StatementJsPdf.ts:function drawRow(doc: jsPDF, row: TableRow, columns: Column[], y: number, h: number, alt?: string) {
+src\StatementJsPdf.ts:  rows: TableRow[],
+src\StatementJsPdf.ts:): TableRow {
+src\StatementJsPdf.ts:): TableRow {
+src\StatementJsPdf.ts:): TableRow {
+src\StatementJsPdf.ts:): TableRow {
+src\StatementJsPdf.ts:): TableRow {
+src\StatementJsPdf.ts:): TableRow {
+src\StatementJsPdf.ts:  originalRows: TableRow[],
+src\StatementJsPdf.ts:  makeAdjustment: (adjustment: StatementAdjustmentRecord, latest: boolean) => TableRow,
+src\StatementJsPdf.ts:  const packageRows: TableRow[] = [];
+src\StatementJsPdf.ts:      } as TableRow;
+src\StatementJsPdf.ts:  const ticketRows: TableRow[] = [];
+src\StatementJsPdf.ts:      } as TableRow;
+src\StatementJsPdf.ts:  const hotelRows: TableRow[] = [];
+src\StatementJsPdf.ts:      } as TableRow;
+src\StatementJsPdf.ts:  const visaRows: TableRow[] = [];
+src\StatementJsPdf.ts:      } as TableRow;
+src\StatementJsPdf.ts:  const transportRows: TableRow[] = [];
+src\StatementJsPdf.ts:      } as TableRow;
+src\StatementJsPdf.ts:  const miscRows: TableRow[] = [];
+src\StatementJsPdf.ts:      } as TableRow;
+src\StatementJsPdf.ts:  const paymentRows: TableRow[] = data.payments.map((entry, index) => ({
+src\Statements.tsx:        nextUrl = URL.createObjectURL(blob);
+src\supabaseClient.ts:import { createClient } from "@supabase/supabase-js";
+src\supabaseClient.ts:export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "");
+src\ThemeContext.tsx:import React, { createContext, useContext, useEffect, useState } from "react";
+src\ThemeContext.tsx:const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+src\TicketBookingFlowV3.tsx:  createTicketCommercialBooking,
+src\TicketBookingFlowV3.tsx:  canCreate?: boolean;
+src\TicketBookingFlowV3.tsx:  canCreate = true,
+src\TicketBookingFlowV3.tsx:    if (!assigned) return setError("Create / Assign the Booking UB first.");
+src\TicketBookingFlowV3.tsx:      const id = await createTicketCommercialBooking(
+src\TicketBookingFlowV3.tsx:              : "Create the UB first, save Ticket fares second, then add optional passenger and flight details."}
+src\TicketBookingFlowV3.tsx:              <button type="button" className="ticket17-add-row" disabled={!canCreate} onClick={addRow}>
+src\TicketBookingFlowV3.tsx:            <table className="ticket17-fare-table">
+src\TicketBookingFlowV3.tsx:            </table>
+src\TicketBookingFlowV3.tsx:            {!editingId && canCreate && (
+src\TicketFlowDb.ts:  created_at: string;
+src\TicketFlowDb.ts:async function ensureColumn(table: string, column: string, definition: string) {
+src\TicketFlowDb.ts:  const rows = await database.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
+src\TicketFlowDb.ts:    await database.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+src\TicketFlowDb.ts:    sql: `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\TicketFlowDb.ts:            b.transaction_date,b.ub_number,b.airline_name,b.pnr,b.sector,b.departure_date,b.return_date,b.flight_no,b.departure_time,b.arrival_time,b.baggage,b.ticket_status,b.customer_contact,b.notes,b.total_pkr,b.status,b.created_at,b.updated_at
+src\TicketFlowDb.ts:     ORDER BY b.transaction_date DESC,b.created_at DESC`,
+src\TicketFlowDb.ts:export async function createTicketCommercialBooking(companyId: string, input: TicketCommercialInput, actorUserId = "") {
+src\TicketFlowDb.ts:  await requirePermission(companyId, actorUserId, "create_bookings");
+src\TicketFlowDb.ts:        (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,airline_name,pnr,sector,departure_date,return_date,flight_no,departure_time,arrival_time,baggage,ticket_status,customer_contact,notes,total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+src\TicketFlowDb.ts:    "BOOKING_CREATED",
+src\TicketOperationalDb.ts:let tablesPromise: Promise<void> | null = null;
+src\TicketOperationalDb.ts:async function ensureTables() {
+src\TicketOperationalDb.ts:  if (!tablesPromise) {
+src\TicketOperationalDb.ts:    tablesPromise = (async () => {
+src\TicketOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS ticket_operational_meta (
+src\TicketOperationalDb.ts:        created_at TEXT NOT NULL,
+src\TicketOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS ticket_operational_passengers (
+src\TicketOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS ticket_operational_flights (
+src\TicketOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_ticket_operational_passengers_booking ON ticket_operational_passengers(company_id,booking_id,sort_order)`,
+src\TicketOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_ticket_operational_flights_booking ON ticket_operational_flights(company_id,booking_id,sort_order)`,
+src\TicketOperationalDb.ts:      tablesPromise = null;
+src\TicketOperationalDb.ts:  return tablesPromise;
+src\TicketOperationalDb.ts:    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\TicketOperationalDb.ts:  await ensureTables();
+src\TicketOperationalDb.ts:  await ensureTables();
+src\TicketOperationalDb.ts:    `INSERT INTO ticket_operational_meta (booking_id,company_id,notes,created_at,updated_at) VALUES ($1,$2,$3,$4,$4)
+src\TicketOperationalDetails.tsx:        <div className="ticket17-table-wrap">
+src\TicketOperationalDetails.tsx:          <table className="ticket17-table ticket17-passenger-table">
+src\TicketOperationalDetails.tsx:          </table>
+src\TicketOperationalDetails.tsx:        <div className="ticket17-table-wrap">
+src\TicketOperationalDetails.tsx:          <table className="ticket17-table ticket17-flight-table">
+src\TicketOperationalDetails.tsx:          </table>
+src\TransportBookingFlowV3.tsx:import { createTransportBooking, getTransportBookings } from "./db";
+src\TransportBookingFlowV3.tsx:  canCreate?: boolean;
+src\TransportBookingFlowV3.tsx:  canCreate = true,
+src\TransportBookingFlowV3.tsx:    if (!assigned) return setError("Create / Assign the Booking UB first.");
+src\TransportBookingFlowV3.tsx:      const id = await createTransportBooking(companyId, input(), userId);
+src\TransportBookingFlowV3.tsx:              : "Create the UB first, save Transport accounting second, then complete optional pickup / driver operations."}
+src\TransportBookingFlowV3.tsx:          <div className="bf-table-wrap">
+src\TransportBookingFlowV3.tsx:            <table className="bf-table transport-v3-table">
+src\TransportBookingFlowV3.tsx:            </table>
+src\TransportBookingFlowV3.tsx:              <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>
+src\TransportBookingFlowV3.tsx:                <div className="bf-table-wrap">
+src\TransportBookingFlowV3.tsx:                  <table className="bf-table" style={{ minWidth: 1450 }}>
+src\TransportBookingFlowV3.tsx:                  </table>
+src\TransportBookingFlowV3.tsx:        <div className="package14-next-step">Create / Assign a Booking UB to unlock Transport Details & Rates.</div>
+src\TransportOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS transport_operational_sectors (
+src\TransportOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS transport_operational_meta (
+src\TransportOperationalDb.ts:        created_at TEXT NOT NULL,
+src\TransportOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_transport_operational_sector ON transport_operational_sectors(company_id,booking_id,sort_order)`,
+src\TransportOperationalDb.ts:    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\TransportOperationalDb.ts:    `INSERT INTO transport_operational_meta (booking_id,company_id,passenger_saudi_contact,group_family_head,transport_instructions,notes,created_at,updated_at)
+src\UniversalBookingAdjustment.tsx:  createRow?: () => UniversalAdjustmentRow;
+src\UniversalBookingAdjustment.tsx:  createRow,
+src\UniversalBookingAdjustment.tsx:          {createRow && (
+src\UniversalBookingAdjustment.tsx:            <button type="button" onClick={() => setRows((current) => [...current, createRow()])}>
+src\UniversalBookingAdjustment.tsx:        <div className="adj-lines-table-wrap">
+src\UniversalBookingAdjustment.tsx:          <table className="adj-lines-table">
+src\UniversalBookingAdjustment.tsx:          </table>
+src\UniversalBookingAdjustment.tsx:      <div className="adj-lines-table-wrap">
+src\UniversalBookingAdjustment.tsx:        <table className="adj-lines-table cancellation">
+src\UniversalBookingAdjustment.tsx:        </table>
+src\UniversalBookingAdjustment.tsx:                      <small>Review the commercial effect before saving. No payment or refund is created here.</small>
+src\UniversalBookingAdjustmentDb.ts:const bookingTables: Record<BookingServiceName, string> = {
+src\UniversalBookingAdjustmentDb.ts:  created_by_user_id: string;
+src\UniversalBookingAdjustmentDb.ts:  created_at: string;
+src\UniversalBookingAdjustmentDb.ts:      `CREATE TABLE IF NOT EXISTS booking_adjustments (
+src\UniversalBookingAdjustmentDb.ts:      created_by_user_id TEXT NOT NULL DEFAULT '',
+src\UniversalBookingAdjustmentDb.ts:      created_at TEXT NOT NULL
+src\UniversalBookingAdjustmentDb.ts:      `CREATE INDEX IF NOT EXISTS idx_booking_adjustments_lookup
+src\UniversalBookingAdjustmentDb.ts:      `CREATE INDEX IF NOT EXISTS idx_booking_adjustments_service_date
+src\UniversalBookingAdjustmentDb.ts:     ORDER BY revision_no DESC,created_at DESC LIMIT 1`,
+src\UniversalBookingAdjustmentDb.ts:     ORDER BY revision_no ASC,created_at ASC`,
+src\UniversalBookingAdjustmentDb.ts:    sql: `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\UniversalBookingAdjustmentDb.ts:  const table = bookingTables[input.service];
+src\UniversalBookingAdjustmentDb.ts:    `SELECT status,ub_number FROM ${table} WHERE id=$1 AND company_id=$2 LIMIT 1`,
+src\UniversalBookingAdjustmentDb.ts:      sql: `UPDATE ${table} SET total_pkr=$1,updated_at=$2,updated_by_user_id=$3
+src\UniversalBookingAdjustmentDb.ts:         before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
+src\VisaBookingFlowV3.tsx:import { createVisaBooking, getVisaBookings } from "./db";
+src\VisaBookingFlowV3.tsx:  canCreate?: boolean;
+src\VisaBookingFlowV3.tsx:  canCreate = true,
+src\VisaBookingFlowV3.tsx:    if (!assigned) return setError("Create / Assign the Booking UB first.");
+src\VisaBookingFlowV3.tsx:      const id = await createVisaBooking(companyId, commercialInput(), userId);
+src\VisaBookingFlowV3.tsx:              : "Create the UB first, save Visa accounting second, then complete optional passenger / document details."}
+src\VisaBookingFlowV3.tsx:          <div className="bf-table-wrap">
+src\VisaBookingFlowV3.tsx:            <table className="bf-table visa-v3-table">
+src\VisaBookingFlowV3.tsx:            </table>
+src\VisaBookingFlowV3.tsx:                  <div className="bf-table-wrap">
+src\VisaBookingFlowV3.tsx:                    <table className="bf-table">
+src\VisaBookingFlowV3.tsx:                    </table>
+src\VisaBookingFlowV3.tsx:              <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>
+src\VisaBookingFlowV3.tsx:                <div className="bf-table-wrap">
+src\VisaBookingFlowV3.tsx:                  <table className="bf-table" style={{ minWidth: 1600 }}>
+src\VisaBookingFlowV3.tsx:                  </table>
+src\VisaBookingFlowV3.tsx:        <div className="package14-next-step">Create / Assign a Booking UB to unlock Visa Services & Rates.</div>
+src\VisaOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS visa_operational_meta (
+src\VisaOperationalDb.ts:        created_at TEXT NOT NULL,
+src\VisaOperationalDb.ts:      await database.execute(`CREATE TABLE IF NOT EXISTS visa_operational_passengers (
+src\VisaOperationalDb.ts:        `CREATE INDEX IF NOT EXISTS idx_visa_operational_passengers ON visa_operational_passengers(company_id,booking_id,sort_order)`,
+src\VisaOperationalDb.ts:    `INSERT INTO audit_logs (id,company_id,user_id,user_name,action,module,record_id,details,created_at)
+src\VisaOperationalDb.ts:    `INSERT INTO visa_operational_meta (booking_id,company_id,expected_entry_date,notes,created_at,updated_at)
+src\WorkspaceContext.tsx:import { createContext, useCallback, useContext, useEffect, useState } from "react";
+src\WorkspaceContext.tsx:const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
