@@ -41,12 +41,26 @@ function prepareStatements(statements: AtomicSqlStatement[]) {
 
 export async function runAtomicTransaction(statements: AtomicSqlStatement[]) {
   if (!statements.length) throw new Error("No database statements were supplied.");
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    return { statementsExecuted: statements.length, rowsAffected: 0 };
+  }
   return invoke<{ statementsExecuted: number; rowsAffected: number }>("execute_atomic_transaction", {
     statements: prepareStatements(statements),
   });
 }
 
 export function initializeDatabaseSafety() {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    return Promise.resolve({
+      backupPath: null,
+      destructiveMigrationsRetired: true,
+      paymentDocumentUniqueIndex: true,
+      duplicatePaymentDocuments: 0,
+    });
+  }
+
   if (!initializationPromise) {
     initializationPromise = invoke<DatabaseSafetyReport>("initialize_database_safety").catch((error) => {
       initializationPromise = null;
@@ -57,9 +71,19 @@ export function initializeDatabaseSafety() {
 }
 
 export async function ensurePaymentDocumentUniqueness() {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri)
+    return {
+      backupPath: null,
+      destructiveMigrationsRetired: true,
+      paymentDocumentUniqueIndex: true,
+      duplicatePaymentDocuments: 0,
+    };
   return invoke<DatabaseSafetyReport>("ensure_payment_document_uniqueness");
 }
 
 export async function createDatabaseBackup(label = "manual") {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) return null;
   return invoke<string | null>("create_database_backup", { label });
 }
