@@ -34,6 +34,10 @@ function AppLayout() {
   const [paymentReset, setPaymentReset] = useState(0);
 
   useEffect(() => {
+    // Only run the auto-updater check if we are inside the Tauri desktop app
+    const isTauri = "__TAURI_INTERNALS__" in window;
+    if (!isTauri) return;
+
     let active = true;
     const runCheck = async () => {
       try {

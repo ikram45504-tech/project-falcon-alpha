@@ -685,7 +685,16 @@ type InitialSetupInput = {
 
 async function db() {
   if (!databasePromise) {
-    databasePromise = Database.load(DB_PATH);
+    const isTauri = "__TAURI_INTERNALS__" in window;
+    if (isTauri) {
+      databasePromise = Database.load(DB_PATH);
+    } else {
+      console.warn("Running in Web Mode. Local database is not available.");
+      databasePromise = Promise.resolve({
+        execute: async () => ({ lastInsertId: 0, rowsAffected: 0 }),
+        select: async () => [],
+      } as any);
+    }
   }
   return databasePromise;
 }
