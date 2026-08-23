@@ -863,13 +863,35 @@ async function createAuditLog(
 
 async function requirePermission(companyId: string, userId: string, permission: Permission) {
   if (!userId) return; // Backward compatibility for untouched legacy modules during the staged rebuild.
-  const database = await db();
-  const rows = await database.select<Array<{ role: UserRole; status: string }>>(
-    `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId],
-  );
-  const actor = rows[0];
-  if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, permission)) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  let actorRole: UserRole;
+  let actorStatus: string;
+
+  if (isTauri) {
+    const database = await db();
+    const rows = await database.select<Array<{ role: UserRole; status: string }>>(
+      `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [userId, companyId],
+    );
+    const actor = rows[0];
+    if (!actor) throw new Error("You do not have permission to perform this action.");
+    actorRole = actor.role;
+    actorStatus = actor.status;
+  } else {
+    // Web Mode (Browser)
+    const { data, error } = await supabase
+      .from("users")
+      .select("role, status")
+      .eq("id", userId)
+      .eq("company_id", companyId)
+      .single();
+
+    if (error || !data) throw new Error("You do not have permission to perform this action.");
+    actorRole = data.role as UserRole;
+    actorStatus = data.status;
+  }
+
+  if (actorStatus !== "ACTIVE" || !hasPermission(actorRole, permission)) {
     throw new Error("You do not have permission to perform this action.");
   }
 }
@@ -4788,6 +4810,24 @@ export async function queueSync(
   recordId: string,
   payload: Record<string, any>,
 ) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+
+  // Web Mode: Bypass local SQLite queue and push directly to Cloud
+  if (!isTauri) {
+    if (operation === "INSERT") {
+      const { error } = await supabase.from(tableName).insert(payload);
+      if (error && error.code !== "23505") throw new Error(error.message);
+    } else if (operation === "UPDATE") {
+      const { error } = await supabase.from(tableName).update(payload).eq("id", recordId);
+      if (error) throw new Error(error.message);
+    } else if (operation === "DELETE") {
+      const { error } = await supabase.from(tableName).delete().eq("id", recordId);
+      if (error) throw new Error(error.message);
+    }
+    return;
+  }
+
+  // Desktop Mode: Queue in local SQLite for background worker
   const database = await db();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
