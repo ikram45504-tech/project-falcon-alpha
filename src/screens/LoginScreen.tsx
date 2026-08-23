@@ -1,6 +1,5 @@
 import { FormEvent, useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import { useAuth } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export default function LoginScreen({
