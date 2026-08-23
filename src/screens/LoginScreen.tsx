@@ -1,5 +1,5 @@
 import { FormEvent, useState, useEffect } from "react";
-import { loginUser, getCompanyById, createRememberedSession, revokeRememberedSession } from "../db";
+import { supabase } from "../supabaseClient";
 import { useAuth } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -49,28 +49,37 @@ export default function LoginScreen({
     setBusy(true);
     setError("");
     try {
-      const loggedIn = await loginUser(loginCompanyCode.trim(), loginName.trim(), loginPassword);
-      if (!loggedIn) return setError("Company Code, username/email or password is incorrect.");
-      const linkedCompany = await getCompanyById(loggedIn.companyId);
-      if (!linkedCompany) return setError("Company account could not be loaded.");
+      let emailToUse = loginName.trim();
 
-      const existingRememberToken = localStorage.getItem("travelAccountingRememberToken") || "";
-      if (existingRememberToken) {
-        await revokeRememberedSession(existingRememberToken);
-        localStorage.removeItem("travelAccountingRememberToken");
+      if (!emailToUse.includes("@")) {
+        const { data: resolvedEmail, error: rpcError } = await supabase.rpc("get_user_email", {
+          p_company_code: loginCompanyCode.trim(),
+          p_username: loginName.trim(),
+        });
+
+        if (rpcError || !resolvedEmail) {
+          throw new Error("Company Code or Username is incorrect.");
+        }
+        emailToUse = resolvedEmail;
+      }
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: emailToUse,
+        password: loginPassword,
+      });
+
+      if (authError || !data.user) {
+        throw new Error(authError?.message || "Invalid credentials.");
       }
 
       if (rememberCredentials) {
-        const rememberToken = await createRememberedSession(loggedIn, getOrCreateDeviceId());
-        localStorage.setItem("travelAccountingRememberToken", rememberToken);
-        localStorage.setItem("travelAccountingLastCompanyCode", linkedCompany.company_code);
+        localStorage.setItem("travelAccountingLastCompanyCode", loginCompanyCode.trim());
         localStorage.setItem("travelAccountingLastIdentifier", loginName.trim());
       } else {
         localStorage.removeItem("travelAccountingLastCompanyCode");
         localStorage.removeItem("travelAccountingLastIdentifier");
       }
 
-      setSessionData(loggedIn, linkedCompany);
       setAccountCreatedNotice(null);
       navigate("/");
     } catch (e) {

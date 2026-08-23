@@ -1,12 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-  Company,
-  UserSession,
-  getCompanyById,
-  initDatabase,
-  restoreRememberedSession,
-  revokeRememberedSession,
-} from "./db";
+import { supabase } from "./supabaseClient";
+import { Company, UserSession, initDatabase } from "./db";
 
 type AuthContextType = {
   isInitialized: boolean;
@@ -27,29 +21,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    (async () => {
-      try {
-        await initDatabase();
-        const rememberedToken = localStorage.getItem("travelAccountingRememberToken") || "";
-        if (rememberedToken) {
-          const restored = await restoreRememberedSession(rememberedToken);
-          if (restored) {
-            const linkedCompany = await getCompanyById(restored.companyId);
-            if (linkedCompany) {
-              setSession(restored);
-              setCompany(linkedCompany);
-              setIsInitialized(true);
-              return;
-            }
-          }
-          localStorage.removeItem("travelAccountingRememberToken");
+    let mounted = true;
+    let authSubscription: any = null;
+
+    async function loadSupabaseSession(supabaseUser: any) {
+      if (!supabaseUser) {
+        if (mounted) {
+          setSession(null);
+          setCompany(null);
+          setIsInitialized(true);
         }
-      } catch (e) {
-        setError(`Workspace could not start: ${e instanceof Error ? e.message : String(e)}`);
-      } finally {
-        setIsInitialized(true);
+        return;
       }
-    })();
+
+      try {
+        const metadata = supabaseUser.user_metadata || {};
+        const companyId = metadata.company_id || "";
+        const role = metadata.role || "VIEW_ONLY";
+
+        const newSession: UserSession = {
+          userId: supabaseUser.id,
+          companyId,
+          companyCode: metadata.company_code || "",
+          companyName: metadata.company_name || "",
+          fullName: metadata.full_name || "",
+          username: metadata.username || "",
+          email: supabaseUser.email || "",
+          phone: metadata.phone || "",
+          role,
+        };
+
+        const { data: companyData, error: companyError } = await supabase
+          .from("companies")
+          .select("*")
+          .eq("id", companyId)
+          .single();
+
+        if (companyError || !companyData) {
+          throw new Error("Could not load company profile from cloud database.");
+        }
+
+        if (mounted) {
+          setSession(newSession);
+          setCompany(companyData as Company);
+          setIsInitialized(true);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : String(err));
+          setIsInitialized(true);
+        }
+      }
+    }
+
+    async function initialize() {
+      try {
+        await initDatabase(); // Keep local DB running for unmigrated modules
+
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+        await loadSupabaseSession(currentSession?.user);
+
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+          loadSupabaseSession(currentSession?.user);
+        });
+        authSubscription = subscription;
+      } catch (e) {
+        if (mounted) {
+          setError(`Workspace could not start: ${e instanceof Error ? e.message : String(e)}`);
+          setIsInitialized(true);
+        }
+      }
+    }
+
+    initialize();
+
+    return () => {
+      mounted = false;
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+    };
   }, []);
 
   const setSessionData = (newSession: UserSession | null, newCompany: Company | null) => {
@@ -58,14 +113,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    const rememberToken = localStorage.getItem("travelAccountingRememberToken") || "";
-    if (rememberToken) {
-      try {
-        await revokeRememberedSession(rememberToken);
-      } catch {
-        // Signing out should still clear the device session locally.
-      }
-    }
+    await supabase.auth.signOut();
+
+    // Clear legacy tokens if any
     localStorage.removeItem("travelAccountingRememberToken");
     localStorage.removeItem("travelAccountingLastCompanyCode");
     localStorage.removeItem("travelAccountingLastIdentifier");

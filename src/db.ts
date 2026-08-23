@@ -1,4 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
+import { supabase } from "./supabaseClient";
 import { createPasswordRecord, verifyPassword } from "./security";
 import { hasPermission, Permission, UserRole } from "./permissions";
 
@@ -1524,26 +1525,28 @@ export async function needsFirstSetup() {
 }
 
 async function generateUniqueCompanyCode(companyName: string) {
-  const database = await db();
   const prefixes = companyCodePrefixes(companyName);
 
-  // Human-friendly, SaaS-ready code: Exactly 3 letters.
   for (const prefix of prefixes) {
-    const candidate = prefix;
-    const rows = await database.select<CountRow[]>(
-      `SELECT COUNT(*) AS count FROM companies WHERE company_code=$1 COLLATE NOCASE`,
-      [candidate],
-    );
-    if (Number(rows[0]?.count ?? 0) === 0) return candidate;
+    const candidate = prefix.toUpperCase();
+    const { count, error } = await supabase
+      .from("companies")
+      .select("*", { count: "exact", head: true })
+      .ilike("company_code", candidate);
+
+    if (error) throw new Error(error.message);
+    if (count === 0) return candidate;
   }
 
   for (let attempt = 0; attempt < 500; attempt += 1) {
-    const candidate = randomLetters(3);
-    const rows = await database.select<CountRow[]>(
-      `SELECT COUNT(*) AS count FROM companies WHERE company_code=$1 COLLATE NOCASE`,
-      [candidate],
-    );
-    if (Number(rows[0]?.count ?? 0) === 0) return candidate;
+    const candidate = randomLetters(3).toUpperCase();
+    const { count, error } = await supabase
+      .from("companies")
+      .select("*", { count: "exact", head: true })
+      .ilike("company_code", candidate);
+
+    if (error) throw new Error(error.message);
+    if (count === 0) return candidate;
   }
 
   throw new Error("Could not generate a unique 3-letter Company Code.");
@@ -1566,7 +1569,6 @@ function validateEmail(value: string) {
 }
 
 export async function createCompanyAccount(input: CreateCompanyAccountInput) {
-  const database = await db();
   const username = validateOwnerUsername(input.ownerUsername);
   const ownerEmail = validateEmail(input.ownerEmail);
   const ownerPhone = input.ownerPhone.trim();
@@ -1578,55 +1580,79 @@ export async function createCompanyAccount(input: CreateCompanyAccountInput) {
   if (!ownerPhone) throw new Error("Phone / WhatsApp Number is required.");
   validateStrongPassword(input.password);
 
-  const companyId = crypto.randomUUID();
-  const userId = crypto.randomUUID();
   const companyCode = await generateUniqueCompanyCode(companyName);
-  const password = await createPasswordRecord(input.password);
   const now = new Date().toISOString();
 
-  try {
-    await database.execute(
-      `INSERT INTO companies
-       (id,company_code,name,dts_license,logo_data,address,phone,whatsapp,email,base_currency,foreign_currency,status,created_at,updated_at)
-       VALUES ($1,$2,$3,$4,NULL,'',$5,$5,$6,'PKR','SAR','ACTIVE',$7,$7)`,
-      [companyId, companyCode, companyName, dtsLicense, ownerPhone, ownerEmail, now],
-    );
-
-    await database.execute(
-      `INSERT INTO users
-       (id,company_id,full_name,username,email,phone,phone_normalized,password_hash,password_salt,password_iterations,role,status,created_at,updated_at,last_login_at)
-       VALUES ($1,$2,$3,$3,$4,$5,$6,$7,$8,$9,'OWNER','ACTIVE',$10,$10,'')`,
-      [
-        userId,
-        companyId,
+  // 1. Sign up Master User in Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: ownerEmail,
+    password: input.password,
+    options: {
+      data: {
         username,
-        ownerEmail,
-        ownerPhone,
-        normalizePhone(ownerPhone),
-        password.hash,
-        password.salt,
-        password.iterations,
-        now,
-      ],
-    );
+        full_name: username,
+        phone: ownerPhone,
+        role: "OWNER",
+        company_code: companyCode,
+        company_name: companyName,
+      },
+    },
+  });
 
-    await createAuditLog(
-      companyId,
-      userId,
-      "COMPANY_CREATED",
-      "SECURITY",
-      companyId,
-      `Company ${companyName} created with Master account ${username}.`,
-    );
+  if (authError || !authData.user) {
+    throw new Error(authError?.message || "Could not register cloud authentication.");
+  }
+  const userId = authData.user.id;
+  const companyId = crypto.randomUUID();
+
+  try {
+    // 2. Insert Company Profile
+    const { error: companyError } = await supabase.from("companies").insert({
+      id: companyId,
+      company_code: companyCode,
+      name: companyName,
+      dts_license: dtsLicense,
+      phone: ownerPhone,
+      whatsapp: ownerPhone,
+      email: ownerEmail,
+      base_currency: "PKR",
+      foreign_currency: "SAR",
+      status: "ACTIVE",
+      created_at: now,
+      updated_at: now,
+    });
+    if (companyError) throw new Error(companyError.message);
+
+    // 3. Insert Master User Profile
+    const { error: userError } = await supabase.from("users").insert({
+      id: userId,
+      company_id: companyId,
+      full_name: username,
+      username: username,
+      email: ownerEmail,
+      phone: ownerPhone,
+      phone_normalized: normalizePhone(ownerPhone),
+      password_hash: "SUPABASE_AUTH",
+      password_salt: "SUPABASE_AUTH",
+      password_iterations: 0,
+      role: "OWNER",
+      status: "ACTIVE",
+      created_at: now,
+      updated_at: now,
+      last_login_at: "",
+    });
+    if (userError) throw new Error(userError.message);
+
+    // 4. Update Auth metadata to securely link the correct Company ID
+    await supabase.auth.updateUser({
+      data: { company_id: companyId },
+    });
 
     return { companyId, companyCode, userId, username, email: ownerEmail, accountStatus: "ACTIVE" as const };
   } catch (error) {
-    try {
-      await database.execute("DELETE FROM users WHERE id=$1", [userId]);
-      await database.execute("DELETE FROM companies WHERE id=$1", [companyId]);
-    } catch {
-      // Preserve original error.
-    }
+    // Attempt rollback if insert failed
+    await supabase.from("users").delete().eq("id", userId);
+    await supabase.from("companies").delete().eq("id", companyId);
     throw error;
   }
 }

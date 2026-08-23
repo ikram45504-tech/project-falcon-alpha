@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS companies (
     id TEXT PRIMARY KEY,
-    company_code TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    company_code TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     dts_license TEXT NOT NULL DEFAULT '',
     logo_data TEXT,
@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,
     full_name TEXT NOT NULL,
-    username TEXT NOT NULL COLLATE NOCASE,
-    email TEXT NOT NULL DEFAULT '' COLLATE NOCASE,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL DEFAULT '',
     phone TEXT NOT NULL DEFAULT '',
     phone_normalized TEXT NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL,
@@ -377,8 +377,8 @@ CREATE TABLE IF NOT EXISTS hotel_commercial_guest_refs (
         booking_id TEXT NOT NULL,
         sort_order INTEGER NOT NULL DEFAULT 0,
         guest_name TEXT NOT NULL DEFAULT '',
-        PRIMARY KEY (company_id, booking_id, sort_order);
-
+        PRIMARY KEY (company_id, booking_id, sort_order)
+);
 CREATE TABLE IF NOT EXISTS hotel_operational_reservations (
         company_id TEXT NOT NULL,
         booking_id TEXT NOT NULL,
@@ -386,8 +386,8 @@ CREATE TABLE IF NOT EXISTS hotel_operational_reservations (
         confirmation_voucher TEXT NOT NULL DEFAULT '',
         meal_plan TEXT NOT NULL DEFAULT '',
         reservation_status TEXT NOT NULL DEFAULT '',
-        PRIMARY KEY (company_id, booking_id, hotel_sort_order);
-
+        PRIMARY KEY (company_id, booking_id, hotel_sort_order)
+);
 CREATE TABLE IF NOT EXISTS hotel_operational_guests (
         id TEXT PRIMARY KEY,
         company_id TEXT NOT NULL,
@@ -446,8 +446,8 @@ CREATE TABLE IF NOT EXISTS misc_commercial_family_refs (
         booking_id TEXT NOT NULL,
         sort_order INTEGER NOT NULL DEFAULT 0,
         family_head TEXT NOT NULL DEFAULT '',
-        PRIMARY KEY (company_id, booking_id, sort_order);
-
+        PRIMARY KEY (company_id, booking_id, sort_order)
+);
 CREATE TABLE IF NOT EXISTS misc_operational_services (
         id TEXT PRIMARY KEY,
         company_id TEXT NOT NULL,
