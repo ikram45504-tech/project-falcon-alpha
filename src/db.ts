@@ -4864,3 +4864,57 @@ export async function startBackgroundSync() {
     }
   }, 10000); // Check every 10 seconds
 }
+
+/**
+ * Ensures the currently logged-in Supabase user and company exist in the local SQLite db
+ * so that offline-first functions (like requirePermission) work properly.
+ */
+export async function syncCloudSessionToLocal(company: Company, session: UserSession) {
+  const database = await db();
+  const now = new Date().toISOString();
+
+  await database.execute(
+    `INSERT INTO companies (id, company_code, name, dts_license, address, phone, whatsapp, email, base_currency, secondary_currency, owner_user_id, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+     ON CONFLICT(id) DO UPDATE SET
+     name=excluded.name,
+     updated_at=excluded.updated_at`,
+    [
+      company.id,
+      company.company_code,
+      company.name,
+      company.dts_license,
+      company.address,
+      company.phone,
+      company.whatsapp,
+      company.email,
+      company.base_currency,
+      company.secondary_currency,
+      company.owner_user_id,
+      now,
+      now,
+    ],
+  );
+
+  await database.execute(
+    `INSERT INTO users (id, company_id, full_name, username, email, phone, phone_normalized, password_hash, password_salt, password_iterations, role, status, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, '', '', 0, $8, 'ACTIVE', $9, $10)
+     ON CONFLICT(id) DO UPDATE SET
+     role=excluded.role,
+     status='ACTIVE',
+     full_name=excluded.full_name,
+     updated_at=excluded.updated_at`,
+    [
+      session.userId,
+      session.companyId,
+      session.fullName,
+      session.username,
+      session.email,
+      session.phone,
+      normalizePhone(session.phone),
+      session.role,
+      now,
+      now,
+    ],
+  );
+}

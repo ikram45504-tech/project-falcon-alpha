@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
-import { Company, UserSession, initDatabase, startBackgroundSync } from "./db";
+import { Company, UserSession, initDatabase, startBackgroundSync, syncCloudSessionToLocal } from "./db";
 
 type AuthContextType = {
   isInitialized: boolean;
@@ -62,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (mounted) {
+          await syncCloudSessionToLocal(companyData as Company, newSession);
           setSession(newSession);
           setCompany(companyData as Company);
           setIsInitialized(true);
