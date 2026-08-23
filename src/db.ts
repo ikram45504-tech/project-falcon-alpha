@@ -4874,8 +4874,8 @@ export async function syncCloudSessionToLocal(company: Company, session: UserSes
   const now = new Date().toISOString();
 
   await database.execute(
-    `INSERT INTO companies (id, company_code, name, dts_license, address, phone, whatsapp, email, base_currency, secondary_currency, owner_user_id, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    `INSERT INTO companies (id, company_code, name, dts_license, address, phone, whatsapp, email, base_currency, foreign_currency, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      ON CONFLICT(id) DO UPDATE SET
      name=excluded.name,
      updated_at=excluded.updated_at`,
@@ -4889,8 +4889,7 @@ export async function syncCloudSessionToLocal(company: Company, session: UserSes
       company.whatsapp,
       company.email,
       company.base_currency,
-      company.secondary_currency,
-      company.owner_user_id,
+      company.foreign_currency,
       now,
       now,
     ],

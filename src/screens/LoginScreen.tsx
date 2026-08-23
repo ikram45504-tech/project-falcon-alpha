@@ -3,15 +3,6 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
 
-function getOrCreateDeviceId() {
-  const key = "travelAccountingDeviceId";
-  const existing = localStorage.getItem(key);
-  if (existing) return existing;
-  const created = crypto.randomUUID();
-  localStorage.setItem(key, created);
-  return created;
-}
-
 export default function LoginScreen({
   accountCreatedNotice,
   setAccountCreatedNotice,
@@ -19,7 +10,6 @@ export default function LoginScreen({
   accountCreatedNotice: any;
   setAccountCreatedNotice: (n: any) => void;
 }) {
-  const { setSessionData } = useAuth();
   const navigate = useNavigate();
 
   const [loginCompanyCode, setLoginCompanyCode] = useState(
