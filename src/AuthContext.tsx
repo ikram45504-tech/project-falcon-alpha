@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
-import { Company, UserSession, initDatabase } from "./db";
+import { Company, UserSession, initDatabase, startBackgroundSync } from "./db";
 
 type AuthContextType = {
   isInitialized: boolean;
@@ -77,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function initialize() {
       try {
         await initDatabase(); // Keep local DB running for unmigrated modules
+        await startBackgroundSync(); // Start offline-first sync engine
 
         const {
           data: { session: currentSession },

@@ -882,6 +882,19 @@ async function initDatabaseOnce() {
   // Authentication tables are created/rebuilt at the end of this initializer.
   // This avoids touching old pre-Phase-8 auth indexes before the one-time reset.
 
+  // Phase 3.2 - Offline First Sync Engine
+  await database.execute(`CREATE TABLE IF NOT EXISTS sync_queue (
+    id TEXT PRIMARY KEY,
+    operation TEXT NOT NULL,
+    table_name TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    error_message TEXT NOT NULL DEFAULT ''
+  )`);
+  await database.execute(`CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON sync_queue(status, created_at)`);
+
   await database.execute(`CREATE TABLE IF NOT EXISTS parties (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,
@@ -2225,7 +2238,7 @@ export async function createParty(companyId: string, input: PartyInput, actorUse
     ],
   );
 
-  if (actorUserId)
+  if (actorUserId) {
     await createAuditLog(
       companyId,
       actorUserId,
@@ -2234,6 +2247,25 @@ export async function createParty(companyId: string, input: PartyInput, actorUse
       id,
       `${input.accountType}: ${input.name.trim()}`,
     );
+  }
+
+  // Queue to Supabase
+  await queueSync("INSERT", "parties", id, {
+    id,
+    company_id: companyId,
+    name: input.name.trim(),
+    phone: input.phone.trim(),
+    whatsapp: input.whatsapp.trim(),
+    address: input.address.trim(),
+    notes: input.notes.trim(),
+    status: input.status,
+    account_type: input.accountType,
+    created_at: now,
+    updated_at: now,
+    created_by_user_id: actorUserId,
+    updated_by_user_id: actorUserId,
+  });
+
   return id;
 }
 
@@ -2273,7 +2305,7 @@ export async function updateParty(partyId: string, companyId: string, input: Par
       companyId,
     ],
   );
-  if (actorUserId)
+  if (actorUserId) {
     await createAuditLog(
       companyId,
       actorUserId,
@@ -2282,6 +2314,20 @@ export async function updateParty(partyId: string, companyId: string, input: Par
       partyId,
       `${input.accountType}: ${input.name.trim()}`,
     );
+  }
+
+  // Queue to Supabase
+  await queueSync("UPDATE", "parties", partyId, {
+    name: input.name.trim(),
+    phone: input.phone.trim(),
+    whatsapp: input.whatsapp.trim(),
+    address: input.address.trim(),
+    notes: input.notes.trim(),
+    status: input.status,
+    account_type: input.accountType,
+    updated_at: new Date().toISOString(),
+    updated_by_user_id: actorUserId,
+  });
 }
 
 export async function getPartyById(companyId: string, partyId: string) {
@@ -4716,4 +4762,105 @@ export async function dangerouslyEraseAllData(companyId: string) {
       console.warn(`Could not erase table ${table}`, e);
     }
   }
+}
+
+// --- Phase 3.2 Offline-First Sync Engine ---
+
+export type SyncOperation = "INSERT" | "UPDATE" | "DELETE";
+
+export type SyncQueueEntry = {
+  id: string;
+  operation: SyncOperation;
+  table_name: string;
+  record_id: string;
+  payload: string;
+  created_at: string;
+  status: "PENDING" | "FAILED";
+  error_message: string;
+};
+
+/**
+ * Pushes a new operation to the local SQLite sync_queue.
+ */
+export async function queueSync(
+  operation: SyncOperation,
+  tableName: string,
+  recordId: string,
+  payload: Record<string, any>,
+) {
+  const database = await db();
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  await database.execute(
+    `INSERT INTO sync_queue (id, operation, table_name, record_id, payload, created_at, status, error_message)
+     VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', '')`,
+    [id, operation, tableName, recordId, JSON.stringify(payload), now],
+  );
+}
+
+let isSyncRunning = false;
+
+/**
+ * Polls the sync_queue and pushes changes to Supabase when online.
+ * This should be called once on App mount.
+ */
+export async function startBackgroundSync() {
+  if (isSyncRunning) return;
+  isSyncRunning = true;
+
+  // Run in a continuous loop
+  setInterval(async () => {
+    if (!navigator.onLine) return; // Only sync if online
+
+    try {
+      const database = await db();
+      const pending = await database.select<SyncQueueEntry[]>(
+        "SELECT * FROM sync_queue WHERE status = 'PENDING' ORDER BY created_at ASC",
+      );
+
+      if (pending.length === 0) return;
+
+      for (const job of pending) {
+        try {
+          const payload = JSON.parse(job.payload);
+
+          if (job.operation === "INSERT") {
+            const { error } = await supabase.from(job.table_name).insert(payload);
+            if (error) {
+              // Handle conflicts (e.g., 23505 = unique_violation in Postgres)
+              if (error.code === "23505") {
+                console.warn(
+                  `Duplicate conflict detected for ${job.table_name} ${job.record_id}. Using First-Write-Wins.`,
+                );
+                // For now, if we hit a unique constraint, we just assume the first one won,
+                // and we can safely delete our local queue item (since it's a rejected duplicate).
+                // In the future, we could delete the local SQLite record too if we want.
+              } else {
+                throw error;
+              }
+            }
+          } else if (job.operation === "UPDATE") {
+            const { error } = await supabase.from(job.table_name).update(payload).eq("id", job.record_id);
+            if (error) throw error;
+          } else if (job.operation === "DELETE") {
+            const { error } = await supabase.from(job.table_name).delete().eq("id", job.record_id);
+            if (error) throw error;
+          }
+
+          // If successful (or successfully rejected due to known conflict), remove from queue
+          await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
+        } catch (jobError: any) {
+          console.error("Sync job failed:", jobError);
+          // Mark as failed so it doesn't block the rest forever, but we can retry it later
+          await database.execute("UPDATE sync_queue SET status = 'FAILED', error_message = $1 WHERE id = $2", [
+            String(jobError.message || jobError),
+            job.id,
+          ]);
+        }
+      }
+    } catch (e) {
+      console.error("Background sync error:", e);
+    }
+  }, 10000); // Check every 10 seconds
 }
