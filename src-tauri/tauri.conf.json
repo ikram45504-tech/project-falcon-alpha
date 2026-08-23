@@ -23,8 +23,8 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://travel-accounting-alpha.vercel.app/api/updater"],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzMTBDOUZDQUJDNEQzODUKUldTRjA4U3IvTWtRNHlMNG5tbDNyT0JYRFNvMG16Q3dYeU82WmI3VElVc1R1STJsZ0QybWxyb3UK"
+      "endpoints": ["https://github.com/ikram45504-tech/project-falcon-alpha/releases/latest/download/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQwNkFDMjAwOTBGQkNDOApSV1RJdkE4SklLd0dEU3BRRis5RmMzM1V5TnBlZndvVnYyYkJHYVBsZzhzNGczYjA1dCtNTXFKaQo="
     }
   },
   "bundle": {
