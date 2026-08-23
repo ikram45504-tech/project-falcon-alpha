@@ -187,7 +187,10 @@
   background: rgba(30, 41, 59, 0.4) !important;
 }
 :root[data-theme="midnight"] .modal-card {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: rgba(30, 41, 59, 0.6) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5) !important;
 }
 :root[data-theme="midnight"] .modal-head h3 {
   color: var(--text-main) !important;
@@ -2263,7 +2266,10 @@
   background: rgba(255, 255, 255, 0.4) !important;
 }
 :root[data-theme="ocean"] .modal-card {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.15) !important;
 }
 :root[data-theme="ocean"] .modal-head h3 {
   color: var(--text-main) !important;
