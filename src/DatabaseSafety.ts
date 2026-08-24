@@ -87,7 +87,7 @@ export async function runAtomicTransaction(statements: AtomicSqlStatement[]) {
         });
 
         const { error } = await supabase.from(table).insert(payload);
-        if (error && error.code !== "23505") throw new Error(error.message);
+        if (error) throw new Error(error.message);
         continue;
       }
 

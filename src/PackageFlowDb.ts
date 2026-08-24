@@ -89,12 +89,27 @@ async function validateCounterparty(
 ) {
   if (!counterpartyId)
     throw new Error(transactionType === "SALE" ? "Select a Party / Customer." : "Select a Vendor / Supplier.");
-  const database = await db();
-  const rows = await database.select<Array<{ account_type: string; status: string }>>(
-    `SELECT account_type,status FROM parties WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [counterpartyId, companyId],
-  );
-  const account = rows[0];
+
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  let account;
+
+  if (isTauri) {
+    const database = await db();
+    const rows = await database.select<Array<{ account_type: string; status: string }>>(
+      `SELECT account_type,status FROM parties WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [counterpartyId, companyId],
+    );
+    account = rows[0];
+  } else {
+    const { data } = await supabase
+      .from("parties")
+      .select("account_type, status")
+      .eq("id", counterpartyId)
+      .eq("company_id", companyId)
+      .single();
+    account = data;
+  }
+
   const expected = transactionType === "SALE" ? "PARTY" : "VENDOR";
   if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
     throw new Error(
