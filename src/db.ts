@@ -5200,7 +5200,7 @@ export async function executePullSync() {
 
   const database = await db();
 
-  // We need the company ID to fetch isolated records. We can get it from users table (active session)
+  // We need the company ID to fetch isolated records
   const users = await database.select<UserRow[]>("SELECT company_id FROM users LIMIT 1");
   if (!users.length) return;
   const companyId = users[0].company_id;
@@ -5209,65 +5209,82 @@ export async function executePullSync() {
   const metaRows = await database.select<Array<{ value: string }>>(
     `SELECT value FROM sync_metadata WHERE key = 'last_pull_sync'`,
   );
-  const lastSync = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
 
-  // List of all operational tables to pull from
-  const tables = [
+  // Apply a 24-hour skew window to catch updates and clock differences
+  let lastSync = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
+  const lastSyncDate = new Date(lastSync);
+  if (lastSyncDate.getFullYear() > 2000) {
+    lastSyncDate.setHours(lastSyncDate.getHours() - 24);
+    lastSync = lastSyncDate.toISOString();
+  }
+
+  // Define Root Tables (tables that have company_id and updated_at)
+  const ROOT_TABLES = [
     "parties",
-    "package_bookings",
-    "package_booking_lines",
-    "package_operational_meta",
-    "package_operational_passengers",
-    "package_operational_hotels",
-    "package_operational_flights",
-    "package_operational_flight_stopovers",
-    "package_movement_events",
-    "package_booking_adjustments",
-    "ticket_bookings",
-    "ticket_booking_lines",
-    "ticket_operational_meta",
-    "ticket_operational_passengers",
-    "ticket_operational_flights",
-    "hotel_bookings",
-    "hotel_booking_lines",
-    "hotel_commercial_guest_refs",
-    "hotel_operational_reservations",
-    "hotel_operational_guests",
-    "hotel_operational_meta",
-    "visa_bookings",
-    "visa_booking_lines",
-    "visa_transport_fleet",
-    "visa_passport_details",
-    "visa_operational_meta",
-    "visa_operational_passengers",
-    "transport_bookings",
-    "transport_booking_lines",
-    "transport_operational_sectors",
-    "transport_operational_meta",
-    "misc_bookings",
-    "misc_booking_lines",
-    "misc_commercial_family_refs",
-    "misc_operational_services",
-    "misc_operational_meta",
-    "booking_adjustments",
     "payment_entries",
-    "payment_v2_meta",
+    "booking_adjustments",
     "accommodation_entries",
     "service_entries",
+    "payment_v2_meta",
+    "package_bookings",
+    "ticket_bookings",
+    "hotel_bookings",
+    "visa_bookings",
+    "transport_bookings",
+    "misc_bookings",
   ];
 
-  let latestTimestamp = lastSync;
+  // Define Child Tables mapping (tables that belong to a booking_id)
+  const CHILD_TABLES: Record<string, string[]> = {
+    package_bookings: [
+      "package_booking_lines",
+      "package_operational_meta",
+      "package_operational_passengers",
+      "package_operational_hotels",
+      "package_operational_flights",
+      "package_operational_flight_stopovers",
+      "package_movement_events",
+      "package_booking_adjustments",
+    ],
+    ticket_bookings: [
+      "ticket_booking_lines",
+      "ticket_operational_meta",
+      "ticket_operational_passengers",
+      "ticket_operational_flights",
+    ],
+    hotel_bookings: [
+      "hotel_booking_lines",
+      "hotel_commercial_guest_refs",
+      "hotel_operational_reservations",
+      "hotel_operational_guests",
+      "hotel_operational_meta",
+    ],
+    visa_bookings: [
+      "visa_booking_lines",
+      "visa_transport_fleet",
+      "visa_passport_details",
+      "visa_operational_meta",
+      "visa_operational_passengers",
+    ],
+    transport_bookings: ["transport_booking_lines", "transport_operational_sectors", "transport_operational_meta"],
+    misc_bookings: [
+      "misc_booking_lines",
+      "misc_commercial_family_refs",
+      "misc_operational_services",
+      "misc_operational_meta",
+    ],
+  };
 
-  for (const table of tables) {
-    // Fetch records created or updated since last sync.
-    // Important: We order by updated_at if it exists, but many tables only have created_at.
-    // We will use created_at for tables that are append-only or use created_at as their sort.
+  let highestTimestampSeen = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
+
+  for (const table of ROOT_TABLES) {
+    // Fetch records updated since last sync (minus 24h skew window)
     const { data, error } = await supabase
       .from(table)
       .select("*")
       .eq("company_id", companyId)
-      .gt("created_at", lastSync)
-      .order("created_at", { ascending: true })
+      .gt("updated_at", lastSync)
+      .order("updated_at", { ascending: true })
       .limit(500);
 
     if (error || !data || data.length === 0) continue;
@@ -5275,27 +5292,49 @@ export async function executePullSync() {
     for (const row of data) {
       const keys = Object.keys(row);
       const values = Object.values(row);
-
       const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
 
       try {
-        // SQLite INSERT OR REPLACE acts as an UPSERT.
+        // UPSERT the Root Record
         await database.execute(`INSERT OR REPLACE INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`, values);
 
-        // Track the highest timestamp
-        if (row.created_at && row.created_at > latestTimestamp) {
-          latestTimestamp = row.created_at;
+        // Track the absolute highest updated_at seen (without the 24h subtraction)
+        if (row.updated_at && row.updated_at > highestTimestampSeen) {
+          highestTimestampSeen = row.updated_at;
+        }
+
+        // Auto-fetch children if it's a booking table
+        const children = CHILD_TABLES[table];
+        if (children && row.id) {
+          for (const childTable of children) {
+            // Child tables use booking_id
+            const { data: childData, error: childError } = await supabase
+              .from(childTable)
+              .select("*")
+              .eq("booking_id", row.id);
+
+            if (childError || !childData || childData.length === 0) continue;
+
+            for (const childRow of childData) {
+              const childKeys = Object.keys(childRow);
+              const childValues = Object.values(childRow);
+              const childPlaceholders = childKeys.map((_, i) => `$${i + 1}`).join(", ");
+              await database.execute(
+                `INSERT OR REPLACE INTO ${childTable} (${childKeys.join(", ")}) VALUES (${childPlaceholders})`,
+                childValues,
+              );
+            }
+          }
         }
       } catch (err) {
         console.error(`Pull Sync Error on table ${table}:`, err);
-        alert(`Pull Sync Error on table ${table}:\n` + JSON.stringify(err) + "\nRow: " + JSON.stringify(row));
       }
     }
   }
 
-  if (latestTimestamp !== lastSync) {
+  if (highestTimestampSeen !== (metaRows[0]?.value || "2000-01-01T00:00:00.000Z")) {
     await database.execute(`INSERT OR REPLACE INTO sync_metadata (key, value) VALUES ('last_pull_sync', $1)`, [
-      latestTimestamp,
+      highestTimestampSeen,
     ]);
   }
 }
