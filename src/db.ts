@@ -4880,63 +4880,65 @@ let isSyncRunning = false;
  * Polls the sync_queue and pushes changes to Supabase when online.
  * This should be called once on App mount.
  */
+export async function processSyncQueue() {
+  if (!navigator.onLine) return; // Only sync if online
+
+  try {
+    const database = await db();
+    const pending = await database.select<SyncQueueEntry[]>(
+      "SELECT * FROM sync_queue WHERE status = 'PENDING' ORDER BY created_at ASC",
+    );
+
+    if (pending.length === 0) return;
+
+    for (const job of pending) {
+      try {
+        const payload = JSON.parse(job.payload);
+
+        if (job.operation === "INSERT") {
+          const { error } = await supabase.from(job.table_name).insert(payload);
+          if (error) {
+            // Handle conflicts (e.g., 23505 = unique_violation in Postgres)
+            if (error.code === "23505") {
+              console.warn(
+                `Duplicate conflict detected for ${job.table_name} ${job.record_id}. Using First-Write-Wins.`,
+              );
+            } else {
+              throw error;
+            }
+          }
+        } else if (job.operation === "UPDATE") {
+          const { error } = await supabase.from(job.table_name).update(payload).eq("id", job.record_id);
+          if (error) throw error;
+        } else if (job.operation === "DELETE") {
+          const { error } = await supabase.from(job.table_name).delete().eq("id", job.record_id);
+          if (error) throw error;
+        }
+
+        // If successful (or successfully rejected due to known conflict), remove from queue
+        await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
+      } catch (jobError: any) {
+        console.error("Sync job failed:", jobError);
+        // Mark as failed so it doesn't block the rest forever, but we can retry it later
+        await database.execute("UPDATE sync_queue SET status = 'FAILED', error_message = $1 WHERE id = $2", [
+          String(jobError.message || jobError),
+          job.id,
+        ]);
+      }
+    }
+  } catch (e) {
+    console.error("Background sync error:", e);
+    throw e; // Throw so UI can catch it
+  }
+}
+
 export async function startBackgroundSync() {
   if (isSyncRunning) return;
   isSyncRunning = true;
 
   // Run in a continuous loop
-  setInterval(async () => {
-    if (!navigator.onLine) return; // Only sync if online
-
-    try {
-      const database = await db();
-      const pending = await database.select<SyncQueueEntry[]>(
-        "SELECT * FROM sync_queue WHERE status = 'PENDING' ORDER BY created_at ASC",
-      );
-
-      if (pending.length === 0) return;
-
-      for (const job of pending) {
-        try {
-          const payload = JSON.parse(job.payload);
-
-          if (job.operation === "INSERT") {
-            const { error } = await supabase.from(job.table_name).insert(payload);
-            if (error) {
-              // Handle conflicts (e.g., 23505 = unique_violation in Postgres)
-              if (error.code === "23505") {
-                console.warn(
-                  `Duplicate conflict detected for ${job.table_name} ${job.record_id}. Using First-Write-Wins.`,
-                );
-                // For now, if we hit a unique constraint, we just assume the first one won,
-                // and we can safely delete our local queue item (since it's a rejected duplicate).
-                // In the future, we could delete the local SQLite record too if we want.
-              } else {
-                throw error;
-              }
-            }
-          } else if (job.operation === "UPDATE") {
-            const { error } = await supabase.from(job.table_name).update(payload).eq("id", job.record_id);
-            if (error) throw error;
-          } else if (job.operation === "DELETE") {
-            const { error } = await supabase.from(job.table_name).delete().eq("id", job.record_id);
-            if (error) throw error;
-          }
-
-          // If successful (or successfully rejected due to known conflict), remove from queue
-          await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
-        } catch (jobError: any) {
-          console.error("Sync job failed:", jobError);
-          // Mark as failed so it doesn't block the rest forever, but we can retry it later
-          await database.execute("UPDATE sync_queue SET status = 'FAILED', error_message = $1 WHERE id = $2", [
-            String(jobError.message || jobError),
-            job.id,
-          ]);
-        }
-      }
-    } catch (e) {
-      console.error("Background sync error:", e);
-    }
+  setInterval(() => {
+    void processSyncQueue().catch((e) => console.error("Interval sync failed:", e));
   }, 10000); // Check every 10 seconds
 }
 
@@ -4947,6 +4949,13 @@ export async function startBackgroundSync() {
 export async function syncCloudSessionToLocal(company: Company, session: UserSession) {
   const database = await db();
   const now = new Date().toISOString();
+
+  // Prevent UNIQUE constraint failed: companies.company_code if the ID changed
+  // (e.g. wiped Supabase but kept local SQLite cache)
+  await database.execute(`DELETE FROM companies WHERE company_code = $1 AND id != $2`, [
+    company.company_code,
+    company.id,
+  ]);
 
   await database.execute(
     `INSERT INTO companies (id, company_code, name, dts_license, address, phone, whatsapp, email, base_currency, foreign_currency, created_at, updated_at)

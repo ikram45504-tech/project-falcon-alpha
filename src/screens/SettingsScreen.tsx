@@ -139,9 +139,42 @@ export default function SettingsScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "8px",
+                marginBottom: "12px",
               }}
             >
               🔄 Check for Updates
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const { processSyncQueue } = await import("../db");
+                  const { message } = await import("@tauri-apps/plugin-dialog");
+                  await processSyncQueue();
+                  await message("Local data successfully synced to the cloud!", {
+                    title: "Sync Complete",
+                    kind: "info",
+                  });
+                } catch (e: any) {
+                  const { message } = await import("@tauri-apps/plugin-dialog");
+                  await message(`Sync failed: ${e.message || String(e)}`, { title: "Sync Error", kind: "error" });
+                }
+              }}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-glass)",
+                background: "var(--bg-app)",
+                color: "var(--brand-secondary)",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              ☁️ Sync Data to Cloud
             </button>
           </div>
         )}

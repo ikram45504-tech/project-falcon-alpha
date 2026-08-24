@@ -33,8 +33,29 @@ function AppLayout() {
   const [paymentReset, setPaymentReset] = useState(0);
 
   useEffect(() => {
-    // Only run the auto-updater check if we are inside the Tauri desktop app
+    // Only run the auto-updater check and title updates if we are inside the Tauri desktop app
     const isTauri = "__TAURI_INTERNALS__" in window;
+    if (!isTauri) return;
+
+    // 1. Online/Offline window title
+    const updateTitle = async () => {
+      const status = navigator.onLine ? "Connected (Online)" : "Offline Mode";
+      const newTitle = `Travel Accounting - ${status}`;
+      document.title = newTitle;
+
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await getCurrentWindow().setTitle(newTitle);
+      } catch (e) {
+        console.error("Failed to update window title", e);
+      }
+    };
+
+    updateTitle();
+    window.addEventListener("online", updateTitle);
+    window.addEventListener("offline", updateTitle);
+
+    // 2. Auto-Updater Check
     if (!isTauri) return;
 
     let active = true;
@@ -61,8 +82,11 @@ function AppLayout() {
       }
     };
     runCheck();
+
     return () => {
       active = false;
+      window.removeEventListener("online", updateTitle);
+      window.removeEventListener("offline", updateTitle);
     };
   }, []);
 
