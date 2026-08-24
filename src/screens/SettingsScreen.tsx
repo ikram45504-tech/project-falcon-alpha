@@ -2,8 +2,6 @@ import { NavLink, Routes, Route, Navigate } from "react-router-dom";
 import AppearanceScreen from "./AppearanceScreen";
 import SecurityCenter from "../SecurityCenter";
 import { useAuth } from "../AuthContext";
-import { check } from "@tauri-apps/plugin-updater";
-import { ask, message } from "@tauri-apps/plugin-dialog";
 import { useIsDesktop } from "../useIsDesktop";
 import AboutScreen from "./AboutScreen";
 
@@ -13,6 +11,8 @@ export default function SettingsScreen() {
 
   const checkForUpdates = async () => {
     try {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const { ask, message } = await import("@tauri-apps/plugin-dialog");
       const update = await check();
       if (update) {
         const yes = await ask(`Update to ${update.version} is available!\n\nRelease notes: ${update.body}`, {
@@ -30,6 +30,7 @@ export default function SettingsScreen() {
         await message("You are already on the latest version!", { title: "No Update Available", kind: "info" });
       }
     } catch (error) {
+      const { message } = await import("@tauri-apps/plugin-dialog");
       await message(`Error checking for updates: ${error}`, { title: "Update Error", kind: "error" });
     }
   };

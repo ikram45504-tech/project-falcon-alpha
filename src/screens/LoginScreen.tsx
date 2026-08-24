@@ -1,6 +1,7 @@
 import { FormEvent, useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../AuthContext";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -10,6 +11,7 @@ export default function LoginScreen({
   setAccountCreatedNotice: (n: any) => void;
 }) {
   const navigate = useNavigate();
+  const { error: globalAuthError } = useAuth();
 
   const [loginCompanyCode, setLoginCompanyCode] = useState(
     () => localStorage.getItem("travelAccountingLastCompanyCode") || accountCreatedNotice?.companyCode || "",
@@ -32,6 +34,12 @@ export default function LoginScreen({
       setLoginName(accountCreatedNotice.username);
     }
   }, [accountCreatedNotice]);
+
+  useEffect(() => {
+    if (globalAuthError) {
+      setError(`Database Error: ${globalAuthError}`);
+    }
+  }, [globalAuthError]);
 
   const signIn = async (e: FormEvent) => {
     e.preventDefault();

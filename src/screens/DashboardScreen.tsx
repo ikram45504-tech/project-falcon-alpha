@@ -314,6 +314,14 @@ export default function DashboardScreen() {
           <div style={{ display: "flex", flexDirection: "column" }}>
             {loading ? (
               <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>Loading feed...</div>
+            ) : !metrics ? (
+              <div style={{ padding: "40px", textAlign: "center" }}>
+                <h2 style={{ color: "var(--brand-primary)" }}>Dashboard Unavailable</h2>
+                <p style={{ color: "var(--text-muted)" }}>
+                  The dashboard data could not be loaded. If you are on the Desktop app, this usually indicates that the
+                  local database failed to initialize properly during login.
+                </p>
+              </div>
             ) : recent.length === 0 ? (
               <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
                 No recent activity to show.

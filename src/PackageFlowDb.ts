@@ -36,7 +36,18 @@ type CalculatedLine = {
 };
 
 async function db() {
-  if (!packageDbPromise) packageDbPromise = Database.load(DB_PATH);
+  if (!packageDbPromise) {
+    const isTauri = "__TAURI_INTERNALS__" in window;
+    if (isTauri) {
+      packageDbPromise = Database.load(DB_PATH);
+    } else {
+      console.warn("Running in Web Mode. Local database is not available for " + DB_PATH);
+      packageDbPromise = Promise.resolve({
+        execute: async () => ({ lastInsertId: 0, rowsAffected: 0 }),
+        select: async () => [],
+      } as any);
+    }
+  }
   return packageDbPromise;
 }
 

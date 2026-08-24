@@ -1,7 +1,4 @@
 import * as XLSX from "xlsx";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
-import { downloadDir, join } from "@tauri-apps/api/path";
 
 export async function downloadExcel(sheets: { name: string; data: any[] }[], filename: string) {
   const workbook = XLSX.utils.book_new();
@@ -25,12 +22,30 @@ export async function downloadExcel(sheets: { name: string; data: any[] }[], fil
   const bytes = new Uint8Array(excelBuffer);
 
   const safeFileName = filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`;
+  const isTauri = "__TAURI_INTERNALS__" in window;
+
+  if (!isTauri) {
+    const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = safeFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const { downloadDir, join } = await import("@tauri-apps/api/path");
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const { writeFile } = await import("@tauri-apps/plugin-fs");
+
   const defaultPath = await join(await downloadDir(), safeFileName);
 
   const filePath = await save({
-    title: "Save Excel File",
     defaultPath,
-    filters: [{ name: "Excel Document", extensions: ["xlsx"] }],
+    filters: [{ name: "Excel files", extensions: ["xlsx"] }],
   });
 
   if (filePath) {

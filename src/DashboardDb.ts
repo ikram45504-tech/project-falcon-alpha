@@ -4,7 +4,18 @@ const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
 
 async function db() {
-  if (!databasePromise) databasePromise = Database.load(DB_PATH);
+  if (!databasePromise) {
+    const isTauri = "__TAURI_INTERNALS__" in window;
+    if (isTauri) {
+      databasePromise = Database.load(DB_PATH);
+    } else {
+      console.warn("Running in Web Mode. Local database is not available for " + DB_PATH);
+      databasePromise = Promise.resolve({
+        execute: async () => ({ lastInsertId: 0, rowsAffected: 0 }),
+        select: async () => [],
+      } as any);
+    }
+  }
   return databasePromise;
 }
 

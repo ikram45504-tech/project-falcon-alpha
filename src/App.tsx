@@ -4,8 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocati
 import { AuthProvider, useAuth } from "./AuthContext";
 import { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
 import { ROLE_LABELS, hasPermission } from "./permissions";
-import { check } from "@tauri-apps/plugin-updater";
-import { ask, message } from "@tauri-apps/plugin-dialog";
+
 import { useEffect } from "react";
 
 // Screens
@@ -41,6 +40,8 @@ function AppLayout() {
     let active = true;
     const runCheck = async () => {
       try {
+        const { check } = await import("@tauri-apps/plugin-updater");
+        const { ask, message } = await import("@tauri-apps/plugin-dialog");
         const update = await check();
         if (active && update) {
           const yes = await ask(`Update to ${update.version} is available!\n\nRelease notes: ${update.body}`, {

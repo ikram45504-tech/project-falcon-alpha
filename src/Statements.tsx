@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
-import { downloadDir, join } from "@tauri-apps/api/path";
 
 import { Company, Party, PaymentEntry, getPayments } from "./db";
 import { accountDirectionLabel } from "./BookingAccounting";
@@ -339,16 +336,35 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     setError("");
     setMessage("");
     try {
-      const bytes = new Uint8Array(await pdfBlob.arrayBuffer());
+      const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
       const fileName = `${safeFileName(company.name)}_Statement_${safeFileName(selectedParty.name)}_${fromDate}_to_${toDate}.pdf`;
+      const isTauri = "__TAURI_INTERNALS__" in window;
+
+      if (!isTauri) {
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      const { downloadDir, join } = await import("@tauri-apps/api/path");
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { writeFile } = await import("@tauri-apps/plugin-fs");
+
       const defaultPath = await join(await downloadDir(), fileName);
       const filePath = await save({
-        title: "Save Statement PDF",
         defaultPath,
         filters: [{ name: "PDF Document", extensions: ["pdf"] }],
       });
-      if (!filePath) return;
-      await writeFile(filePath, bytes);
+      if (filePath) {
+        await writeFile(filePath, pdfBytes);
+      }
       setMessage("PDF saved successfully.");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
