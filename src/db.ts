@@ -2194,8 +2194,27 @@ export async function getAuditLogs(companyId: string, limit = 250) {
 }
 
 export async function getParties(companyId: string, search = "") {
-  const database = await db();
+  const isTauri = "__TAURI_INTERNALS__" in window;
   const clean = search.trim();
+
+  if (!isTauri) {
+    let query = supabase.from("parties").select("*").eq("company_id", companyId);
+    if (clean) {
+      query = query.or(
+        `name.ilike.%${clean}%,phone.ilike.%${clean}%,whatsapp.ilike.%${clean}%,address.ilike.%${clean}%`,
+      );
+    }
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    return (data as Party[]).sort((a, b) => {
+      if (a.status === "ACTIVE" && b.status !== "ACTIVE") return -1;
+      if (a.status !== "ACTIVE" && b.status === "ACTIVE") return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  const database = await db();
 
   if (!clean) {
     return database.select<Party[]>(
@@ -2228,15 +2247,31 @@ export async function createParty(companyId: string, input: PartyInput, actorUse
   const database = await db();
   const now = new Date().toISOString();
 
-  const duplicate = await database.select<CountRow[]>(
-    `SELECT COUNT(*) AS count
-     FROM parties
-     WHERE company_id = $1 AND name = $2 COLLATE NOCASE`,
-    [companyId, input.name.trim()],
-  );
+  const isTauri = "__TAURI_INTERNALS__" in window;
 
-  if (Number(duplicate[0]?.count ?? 0) > 0) {
-    throw new Error("A party with this name already exists in this company.");
+  if (!isTauri) {
+    const { data: duplicate } = await supabase
+      .from("parties")
+      .select("id")
+      .eq("company_id", companyId)
+      .ilike("name", input.name.trim())
+      .limit(1);
+
+    if (duplicate && duplicate.length > 0) {
+      throw new Error("A party with this name already exists in this company.");
+    }
+  } else {
+    const database = await db();
+    const duplicate = await database.select<CountRow[]>(
+      `SELECT COUNT(*) AS count
+       FROM parties
+       WHERE company_id = $1 AND name = $2 COLLATE NOCASE`,
+      [companyId, input.name.trim()],
+    );
+
+    if (Number(duplicate[0]?.count ?? 0) > 0) {
+      throw new Error("A party with this name already exists in this company.");
+    }
   }
 
   const id = crypto.randomUUID();

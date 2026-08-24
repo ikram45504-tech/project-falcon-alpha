@@ -422,6 +422,7 @@ function LedgerRoute({
 function RouterContent() {
   const { isInitialized, session, company, error } = useAuth();
   const [accountCreatedNotice, setAccountCreatedNotice] = useState<any>(null);
+  const location = useLocation();
 
   if (!isInitialized) {
     return (
@@ -451,6 +452,11 @@ function RouterContent() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
+  }
+
+  // If session is loaded but we are stuck on the login route, push to dashboard!
+  if (location.pathname === "/login") {
+    return <Navigate to="/" replace />;
   }
 
   return (

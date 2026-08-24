@@ -4,9 +4,12 @@ import SecurityCenter from "../SecurityCenter";
 import { useAuth } from "../AuthContext";
 import { check } from "@tauri-apps/plugin-updater";
 import { ask, message } from "@tauri-apps/plugin-dialog";
+import { useIsDesktop } from "../useIsDesktop";
+import AboutScreen from "./AboutScreen";
 
 export default function SettingsScreen() {
   const { session, company } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const checkForUpdates = async () => {
     try {
@@ -101,28 +104,46 @@ export default function SettingsScreen() {
           >
             🛡️ Security & Access
           </NavLink>
+          {isDesktop && (
+            <NavLink
+              to="/settings/about"
+              style={({ isActive }) => ({
+                padding: "10px 12px",
+                borderRadius: "8px",
+                textDecoration: "none",
+                color: isActive ? "var(--brand-secondary)" : "var(--text-main)",
+                background: isActive ? "var(--bg-app)" : "transparent",
+                fontWeight: isActive ? 800 : 600,
+                borderLeft: isActive ? "3px solid var(--brand-secondary)" : "3px solid transparent",
+              })}
+            >
+              ℹ️ About Software
+            </NavLink>
+          )}
         </nav>
-        <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
-          <button
-            onClick={checkForUpdates}
-            style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: "8px",
-              border: "1px solid var(--border-glass)",
-              background: "var(--bg-app)",
-              color: "var(--brand-primary)",
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-          >
-            🔄 Check for Updates
-          </button>
-        </div>
+        {isDesktop && (
+          <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
+            <button
+              onClick={checkForUpdates}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-glass)",
+                background: "var(--bg-app)",
+                color: "var(--brand-primary)",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              🔄 Check for Updates
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Settings Content Area */}
@@ -154,6 +175,7 @@ export default function SettingsScreen() {
               />
             }
           />
+          {isDesktop && <Route path="about" element={<AboutScreen />} />}
         </Routes>
       </div>
     </div>
