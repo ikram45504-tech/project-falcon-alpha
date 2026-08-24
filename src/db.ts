@@ -5041,6 +5041,7 @@ export async function executePullSync() {
         }
       } catch (err) {
         console.error(`Pull Sync Error on table ${table}:`, err);
+        alert(`Pull Sync Error on table ${table}:\n` + JSON.stringify(err) + "\nRow: " + JSON.stringify(row));
       }
     }
   }

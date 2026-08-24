@@ -46,8 +46,9 @@ export default function DashboardScreen() {
       await processSyncQueue(); // Push local changes
       await executePullSync(); // Pull cloud changes
       await fetchData(); // Redraw dashboard
-    } catch (err) {
+    } catch (err: any) {
       console.error("Sync and refresh failed:", err);
+      alert("Sync failed: " + (err.message || err));
     } finally {
       setIsSyncing(false);
     }
