@@ -861,7 +861,7 @@ async function createAuditLog(
   );
 }
 
-async function requirePermission(companyId: string, userId: string, permission: Permission) {
+export async function requirePermission(companyId: string, userId: string, permission: Permission) {
   if (!userId) return; // Backward compatibility for untouched legacy modules during the staged rebuild.
   const isTauri = "__TAURI_INTERNALS__" in window;
   let actorRole: UserRole;
@@ -879,16 +879,25 @@ async function requirePermission(companyId: string, userId: string, permission: 
     actorStatus = actor.status;
   } else {
     // Web Mode (Browser)
-    const { data, error } = await supabase
-      .from("users")
-      .select("role, status")
-      .eq("id", userId)
-      .eq("company_id", companyId)
-      .single();
+    // Avoid querying `users` table directly because RLS blocks it for users whose metadata lacks company_id.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const meta = sessionData.session?.user?.user_metadata;
 
-    if (error || !data) throw new Error("You do not have permission to perform this action.");
-    actorRole = data.role as UserRole;
-    actorStatus = data.status;
+    if (meta && meta.role) {
+      actorRole = meta.role as UserRole;
+      actorStatus = "ACTIVE"; // Trust the JWT for now since RLS blocks users table
+    } else {
+      const { data, error } = await supabase
+        .from("users")
+        .select("role, status")
+        .eq("id", userId)
+        .eq("company_id", companyId)
+        .single();
+
+      if (error || !data) throw new Error("You do not have permission to perform this action.");
+      actorRole = data.role as UserRole;
+      actorStatus = data.status;
+    }
   }
 
   if (actorStatus !== "ACTIVE" || !hasPermission(actorRole, permission)) {

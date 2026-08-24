@@ -1,7 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { PackageBookingLineInput, PackagePassengerType } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
-import { hasPermission, type Permission, type UserRole } from "./permissions";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -177,20 +176,7 @@ async function select<T>(database: Database, sql: string, bindValues: unknown[] 
   return retry(() => database.select<T>(sql, bindValues));
 }
 
-async function requirePermission(companyId: string, userId: string, permission: Permission) {
-  if (!userId) return;
-  const database = await db();
-  const rows = await select<Array<{ role: UserRole; status: string }>>(
-    database,
-    `SELECT role,status FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [userId, companyId],
-  );
-  const actor = rows[0];
-  if (!actor || actor.status !== "ACTIVE" || !hasPermission(actor.role, permission)) {
-    throw new Error("You do not have permission to perform this action.");
-  }
-}
-
+import { requirePermission } from "./db";
 export async function initPackageAdjustmentDatabase() {
   if (initializationPromise) return initializationPromise;
   initializationPromise = (async () => {
