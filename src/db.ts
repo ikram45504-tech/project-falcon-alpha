@@ -915,6 +915,25 @@ async function initDatabaseOnce() {
     status TEXT NOT NULL DEFAULT 'PENDING',
     error_message TEXT NOT NULL DEFAULT ''
   )`);
+
+  // -- TEMPORARY FIX FOR CORRUPTED app_migrations --
+  try {
+    await database.select(`SELECT migration_key FROM app_migrations LIMIT 1`);
+  } catch (e) {
+    // If it throws, it means it's the corrupted table with 'key' and 'value'
+    await database.execute(`DROP TABLE IF EXISTS app_migrations`);
+  }
+
+  await database.execute(`CREATE TABLE IF NOT EXISTS app_migrations (
+    migration_key TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL
+  )`);
+
+  await database.execute(`CREATE TABLE IF NOT EXISTS sync_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )`);
+
   await database.execute(`CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON sync_queue(status, created_at)`);
 
   await database.execute(`CREATE TABLE IF NOT EXISTS parties (
@@ -2401,6 +2420,75 @@ export async function getPartyById(companyId: string, partyId: string) {
   return rows[0] ?? null;
 }
 
+export async function deleteParty(partyId: string, companyId: string, actorUserId = "") {
+  await requirePermission(companyId, actorUserId, "edit_parties"); // Require some permission
+  const database = await db();
+
+  await database.execute(`DELETE FROM parties WHERE id=$1 AND company_id=$2`, [partyId, companyId]);
+
+  if (actorUserId) {
+    await createAuditLog(companyId, actorUserId, "ACCOUNT_DELETED", "PARTIES", partyId, `Party/Vendor Deleted`);
+  }
+
+  // Queue to Supabase
+  await queueSync("DELETE", "parties", partyId, {});
+}
+
+export async function deleteBooking(bookingId: string, companyId: string, actorUserId = "") {
+  await requirePermission(companyId, actorUserId, "edit_bookings");
+  const database = await db();
+
+  const tables = [
+    "package_bookings",
+    "package_booking_lines",
+    "package_operational_meta",
+    "package_operational_passengers",
+    "package_operational_hotels",
+    "package_operational_flights",
+    "package_operational_flight_stopovers",
+    "package_movement_events",
+    "ticket_bookings",
+    "ticket_booking_lines",
+    "ticket_operational_meta",
+    "ticket_operational_passengers",
+    "ticket_operational_flights",
+    "hotel_bookings",
+    "hotel_booking_lines",
+    "visa_bookings",
+    "visa_booking_lines",
+    "visa_passport_details",
+    "visa_transport_fleet",
+    "visa_operational_meta",
+    "visa_operational_passengers",
+    "transport_bookings",
+    "transport_booking_lines",
+    "transport_operational_meta",
+    "transport_operational_sectors",
+    "misc_bookings",
+    "misc_booking_lines",
+    "misc_booking_details",
+    "misc_operational_meta",
+    "misc_operational_services",
+    "misc_commercial_family_refs",
+  ];
+
+  for (const table of tables) {
+    try {
+      // Lines tables might use booking_id, header tables use id
+      if (table.includes("bookings") && !table.includes("lines")) {
+        await database.execute(`DELETE FROM ${table} WHERE id=$1 AND company_id=$2`, [bookingId, companyId]);
+        await queueSync("DELETE", table, bookingId, {});
+      } else {
+        await database.execute(`DELETE FROM ${table} WHERE booking_id=$1`, [bookingId]);
+        // Note: we don't queueSync deletes for line items directly since we only sync headers currently,
+        // but for a full delete, deleting the header cascades or orphan lines are ignored.
+      }
+    } catch (e) {
+      console.warn(`Could not delete from ${table}`, e);
+    }
+  }
+}
+
 function calculateAccommodation(input: AccommodationInput) {
   const nights = Math.max(0, Math.trunc(Number(input.nights) || 0));
   const beds = Math.max(0, Math.trunc(Number(input.bedRoomCount) || 0));
@@ -2754,6 +2842,41 @@ function validatePayment(input: PaymentInput) {
 }
 
 export async function getPayments(companyId: string, search = "", partyId = "") {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { supabase } = await import("./supabaseClient");
+    let query = supabase
+      .from("payment_entries")
+      .select(
+        `
+        *,
+        parties(name)
+      `,
+      )
+      .eq("company_id", companyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (partyId) {
+      query = query.eq("party_id", partyId);
+    }
+
+    if (search.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(
+        `receipt_no.ilike.${term},from_account.ilike.${term},to_account.ilike.${term},description.ilike.${term},payment_type.ilike.${term}`,
+      );
+    }
+
+    const { data } = await query;
+    if (!data) return [];
+
+    return data.map((pay: any) => ({
+      ...pay,
+      ledger_party_name: pay.parties?.name || "",
+    })) as PaymentEntry[];
+  }
+
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
@@ -3340,6 +3463,37 @@ async function validateTicketBooking(companyId: string, input: TicketBookingInpu
 }
 
 export async function getTicketBookings(companyId: string, search = "") {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { supabase } = await import("./supabaseClient");
+    let query = supabase
+      .from("ticket_bookings")
+      .select(
+        `
+        *,
+        ticket_booking_lines(*),
+        parties(name)
+      `,
+      )
+      .eq("company_id", companyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (search.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`ub_number.ilike.${term}`);
+    }
+
+    const { data } = await query;
+    if (!data) return [];
+
+    return data.map((b: any) => ({
+      ...b,
+      counterparty_name: b.parties?.name || "",
+      lines: b.ticket_booking_lines || [],
+    })) as TicketBooking[];
+  }
+
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
@@ -3697,6 +3851,37 @@ async function validateHotelBooking(companyId: string, input: HotelBookingInput,
 }
 
 export async function getHotelBookings(companyId: string, search = "") {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { supabase } = await import("./supabaseClient");
+    let query = supabase
+      .from("hotel_bookings")
+      .select(
+        `
+        *,
+        hotel_booking_lines(*),
+        parties(name)
+      `,
+      )
+      .eq("company_id", companyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (search.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`ub_number.ilike.${term}`);
+    }
+
+    const { data } = await query;
+    if (!data) return [];
+
+    return data.map((b: any) => ({
+      ...b,
+      counterparty_name: b.parties?.name || "",
+      lines: b.hotel_booking_lines || [],
+    })) as HotelBooking[];
+  }
+
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
@@ -4126,6 +4311,37 @@ async function validateVisaBooking(companyId: string, input: VisaBookingInput, e
 }
 
 export async function getVisaBookings(companyId: string, search = "") {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { supabase } = await import("./supabaseClient");
+    let query = supabase
+      .from("visa_bookings")
+      .select(
+        `
+        *,
+        visa_booking_lines(*),
+        parties(name)
+      `,
+      )
+      .eq("company_id", companyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (search.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`ub_number.ilike.${term}`);
+    }
+
+    const { data } = await query;
+    if (!data) return [];
+
+    return data.map((b: any) => ({
+      ...b,
+      counterparty_name: b.parties?.name || "",
+      lines: b.visa_booking_lines || [],
+    })) as VisaBooking[];
+  }
+
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
@@ -4573,6 +4789,37 @@ async function validateTransportBooking(companyId: string, input: TransportBooki
 }
 
 export async function getTransportBookings(companyId: string, search = "") {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { supabase } = await import("./supabaseClient");
+    let query = supabase
+      .from("transport_bookings")
+      .select(
+        `
+        *,
+        transport_booking_lines(*),
+        parties(name)
+      `,
+      )
+      .eq("company_id", companyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (search.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`ub_number.ilike.${term}`);
+    }
+
+    const { data } = await query;
+    if (!data) return [];
+
+    return data.map((b: any) => ({
+      ...b,
+      counterparty_name: b.parties?.name || "",
+      lines: b.transport_booking_lines || [],
+    })) as TransportBooking[];
+  }
+
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
@@ -4960,7 +5207,7 @@ export async function executePullSync() {
 
   // Track the last time we successfully pulled
   const metaRows = await database.select<Array<{ value: string }>>(
-    `SELECT value FROM app_migrations WHERE key = 'last_pull_sync'`,
+    `SELECT value FROM sync_metadata WHERE key = 'last_pull_sync'`,
   );
   const lastSync = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
 
@@ -5047,7 +5294,7 @@ export async function executePullSync() {
   }
 
   if (latestTimestamp !== lastSync) {
-    await database.execute(`INSERT OR REPLACE INTO app_migrations (key, value) VALUES ('last_pull_sync', $1)`, [
+    await database.execute(`INSERT OR REPLACE INTO sync_metadata (key, value) VALUES ('last_pull_sync', $1)`, [
       latestTimestamp,
     ]);
   }

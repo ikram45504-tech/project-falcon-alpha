@@ -3,7 +3,7 @@ import { useWorkspace } from "../WorkspaceContext";
 import { useAuth } from "../AuthContext";
 import { hasPermission } from "../permissions";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Party, PartyInput, createParty, updateParty } from "../db";
+import { Party, PartyInput, createParty, updateParty, deleteParty } from "../db";
 
 const blankParty: PartyInput = {
   name: "",
@@ -230,6 +230,28 @@ export default function PartiesScreen() {
                       <div className="row-actions">
                         <button onClick={() => openLedger(party)}>Open Ledger</button>
                         {can("edit_parties") && <button onClick={() => editParty(party)}>Edit</button>}
+                        {can("edit_parties") && (
+                          <button
+                            className="danger"
+                            style={{ color: "var(--red)", border: "1px solid var(--red)" }}
+                            onClick={async () => {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to permanently delete this Party/Vendor? This is a temporary testing function.",
+                                )
+                              ) {
+                                try {
+                                  await deleteParty(party.id, company?.id || "", session?.userId || "");
+                                  await loadParties(partySearch);
+                                } catch (e) {
+                                  alert(e instanceof Error ? e.message : String(e));
+                                }
+                              }
+                            }}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

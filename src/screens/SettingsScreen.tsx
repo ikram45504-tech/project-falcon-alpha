@@ -212,9 +212,43 @@ export default function SettingsScreen() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "8px",
+                  marginBottom: "12px",
                 }}
               >
                 ⚠️ Factory Reset Local Data
+              </button>
+
+              <button
+                onClick={async () => {
+                  const idToDelete = window.prompt(
+                    "Enter the exact ID of the Booking you want to delete (Temporary testing feature):",
+                  );
+                  if (idToDelete) {
+                    const { deleteBooking } = await import("../db");
+                    try {
+                      await deleteBooking(idToDelete.trim(), company.id, "");
+                      window.alert("Booking deleted successfully!");
+                    } catch (e: any) {
+                      window.alert(`Delete failed: ${e.message || String(e)}`);
+                    }
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255,165,0,0.3)",
+                  background: "rgba(255,165,0,0.1)",
+                  color: "#d48806",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                🗑️ Delete Specific Booking (Test Feature)
               </button>
             </div>
           </>

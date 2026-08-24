@@ -270,6 +270,37 @@ function lineStatements(bookingId: string, lines: CalculatedLine[]) {
 }
 
 export async function getTicketCommercialBookings(companyId: string, search = "") {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { supabase } = await import("./supabaseClient");
+    let query = supabase
+      .from("ticket_bookings")
+      .select(
+        `
+        *,
+        ticket_booking_lines(*),
+        parties(name)
+      `,
+      )
+      .eq("company_id", companyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (search.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`ub_number.ilike.${term}`);
+    }
+
+    const { data } = await query;
+    if (!data) return [];
+
+    return data.map((b: any) => ({
+      ...b,
+      counterparty_name: b.parties?.name || "",
+      lines: b.ticket_booking_lines || [],
+    })) as TicketCommercialBooking[];
+  }
+
   await ensureSchema();
   const database = await db();
   const clean = search.trim();

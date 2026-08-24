@@ -207,6 +207,20 @@ export async function getUniversalBookingAdjustmentHistory(
   service: BookingServiceName,
   bookingId: string,
 ) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { supabase } = await import("./supabaseClient");
+    const { data } = await supabase
+      .from("booking_adjustments")
+      .select("*")
+      .eq("company_id", companyId)
+      .eq("service_type", service)
+      .eq("booking_id", bookingId)
+      .order("revision_no", { ascending: true })
+      .order("created_at", { ascending: true });
+    return (data || []) as UniversalAdjustmentRecord[];
+  }
+
   await initUniversalBookingAdjustmentDatabase();
   const database = await db();
   return select<UniversalAdjustmentRecord[]>(
@@ -219,6 +233,38 @@ export async function getUniversalBookingAdjustmentHistory(
 }
 
 export async function getUniversalBookingAdjustmentSummaryMap(companyId: string, service: BookingServiceName) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { supabase } = await import("./supabaseClient");
+    // Since we don't have a direct view in Supabase for this grouped query, we fetch all adjustments for the service and group in memory
+    const { data } = await supabase
+      .from("booking_adjustments")
+      .select("*")
+      .eq("company_id", companyId)
+      .eq("service_type", service);
+
+    const rows = data || [];
+    const grouped = new Map<string, UniversalAdjustmentRecord[]>();
+    for (const r of rows) {
+      const g = grouped.get(r.booking_id) || [];
+      g.push(r as UniversalAdjustmentRecord);
+      grouped.set(r.booking_id, g);
+    }
+
+    const out: Record<string, UniversalAdjustmentSummary> = {};
+    for (const [bId, groupRows] of grouped.entries()) {
+      groupRows.sort((a, b) => Number(b.revision_no) - Number(a.revision_no)); // Descending
+      const latest = groupRows[0];
+      out[bId] = {
+        bookingId: latest.booking_id,
+        revisionNo: Number(latest.revision_no || 1),
+        adjustmentCount: groupRows.length,
+        lifecycleStatus: latest.lifecycle_status as BookingLifecycleStatus,
+      };
+    }
+    return out;
+  }
+
   await initUniversalBookingAdjustmentDatabase();
   const database = await db();
   const rows = await select<Array<UniversalAdjustmentRecord & { adjustment_count: number }>>(
