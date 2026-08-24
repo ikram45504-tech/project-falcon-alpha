@@ -18,29 +18,40 @@ export default function DashboardScreen() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [recent, setRecent] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const fetchData = async () => {
+    if (!company) return;
+    try {
+      setLoading(true);
+      const [m, r] = await Promise.all([getDashboardMetrics(company.id), getRecentActivity(company.id, 6)]);
+      setMetrics(m);
+      setRecent(r);
+    } catch (err) {
+      console.error("Dashboard Load Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!company) return;
-    let active = true;
-
-    async function load() {
-      try {
-        const [m, r] = await Promise.all([getDashboardMetrics(company!.id), getRecentActivity(company!.id, 6)]);
-        if (active) {
-          setMetrics(m);
-          setRecent(r);
-        }
-      } catch (err) {
-        console.error("Dashboard Load Error:", err);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      active = false;
-    };
+    fetchData();
   }, [company]);
+
+  const handleSyncAndRefresh = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const { processSyncQueue, executePullSync } = await import("../db");
+      await processSyncQueue(); // Push local changes
+      await executePullSync(); // Pull cloud changes
+      await fetchData(); // Redraw dashboard
+    } catch (err) {
+      console.error("Sync and refresh failed:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "32px", padding: "16px", minHeight: "100%" }}>
@@ -63,6 +74,26 @@ export default function DashboardScreen() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
+          <button
+            onClick={handleSyncAndRefresh}
+            disabled={isSyncing}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "8px",
+              border: "1px solid var(--border-glass)",
+              background: "var(--bg-card)",
+              color: "var(--brand-secondary)",
+              fontWeight: 600,
+              cursor: isSyncing ? "wait" : "pointer",
+              boxShadow: "var(--shadow-sm)",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              opacity: isSyncing ? 0.7 : 1,
+            }}
+          >
+            {isSyncing ? "🔄 Syncing..." : "🔄 Sync & Refresh"}
+          </button>
           <button
             onClick={() => navigate("/payments")}
             style={{
