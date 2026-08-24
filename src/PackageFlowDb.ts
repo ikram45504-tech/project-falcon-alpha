@@ -1,7 +1,8 @@
 import Database from "@tauri-apps/plugin-sql";
-import type { BookingTransactionType, PackageBookingLineInput } from "./db";
+import type { BookingTransactionType, PackageBookingLineInput, PackageBooking, PackageBookingLine } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { hasPermission, type Permission, type UserRole } from "./permissions";
+import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let packageDbPromise: Promise<Database> | null = null;
@@ -141,6 +142,72 @@ async function validatePackageUbAvailability(
   throw new Error(
     `This Vendor already has a Package Purchase booking for ${ubNumber}. Open that booking from the Package Register instead.`,
   );
+}
+
+export async function getPackageBookings(companyId: string) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { data } = await supabase
+      .from("package_bookings")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false });
+    return (data || []) as PackageBooking[];
+  }
+
+  const database = await db();
+  const rows = await database.select<PackageBooking[]>(
+    `SELECT id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at,updated_at
+     FROM package_bookings
+     WHERE company_id=$1
+     ORDER BY created_at DESC`,
+    [companyId],
+  );
+  return rows;
+}
+
+export async function getPackageBookingById(companyId: string, bookingId: string) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { data } = await supabase
+      .from("package_bookings")
+      .select("*")
+      .eq("id", bookingId)
+      .eq("company_id", companyId)
+      .single();
+    if (!data) throw new Error("Booking not found");
+    const { data: lines } = await supabase
+      .from("package_booking_lines")
+      .select("*")
+      .eq("booking_id", bookingId)
+      .order("sort_order", { ascending: true });
+    return { ...data, lines: lines || [] } as PackageBooking;
+  }
+
+  const database = await db();
+  const headers = await database.select<Omit<PackageBooking, "lines">[]>(
+    `SELECT id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at,updated_at
+     FROM package_bookings
+     WHERE id=$1 AND company_id=$2
+     LIMIT 1`,
+    [bookingId, companyId],
+  );
+
+  const header = headers[0];
+  if (!header) throw new Error("Booking not found");
+
+  const lines = await database.select<PackageBookingLine[]>(
+    `SELECT id,booking_id,company_id,passenger_type,passenger_name,package_type,rate_per_person,person_count,qty_is_explicit,line_total_pkr,sort_order
+     FROM package_booking_lines
+     WHERE booking_id=$1 AND company_id=$2
+     ORDER BY sort_order ASC`,
+    [bookingId, companyId],
+  );
+
+  return {
+    ...header,
+    lines,
+  } as PackageBooking;
 }
 
 function calculateLines(lines: PackageBookingLineInput[]) {

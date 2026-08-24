@@ -4938,8 +4938,118 @@ export async function startBackgroundSync() {
 
   // Run in a continuous loop
   setInterval(() => {
-    void processSyncQueue().catch((e) => console.error("Interval sync failed:", e));
+    void processSyncQueue().catch((e) => console.error("Interval push sync failed:", e));
+    void executePullSync().catch((e) => console.error("Interval pull sync failed:", e));
   }, 10000); // Check every 10 seconds
+}
+
+/**
+ * Phase 3: Desktop Pull Sync Engine
+ * Fetches data modified on the Cloud (via Web App) and merges it into the local SQLite database.
+ */
+export async function executePullSync() {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri || !navigator.onLine) return; // Only runs on Desktop when online
+
+  const database = await db();
+
+  // We need the company ID to fetch isolated records. We can get it from users table (active session)
+  const users = await database.select<UserRow[]>("SELECT company_id FROM users LIMIT 1");
+  if (!users.length) return;
+  const companyId = users[0].company_id;
+
+  // Track the last time we successfully pulled
+  const metaRows = await database.select<Array<{ value: string }>>(
+    `SELECT value FROM app_migrations WHERE key = 'last_pull_sync'`,
+  );
+  const lastSync = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
+
+  // List of all operational tables to pull from
+  const tables = [
+    "parties",
+    "package_bookings",
+    "package_booking_lines",
+    "package_operational_meta",
+    "package_operational_passengers",
+    "package_operational_hotels",
+    "package_operational_flights",
+    "package_operational_flight_stopovers",
+    "package_movement_events",
+    "package_booking_adjustments",
+    "ticket_bookings",
+    "ticket_booking_lines",
+    "ticket_operational_meta",
+    "ticket_operational_passengers",
+    "ticket_operational_flights",
+    "hotel_bookings",
+    "hotel_booking_lines",
+    "hotel_commercial_guest_refs",
+    "hotel_operational_reservations",
+    "hotel_operational_guests",
+    "hotel_operational_meta",
+    "visa_bookings",
+    "visa_booking_lines",
+    "visa_transport_fleet",
+    "visa_passport_details",
+    "visa_operational_meta",
+    "visa_operational_passengers",
+    "transport_bookings",
+    "transport_booking_lines",
+    "transport_operational_sectors",
+    "transport_operational_meta",
+    "misc_bookings",
+    "misc_booking_lines",
+    "misc_commercial_family_refs",
+    "misc_operational_services",
+    "misc_operational_meta",
+    "booking_adjustments",
+    "payment_entries",
+    "payment_v2_meta",
+    "accommodation_entries",
+    "service_entries",
+  ];
+
+  let latestTimestamp = lastSync;
+
+  for (const table of tables) {
+    // Fetch records created or updated since last sync.
+    // Important: We order by updated_at if it exists, but many tables only have created_at.
+    // We will use created_at for tables that are append-only or use created_at as their sort.
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .eq("company_id", companyId)
+      .gt("created_at", lastSync)
+      .order("created_at", { ascending: true })
+      .limit(500);
+
+    if (error || !data || data.length === 0) continue;
+
+    for (const row of data) {
+      const keys = Object.keys(row);
+      const values = Object.values(row);
+
+      const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
+
+      try {
+        // SQLite INSERT OR REPLACE acts as an UPSERT.
+        await database.execute(`INSERT OR REPLACE INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`, values);
+
+        // Track the highest timestamp
+        if (row.created_at && row.created_at > latestTimestamp) {
+          latestTimestamp = row.created_at;
+        }
+      } catch (err) {
+        console.error(`Pull Sync Error on table ${table}:`, err);
+      }
+    }
+  }
+
+  if (latestTimestamp !== lastSync) {
+    await database.execute(`INSERT OR REPLACE INTO app_migrations (key, value) VALUES ('last_pull_sync', $1)`, [
+      latestTimestamp,
+    ]);
+  }
 }
 
 /**
