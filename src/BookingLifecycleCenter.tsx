@@ -20,6 +20,7 @@ import {
   voidHotelBooking,
   voidTransportBooking,
   voidVisaBooking,
+  deleteBooking,
 } from "./db";
 import {
   getTicketCommercialBookings,
@@ -704,6 +705,27 @@ export default function BookingLifecycleCenter({
     }
   }
 
+  async function doDelete(booking: BookingRow) {
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete this ${config.label} Booking (${booking.ub_number})? This is a temporary testing function.`,
+      )
+    )
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      await deleteBooking(booking.id, companyId, userId || "");
+      await load();
+      await onChanged?.();
+      setMessage(`${config.label} booking ${booking.ub_number} deleted.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function adjustmentSaved(nextMessage: string) {
     setMessage(nextMessage);
     await load();
@@ -865,10 +887,12 @@ export default function BookingLifecycleCenter({
                           canAdjust={canEdit && booking.status === "ACTIVE" && !cancelled}
                           canHistory={booking.status !== "VOID" || Boolean(summary)}
                           canVoid={canVoid && booking.status === "ACTIVE" && !cancelled}
+                          canDelete={canVoid}
                           onOpen={() => void openBooking(booking, lifecycle)}
                           onAdjustment={() => setAdjustmentBooking(booking)}
                           onHistory={() => setHistoryBooking(booking)}
                           onVoid={() => void voidBooking(booking)}
+                          onDelete={() => void doDelete(booking)}
                         />
                       </td>
                     </tr>

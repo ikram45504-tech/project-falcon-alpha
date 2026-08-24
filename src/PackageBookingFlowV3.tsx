@@ -336,6 +336,29 @@ export default function PackageBookingFlowV2({
     }
   }
 
+  async function deleteEntry(entry: PackageBooking) {
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete this Package Booking (${entry.ub_number})? This is a temporary testing function.`,
+      )
+    )
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      const { deleteBooking } = await import("./db");
+      await deleteBooking(entry.id, companyId, userId || "");
+      await loadEntries(search);
+      await onChanged?.();
+      if (editingId === entry.id) resetForm();
+      setMessage(`Package booking ${entry.ub_number} deleted.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function adjustmentSaved(nextMessage: string) {
     setMessage(nextMessage);
     setError("");
@@ -960,6 +983,15 @@ export default function PackageBookingFlowV2({
                             onClick={() => void voidEntry(entry)}
                           >
                             Void
+                          </button>
+                          <button
+                            type="button"
+                            className="danger"
+                            style={{ color: "var(--red)", border: "1px solid var(--red)" }}
+                            disabled={!canVoid || busy}
+                            onClick={() => void deleteEntry(entry)}
+                          >
+                            Delete (Test)
                           </button>
                         </div>
                       </td>
