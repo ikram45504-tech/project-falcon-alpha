@@ -1,5 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
-
 export type AtomicSqlStatement = {
   sql: string;
   params?: unknown[];
@@ -45,6 +43,7 @@ export async function runAtomicTransaction(statements: AtomicSqlStatement[]) {
   if (!isTauri) {
     return { statementsExecuted: statements.length, rowsAffected: 0 };
   }
+  const { invoke } = await import("@tauri-apps/api/core");
   return invoke<{ statementsExecuted: number; rowsAffected: number }>("execute_atomic_transaction", {
     statements: prepareStatements(statements),
   });
@@ -62,7 +61,10 @@ export function initializeDatabaseSafety() {
   }
 
   if (!initializationPromise) {
-    initializationPromise = invoke<DatabaseSafetyReport>("initialize_database_safety").catch((error) => {
+    initializationPromise = (async () => {
+      const { invoke } = await import("@tauri-apps/api/core");
+      return invoke<DatabaseSafetyReport>("initialize_database_safety");
+    })().catch((error) => {
       initializationPromise = null;
       throw error;
     });
@@ -79,11 +81,13 @@ export async function ensurePaymentDocumentUniqueness() {
       paymentDocumentUniqueIndex: true,
       duplicatePaymentDocuments: 0,
     };
+  const { invoke } = await import("@tauri-apps/api/core");
   return invoke<DatabaseSafetyReport>("ensure_payment_document_uniqueness");
 }
 
 export async function createDatabaseBackup(label = "manual") {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
   return invoke<string | null>("create_database_backup", { label });
 }
