@@ -123,60 +123,101 @@ export default function SettingsScreen() {
           )}
         </nav>
         {isDesktop && (
-          <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
-            <button
-              onClick={checkForUpdates}
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: "8px",
-                border: "1px solid var(--border-glass)",
-                background: "var(--bg-app)",
-                color: "var(--brand-primary)",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                marginBottom: "12px",
-              }}
-            >
-              🔄 Check for Updates
-            </button>
-            <button
-              onClick={async () => {
-                try {
-                  const { processSyncQueue } = await import("../db");
-                  const { message } = await import("@tauri-apps/plugin-dialog");
-                  await processSyncQueue();
-                  await message("Local data successfully synced to the cloud!", {
-                    title: "Sync Complete",
-                    kind: "info",
-                  });
-                } catch (e: any) {
-                  const { message } = await import("@tauri-apps/plugin-dialog");
-                  await message(`Sync failed: ${e.message || String(e)}`, { title: "Sync Error", kind: "error" });
-                }
-              }}
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: "8px",
-                border: "1px solid var(--border-glass)",
-                background: "var(--bg-app)",
-                color: "var(--brand-secondary)",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              ☁️ Sync Data to Cloud
-            </button>
-          </div>
+          <>
+            <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
+              <button
+                onClick={checkForUpdates}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-glass)",
+                  background: "var(--bg-app)",
+                  color: "var(--brand-primary)",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  marginBottom: "12px",
+                }}
+              >
+                🔄 Check for Updates
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const { processSyncQueue } = await import("../db");
+                    const { message } = await import("@tauri-apps/plugin-dialog");
+                    await processSyncQueue();
+                    await message("Local data successfully synced to the cloud!", {
+                      title: "Sync Complete",
+                      kind: "info",
+                    });
+                  } catch (e: any) {
+                    const { message } = await import("@tauri-apps/plugin-dialog");
+                    await message(`Sync failed: ${e.message || String(e)}`, { title: "Sync Error", kind: "error" });
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-glass)",
+                  background: "var(--bg-app)",
+                  color: "var(--brand-secondary)",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                ☁️ Sync Data to Cloud
+              </button>
+            </div>
+            <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
+              <button
+                onClick={async () => {
+                  const { ask, message } = await import("@tauri-apps/plugin-dialog");
+                  const yes = await ask(
+                    "WARNING: This will permanently erase ALL bookings and operational data from your local database to allow a fresh start. Are you absolutely sure?",
+                    { title: "DANGER ZONE", kind: "warning" },
+                  );
+                  if (yes) {
+                    const { dangerouslyEraseAllData } = await import("../db");
+                    try {
+                      await dangerouslyEraseAllData(company.id);
+                      await message("Local database successfully wiped. Please restart the application.", {
+                        title: "Wipe Complete",
+                        kind: "info",
+                      });
+                    } catch (e: any) {
+                      await message(`Wipe failed: ${e.message}`, { title: "Error", kind: "error" });
+                    }
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255,50,50,0.3)",
+                  background: "rgba(255,0,0,0.1)",
+                  color: "#ff4444",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                ⚠️ Factory Reset Local Data
+              </button>
+            </div>
+          </>
         )}
       </aside>
 
