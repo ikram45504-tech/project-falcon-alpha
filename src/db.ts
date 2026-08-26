@@ -2887,18 +2887,36 @@ function validatePayment(input: PaymentInput) {
   }
 }
 
+async function fetchPartyNameMap(companyId: string) {
+  const { data, error } = await supabase.from("parties").select("id, name").eq("company_id", companyId);
+  if (error) throw new Error(error.message);
+  return new Map((data || []).map((row) => [String(row.id), String(row.name || "")]));
+}
+
+async function fetchChildRowsByBookingIds(table: string, bookingIds: string[]) {
+  if (!bookingIds.length) return [] as Record<string, any>[];
+  const { data, error } = await supabase.from(table).select("*").in("booking_id", bookingIds);
+  if (error) throw new Error(error.message);
+  return (data || []) as Record<string, any>[];
+}
+
+function groupRowsByBookingId(rows: Record<string, any>[]) {
+  const grouped = new Map<string, Record<string, any>[]>();
+  for (const row of rows) {
+    const bookingId = String(row.booking_id || "");
+    const current = grouped.get(bookingId) || [];
+    current.push(row);
+    grouped.set(bookingId, current);
+  }
+  return grouped;
+}
+
 export async function getPayments(companyId: string, search = "", partyId = "") {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) {
-    const { supabase } = await import("./supabaseClient");
     let query = supabase
       .from("payment_entries")
-      .select(
-        `
-        *,
-        parties(name)
-      `,
-      )
+      .select("*")
       .eq("company_id", companyId)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
@@ -2914,12 +2932,14 @@ export async function getPayments(companyId: string, search = "", partyId = "") 
       );
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
     if (!data) return [];
 
+    const partyNames = await fetchPartyNameMap(companyId);
     return data.map((pay: any) => ({
       ...pay,
-      ledger_party_name: pay.parties?.name || "",
+      ledger_party_name: partyNames.get(String(pay.party_id)) || "",
     })) as PaymentEntry[];
   }
 
@@ -3157,7 +3177,7 @@ export async function getPackageBookings(companyId: string, search = "") {
   if (!isTauri) {
     let query = supabase
       .from("package_bookings")
-      .select("*, parties(name), package_booking_lines(*)")
+      .select("*")
       .eq("company_id", companyId)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
@@ -3171,14 +3191,20 @@ export async function getPackageBookings(companyId: string, search = "") {
     const { data, error } = await query;
     if (error) throw new Error(error.message);
 
-    return (data || []).map((row: any) => ({
+    const headers = data || [];
+    const partyNames = await fetchPartyNameMap(companyId);
+    const lines = await fetchChildRowsByBookingIds(
+      "package_booking_lines",
+      headers.map((row) => String(row.id)),
+    );
+    const linesByBooking = groupRowsByBookingId(lines);
+
+    return headers.map((row: any) => ({
       ...row,
-      counterparty_name: row.parties?.name || "",
-      lines: (row.package_booking_lines || []).sort(
-        (a: PackageBookingLine, b: PackageBookingLine) => a.sort_order - b.sort_order,
-      ),
-      parties: undefined,
-      package_booking_lines: undefined,
+      counterparty_name: partyNames.get(String(row.counterparty_id)) || "",
+      lines: (linesByBooking.get(String(row.id)) || [])
+        .slice()
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)),
     })) as PackageBooking[];
   }
 
@@ -3560,16 +3586,9 @@ async function validateTicketBooking(companyId: string, input: TicketBookingInpu
 export async function getTicketBookings(companyId: string, search = "") {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) {
-    const { supabase } = await import("./supabaseClient");
     let query = supabase
       .from("ticket_bookings")
-      .select(
-        `
-        *,
-        ticket_booking_lines(*),
-        parties(name)
-      `,
-      )
+      .select("*")
       .eq("company_id", companyId)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
@@ -3579,13 +3598,21 @@ export async function getTicketBookings(companyId: string, search = "") {
       query = query.or(`ub_number.ilike.${term}`);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
     if (!data) return [];
+
+    const partyNames = await fetchPartyNameMap(companyId);
+    const lines = await fetchChildRowsByBookingIds(
+      "ticket_booking_lines",
+      data.map((row) => String(row.id)),
+    );
+    const linesByBooking = groupRowsByBookingId(lines);
 
     return data.map((b: any) => ({
       ...b,
-      counterparty_name: b.parties?.name || "",
-      lines: b.ticket_booking_lines || [],
+      counterparty_name: partyNames.get(String(b.counterparty_id)) || "",
+      lines: linesByBooking.get(String(b.id)) || [],
     })) as TicketBooking[];
   }
 
@@ -3948,16 +3975,9 @@ async function validateHotelBooking(companyId: string, input: HotelBookingInput,
 export async function getHotelBookings(companyId: string, search = "") {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) {
-    const { supabase } = await import("./supabaseClient");
     let query = supabase
       .from("hotel_bookings")
-      .select(
-        `
-        *,
-        hotel_booking_lines(*),
-        parties(name)
-      `,
-      )
+      .select("*")
       .eq("company_id", companyId)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
@@ -3967,13 +3987,21 @@ export async function getHotelBookings(companyId: string, search = "") {
       query = query.or(`ub_number.ilike.${term}`);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
     if (!data) return [];
+
+    const partyNames = await fetchPartyNameMap(companyId);
+    const lines = await fetchChildRowsByBookingIds(
+      "hotel_booking_lines",
+      data.map((row) => String(row.id)),
+    );
+    const linesByBooking = groupRowsByBookingId(lines);
 
     return data.map((b: any) => ({
       ...b,
-      counterparty_name: b.parties?.name || "",
-      lines: b.hotel_booking_lines || [],
+      counterparty_name: partyNames.get(String(b.counterparty_id)) || "",
+      lines: linesByBooking.get(String(b.id)) || [],
     })) as HotelBooking[];
   }
 
@@ -4408,16 +4436,9 @@ async function validateVisaBooking(companyId: string, input: VisaBookingInput, e
 export async function getVisaBookings(companyId: string, search = "") {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) {
-    const { supabase } = await import("./supabaseClient");
     let query = supabase
       .from("visa_bookings")
-      .select(
-        `
-        *,
-        visa_booking_lines(*),
-        parties(name)
-      `,
-      )
+      .select("*")
       .eq("company_id", companyId)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
@@ -4427,13 +4448,21 @@ export async function getVisaBookings(companyId: string, search = "") {
       query = query.or(`ub_number.ilike.${term}`);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
     if (!data) return [];
+
+    const partyNames = await fetchPartyNameMap(companyId);
+    const lines = await fetchChildRowsByBookingIds(
+      "visa_booking_lines",
+      data.map((row) => String(row.id)),
+    );
+    const linesByBooking = groupRowsByBookingId(lines);
 
     return data.map((b: any) => ({
       ...b,
-      counterparty_name: b.parties?.name || "",
-      lines: b.visa_booking_lines || [],
+      counterparty_name: partyNames.get(String(b.counterparty_id)) || "",
+      lines: linesByBooking.get(String(b.id)) || [],
     })) as VisaBooking[];
   }
 
@@ -4886,16 +4915,9 @@ async function validateTransportBooking(companyId: string, input: TransportBooki
 export async function getTransportBookings(companyId: string, search = "") {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) {
-    const { supabase } = await import("./supabaseClient");
     let query = supabase
       .from("transport_bookings")
-      .select(
-        `
-        *,
-        transport_booking_lines(*),
-        parties(name)
-      `,
-      )
+      .select("*")
       .eq("company_id", companyId)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
@@ -4905,13 +4927,21 @@ export async function getTransportBookings(companyId: string, search = "") {
       query = query.or(`ub_number.ilike.${term}`);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
     if (!data) return [];
+
+    const partyNames = await fetchPartyNameMap(companyId);
+    const lines = await fetchChildRowsByBookingIds(
+      "transport_booking_lines",
+      data.map((row) => String(row.id)),
+    );
+    const linesByBooking = groupRowsByBookingId(lines);
 
     return data.map((b: any) => ({
       ...b,
-      counterparty_name: b.parties?.name || "",
-      lines: b.transport_booking_lines || [],
+      counterparty_name: partyNames.get(String(b.counterparty_id)) || "",
+      lines: linesByBooking.get(String(b.id)) || [],
     })) as TransportBooking[];
   }
 

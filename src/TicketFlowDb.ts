@@ -262,13 +262,7 @@ export async function getTicketCommercialBookings(companyId: string, search = ""
     const { supabase } = await import("./supabaseClient");
     let query = supabase
       .from("ticket_bookings")
-      .select(
-        `
-        *,
-        ticket_booking_lines(*),
-        parties(name)
-      `,
-      )
+      .select("*")
       .eq("company_id", companyId)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
@@ -278,13 +272,31 @@ export async function getTicketCommercialBookings(companyId: string, search = ""
       query = query.or(`ub_number.ilike.${term}`);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
     if (!data) return [];
+
+    const { data: parties } = await supabase.from("parties").select("id, name").eq("company_id", companyId);
+    const partyNames = new Map((parties || []).map((p) => [String(p.id), String(p.name || "")]));
+
+    const bookingIds = data.map((row) => String(row.id));
+    const { data: lineRows, error: lineError } = bookingIds.length
+      ? await supabase.from("ticket_booking_lines").select("*").in("booking_id", bookingIds)
+      : { data: [], error: null };
+    if (lineError) throw new Error(lineError.message);
+
+    const linesByBooking = new Map<string, any[]>();
+    for (const line of lineRows || []) {
+      const id = String(line.booking_id);
+      const current = linesByBooking.get(id) || [];
+      current.push(line);
+      linesByBooking.set(id, current);
+    }
 
     return data.map((b: any) => ({
       ...b,
-      counterparty_name: b.parties?.name || "",
-      lines: b.ticket_booking_lines || [],
+      counterparty_name: partyNames.get(String(b.counterparty_id)) || "",
+      lines: linesByBooking.get(String(b.id)) || [],
     })) as TicketCommercialBooking[];
   }
 
