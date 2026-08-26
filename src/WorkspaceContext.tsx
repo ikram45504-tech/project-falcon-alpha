@@ -89,6 +89,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void loadFinancialTotals();
   }, [company, loadParties, loadFinancialTotals]);
 
+  // Auto-refresh UI after background cloud sync (no Sync button required).
+  useEffect(() => {
+    if (!company) return;
+
+    const onSyncComplete = (event: Event) => {
+      const detail = (event as CustomEvent<{ companyId?: string }>).detail;
+      if (detail?.companyId && detail.companyId !== company.id) return;
+      void loadParties(partySearch);
+      void loadFinancialTotals();
+    };
+
+    window.addEventListener("travel-accounting:sync-complete", onSyncComplete);
+    return () => window.removeEventListener("travel-accounting:sync-complete", onSyncComplete);
+  }, [company, loadParties, loadFinancialTotals, partySearch]);
+
   const partyAccounts = parties.filter((item) => item.account_type === "PARTY");
   const vendorAccounts = parties.filter((item) => item.account_type === "VENDOR");
   const unassignedAccounts = parties.filter((item) => item.account_type === "UNASSIGNED");

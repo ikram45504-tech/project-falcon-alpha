@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { useWorkspace } from "../WorkspaceContext";
+import { useIsDesktop } from "../useIsDesktop";
 import { getDashboardMetrics, getRecentActivity, DashboardMetrics, RecentActivity } from "../DashboardDb";
 import { useNavigate } from "react-router-dom";
 // Helper to format currency
@@ -13,12 +15,15 @@ const pkr = (val: number) =>
 
 export default function DashboardScreen() {
   const { company } = useAuth();
+  const { loadParties, loadFinancialTotals } = useWorkspace();
+  const isDesktop = useIsDesktop();
   const navigate = useNavigate();
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [recent, setRecent] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncNote, setSyncNote] = useState("");
 
   const fetchData = async () => {
     if (!company) return;
@@ -38,16 +43,21 @@ export default function DashboardScreen() {
     fetchData();
   }, [company]);
 
-  const handleSyncAndRefresh = async () => {
-    if (isSyncing) return;
+  const handleSync = async () => {
+    if (isSyncing || !company) return;
     setIsSyncing(true);
+    setSyncNote("");
     try {
-      const { processSyncQueue, executePullSync } = await import("../db");
-      await processSyncQueue(); // Push local changes
-      await executePullSync(); // Pull cloud changes
-      await fetchData(); // Redraw dashboard
+      if (isDesktop) {
+        const { runManualSyncAndRefresh } = await import("../db");
+        await runManualSyncAndRefresh(company.id);
+      }
+      await Promise.all([fetchData(), loadParties(), loadFinancialTotals()]);
+      const stamp = new Date().toLocaleTimeString();
+      setSyncNote(`Synced at ${stamp}`);
+      window.setTimeout(() => setSyncNote(""), 4000);
     } catch (err: any) {
-      console.error("Sync and refresh failed:", err);
+      console.error("Sync failed:", err);
       alert("Sync failed: " + (err.message || err));
     } finally {
       setIsSyncing(false);
@@ -74,10 +84,14 @@ export default function DashboardScreen() {
             Welcome back to {company?.name || "your agency"}. Here's your performance this month.
           </p>
         </div>
-        <div style={{ display: "flex", gap: "12px" }}>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          {syncNote ? (
+            <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>{syncNote}</span>
+          ) : null}
           <button
-            onClick={handleSyncAndRefresh}
+            onClick={handleSync}
             disabled={isSyncing}
+            title="Optional manual sync. Automatic sync already runs in the background."
             style={{
               padding: "10px 20px",
               borderRadius: "8px",
@@ -93,7 +107,7 @@ export default function DashboardScreen() {
               opacity: isSyncing ? 0.7 : 1,
             }}
           >
-            {isSyncing ? "🔄 Syncing..." : "🔄 Sync & Refresh"}
+            {isSyncing ? "Syncing..." : "Sync"}
           </button>
           <button
             onClick={() => navigate("/payments")}

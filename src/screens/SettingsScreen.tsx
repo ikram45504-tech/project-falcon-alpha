@@ -148,13 +148,8 @@ export default function SettingsScreen() {
               <button
                 onClick={async () => {
                   try {
-                    const { processSyncQueue } = await import("../db");
-                    const { message } = await import("@tauri-apps/plugin-dialog");
-                    await processSyncQueue();
-                    await message("Local data successfully synced to the cloud!", {
-                      title: "Sync Complete",
-                      kind: "info",
-                    });
+                    const { runManualSyncAndRefresh } = await import("../db");
+                    await runManualSyncAndRefresh(company.id);
                   } catch (e: any) {
                     const { message } = await import("@tauri-apps/plugin-dialog");
                     await message(`Sync failed: ${e.message || String(e)}`, { title: "Sync Error", kind: "error" });
@@ -175,7 +170,7 @@ export default function SettingsScreen() {
                   gap: "8px",
                 }}
               >
-                ☁️ Sync Data to Cloud
+                Sync
               </button>
             </div>
             <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>

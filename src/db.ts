@@ -5172,13 +5172,19 @@ export async function queueSync(
 }
 
 let isSyncRunning = false;
+let backgroundCompanyId = "";
+let syncPassInFlight = false;
+
+/** Keep background sync tied to the signed-in company. */
+export function setBackgroundSyncCompanyId(companyId: string) {
+  backgroundCompanyId = companyId.trim();
+}
 
 /**
  * Polls the sync_queue and pushes changes to Supabase when online.
- * This should be called once on App mount.
  */
 export async function processSyncQueue() {
-  if (!navigator.onLine) return; // Only sync if online
+  if (!navigator.onLine) return;
 
   try {
     const database = await db();
@@ -5195,7 +5201,6 @@ export async function processSyncQueue() {
         await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
       } catch (jobError: any) {
         console.error("Sync job failed:", jobError);
-        // Mark as failed so it doesn't block the rest forever, but we can retry it later
         await database.execute("UPDATE sync_queue SET status = 'FAILED', error_message = $1 WHERE id = $2", [
           String(jobError.message || jobError),
           job.id,
@@ -5204,50 +5209,106 @@ export async function processSyncQueue() {
     }
   } catch (e) {
     console.error("Background sync error:", e);
-    throw e; // Throw so UI can catch it
+    throw e;
   }
 }
 
-export async function startBackgroundSync() {
+function notifySyncComplete(detail: { companyId: string; partiesPulled: number; source: string }) {
+  window.dispatchEvent(new CustomEvent("travel-accounting:sync-complete", { detail }));
+}
+
+async function runSyncPass(source: "interval" | "focus" | "online" | "manual", fullResync = false) {
+  if (!navigator.onLine) return null;
+  if (syncPassInFlight) return null;
+  syncPassInFlight = true;
+  try {
+    await processSyncQueue();
+    const result = await executePullSync({
+      companyId: backgroundCompanyId || undefined,
+      fullResync,
+    });
+    if (result) {
+      notifySyncComplete({
+        companyId: result.companyId,
+        partiesPulled: result.partiesPulled,
+        source,
+      });
+    }
+    return result;
+  } finally {
+    syncPassInFlight = false;
+  }
+}
+
+/**
+ * Starts automatic push/pull sync for desktop.
+ * Runs every few seconds, and also when the window is focused or comes back online.
+ */
+export async function startBackgroundSync(companyId = "") {
+  if (companyId) backgroundCompanyId = companyId.trim();
   if (isSyncRunning) return;
   isSyncRunning = true;
 
-  // Run in a continuous loop
-  setInterval(() => {
-    void processSyncQueue().catch((e) => console.error("Interval push sync failed:", e));
-    void executePullSync().catch((e) => console.error("Interval pull sync failed:", e));
-  }, 10000); // Check every 10 seconds
+  const tick = () => {
+    void runSyncPass("interval").catch((e) => console.error("Interval sync failed:", e));
+  };
+
+  // First pass soon after login, then every 5 seconds.
+  window.setTimeout(tick, 1500);
+  window.setInterval(tick, 5000);
+
+  window.addEventListener("focus", () => {
+    void runSyncPass("focus").catch((e) => console.error("Focus sync failed:", e));
+  });
+  window.addEventListener("online", () => {
+    void runSyncPass("online").catch((e) => console.error("Online sync failed:", e));
+  });
+}
+
+/** Manual Sync button helper. Forces a full company pull on desktop. */
+export async function runManualSyncAndRefresh(companyId: string) {
+  backgroundCompanyId = companyId.trim();
+  return runSyncPass("manual", true);
 }
 
 /**
  * Phase 3: Desktop Pull Sync Engine
  * Fetches data modified on the Cloud (via Web App) and merges it into the local SQLite database.
  */
-export async function executePullSync() {
+export async function executePullSync(options?: { companyId?: string; fullResync?: boolean }) {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri || !navigator.onLine) return; // Only runs on Desktop when online
 
   const database = await db();
 
-  // We need the company ID to fetch isolated records
-  const users = await database.select<UserRow[]>("SELECT company_id FROM users LIMIT 1");
-  if (!users.length) return;
-  const companyId = users[0].company_id;
+  // Prefer the signed-in company. Falling back to "first user" can pull the wrong tenant.
+  let companyId = options?.companyId?.trim() || "";
+  if (!companyId) {
+    const users = await database.select<UserRow[]>("SELECT company_id FROM users LIMIT 1");
+    companyId = users[0]?.company_id || "";
+  }
+  if (!companyId) {
+    console.warn("Pull sync skipped: no company id available.");
+    return;
+  }
 
-  // Track the last time we successfully pulled
   const metaRows = await database.select<Array<{ value: string }>>(
     `SELECT value FROM sync_metadata WHERE key = 'last_pull_sync'`,
   );
 
   // Apply a 24-hour skew window to catch updates and clock differences
   let lastSync = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
-  const lastSyncDate = new Date(lastSync);
-  if (lastSyncDate.getFullYear() > 2000) {
-    lastSyncDate.setHours(lastSyncDate.getHours() - 24);
-    lastSync = lastSyncDate.toISOString();
+  if (!options?.fullResync) {
+    const lastSyncDate = new Date(lastSync);
+    if (lastSyncDate.getFullYear() > 2000) {
+      lastSyncDate.setHours(lastSyncDate.getHours() - 24);
+      lastSync = lastSyncDate.toISOString();
+    }
+  } else {
+    // Manual Sync & Refresh: re-pull everything for this company.
+    lastSync = "2000-01-01T00:00:00.000Z";
   }
 
-  // Define Root Tables (tables that have company_id and updated_at)
   const ROOT_TABLES = [
     "parties",
     "payment_entries",
@@ -5263,7 +5324,6 @@ export async function executePullSync() {
     "misc_bookings",
   ];
 
-  // Define Child Tables mapping (tables that belong to a booking_id)
   const CHILD_TABLES: Record<string, string[]> = {
     package_bookings: [
       "package_booking_lines",
@@ -5304,54 +5364,77 @@ export async function executePullSync() {
     ],
   };
 
+  const columnCache = new Map<string, Set<string>>();
+  async function localColumns(table: string) {
+    const cached = columnCache.get(table);
+    if (cached) return cached;
+    const info = await database.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
+    const set = new Set(info.map((col) => col.name));
+    columnCache.set(table, set);
+    return set;
+  }
+
+  async function upsertCloudRow(table: string, row: Record<string, unknown>) {
+    const allowed = await localColumns(table);
+    if (!allowed.size) {
+      console.warn(`Pull sync skipped unknown local table: ${table}`);
+      return;
+    }
+    const keys = Object.keys(row).filter((key) => allowed.has(key));
+    if (!keys.length) return;
+    const values = keys.map((key) => {
+      const value = row[key];
+      // SQLite plugin cannot bind plain objects/arrays.
+      if (value !== null && typeof value === "object") return JSON.stringify(value);
+      return value;
+    });
+    const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
+    await database.execute(`INSERT OR REPLACE INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`, values);
+  }
+
   let highestTimestampSeen = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
+  let partiesPulled = 0;
 
   for (const table of ROOT_TABLES) {
-    // Fetch records updated since last sync (minus 24h skew window)
-    const { data, error } = await supabase
-      .from(table)
-      .select("*")
-      .eq("company_id", companyId)
-      .gt("updated_at", lastSync)
-      .order("updated_at", { ascending: true })
-      .limit(500);
+    let query = supabase.from(table).select("*").eq("company_id", companyId).limit(1000);
 
-    if (error || !data || data.length === 0) continue;
+    // Prefer updated_at, but also catch rows that only have created_at (or null updated_at).
+    if (lastSync !== "2000-01-01T00:00:00.000Z") {
+      query = query.or(`updated_at.gt."${lastSync}",created_at.gt."${lastSync}"`);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: true });
+
+    if (error) {
+      console.error(`Pull sync query failed for ${table}:`, error.message);
+      continue;
+    }
+    if (!data || data.length === 0) continue;
 
     for (const row of data) {
-      const keys = Object.keys(row);
-      const values = Object.values(row);
-      const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
-
       try {
-        // UPSERT the Root Record
-        await database.execute(`INSERT OR REPLACE INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`, values);
+        await upsertCloudRow(table, row as Record<string, unknown>);
+        if (table === "parties") partiesPulled += 1;
 
-        // Track the absolute highest updated_at seen (without the 24h subtraction)
-        if (row.updated_at && row.updated_at > highestTimestampSeen) {
-          highestTimestampSeen = row.updated_at;
-        }
+        const stamp = String((row as any).updated_at || (row as any).created_at || "");
+        if (stamp && stamp > highestTimestampSeen) highestTimestampSeen = stamp;
 
-        // Auto-fetch children if it's a booking table
         const children = CHILD_TABLES[table];
-        if (children && row.id) {
+        if (children && (row as any).id) {
           for (const childTable of children) {
-            // Child tables use booking_id
             const { data: childData, error: childError } = await supabase
               .from(childTable)
               .select("*")
-              .eq("booking_id", row.id);
+              .eq("booking_id", (row as any).id);
 
-            if (childError || !childData || childData.length === 0) continue;
+            if (childError) {
+              console.error(`Pull sync child query failed for ${childTable}:`, childError.message);
+              continue;
+            }
+            if (!childData || childData.length === 0) continue;
 
             for (const childRow of childData) {
-              const childKeys = Object.keys(childRow);
-              const childValues = Object.values(childRow);
-              const childPlaceholders = childKeys.map((_, i) => `$${i + 1}`).join(", ");
-              await database.execute(
-                `INSERT OR REPLACE INTO ${childTable} (${childKeys.join(", ")}) VALUES (${childPlaceholders})`,
-                childValues,
-              );
+              await upsertCloudRow(childTable, childRow as Record<string, unknown>);
             }
           }
         }
@@ -5366,6 +5449,8 @@ export async function executePullSync() {
       highestTimestampSeen,
     ]);
   }
+
+  return { companyId, partiesPulled };
 }
 
 /**

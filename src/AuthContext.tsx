@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
-import { Company, UserSession, initDatabase, startBackgroundSync, syncCloudSessionToLocal } from "./db";
+import { Company, UserSession, initDatabase, startBackgroundSync, setBackgroundSyncCompanyId, syncCloudSessionToLocal } from "./db";
 
 type AuthContextType = {
   isInitialized: boolean;
@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (mounted) {
           await syncCloudSessionToLocal(companyData as Company, newSession);
+          setBackgroundSyncCompanyId(companyId);
           setSession(newSession);
           setCompany(companyData as Company);
           setIsInitialized(true);
@@ -122,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("travelAccountingLastCompanyCode");
     localStorage.removeItem("travelAccountingLastIdentifier");
 
+    setBackgroundSyncCompanyId("");
     setSession(null);
     setCompany(null);
     setError("");
