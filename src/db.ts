@@ -2464,16 +2464,19 @@ export async function getPartyById(companyId: string, partyId: string) {
 }
 
 export async function deleteParty(partyId: string, companyId: string, actorUserId = "") {
-  await requirePermission(companyId, actorUserId, "edit_parties"); // Require some permission
-  const database = await db();
+  await requirePermission(companyId, actorUserId, "edit_parties");
+  const isTauri = "__TAURI_INTERNALS__" in window;
 
-  await database.execute(`DELETE FROM parties WHERE id=$1 AND company_id=$2`, [partyId, companyId]);
+  if (isTauri) {
+    const database = await db();
+    await database.execute(`DELETE FROM parties WHERE id=$1 AND company_id=$2`, [partyId, companyId]);
+  }
 
   if (actorUserId) {
     await createAuditLog(companyId, actorUserId, "ACCOUNT_DELETED", "PARTIES", partyId, `Party/Vendor Deleted`);
   }
 
-  // Queue to Supabase
+  // Always remove from Supabase so the other app can reconcile.
   await queueSync("DELETE", "parties", partyId, {});
 }
 
@@ -5410,6 +5413,7 @@ export async function executePullSync(options?: { companyId?: string; fullResync
 
   let highestTimestampSeen = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
   let partiesPulled = 0;
+  let partiesRemoved = 0;
 
   for (const table of ROOT_TABLES) {
     let query = supabase.from(table).select("*").eq("company_id", companyId).limit(1000);
@@ -5460,13 +5464,40 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     }
   }
 
+  // Reconcile deletes: remove local parties/vendors that no longer exist in cloud.
+  // Incremental pull never "sees" deleted rows, so this must run every sync.
+  try {
+    const { data: cloudPartyIds, error: cloudIdsError } = await supabase
+      .from("parties")
+      .select("id")
+      .eq("company_id", companyId)
+      .limit(5000);
+
+    if (cloudIdsError) {
+      console.error("Party delete reconcile failed:", cloudIdsError.message);
+    } else {
+      const cloudIds = new Set((cloudPartyIds || []).map((row) => String(row.id)));
+      const localRows = await database.select<Array<{ id: string }>>(
+        `SELECT id FROM parties WHERE company_id = $1`,
+        [companyId],
+      );
+      for (const local of localRows) {
+        if (cloudIds.has(local.id)) continue;
+        await database.execute(`DELETE FROM parties WHERE id = $1 AND company_id = $2`, [local.id, companyId]);
+        partiesRemoved += 1;
+      }
+    }
+  } catch (err) {
+    console.error("Party delete reconcile error:", err);
+  }
+
   if (highestTimestampSeen !== (metaRows[0]?.value || "2000-01-01T00:00:00.000Z")) {
     await database.execute(`INSERT OR REPLACE INTO sync_metadata (key, value) VALUES ('last_pull_sync', $1)`, [
       highestTimestampSeen,
     ]);
   }
 
-  return { companyId, partiesPulled };
+  return { companyId, partiesPulled, partiesRemoved };
 }
 
 /**
