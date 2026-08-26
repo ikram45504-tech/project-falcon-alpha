@@ -1,14 +1,15 @@
 import Database from "@tauri-apps/plugin-sql";
 import { initMiscDatabase } from "./miscDb";
 import type { Party } from "./db";
+import { isDesktopApp } from "./cloudSync";
+import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
 
 async function db() {
   if (!databasePromise) {
-    const isTauri = "__TAURI_INTERNALS__" in window;
-    if (isTauri) {
+    if (isDesktopApp()) {
       databasePromise = Database.load(DB_PATH);
     } else {
       console.warn("Running in Web Mode. Local database is not available for " + DB_PATH);
@@ -74,10 +75,70 @@ const bookingUnion = `
 
 export async function getChronologicalLedger(companyId: string, party: Party): Promise<LedgerRow[]> {
   await initMiscDatabase();
-  const database = await db();
 
-  const transactions = await database.select<LedgerTransaction[]>(
-    `SELECT * FROM (
+  let transactions: LedgerTransaction[] = [];
+
+  if (!isDesktopApp()) {
+    // Phase-1 web ledger: package bookings + payments (synced tables).
+    const { data: packages, error: packageError } = await supabase
+      .from("package_bookings")
+      .select("id,transaction_date,created_at,transaction_type,ub_number,total_pkr,status")
+      .eq("company_id", companyId)
+      .eq("counterparty_id", party.id);
+    if (packageError) throw new Error(packageError.message);
+
+    const { data: payments, error: paymentError } = await supabase
+      .from("payment_entries")
+      .select("id,transaction_date,created_at,payment_type,receipt_no,description,paid_amount,status")
+      .eq("company_id", companyId)
+      .eq("party_id", party.id);
+    if (paymentError) throw new Error(paymentError.message);
+
+    const paymentIds = (payments || []).map((p) => p.id);
+    const metaByPayment = new Map<string, string>();
+    if (paymentIds.length) {
+      const { data: metas } = await supabase
+        .from("payment_v2_meta")
+        .select("payment_id,transaction_kind")
+        .in("payment_id", paymentIds);
+      for (const meta of metas || []) {
+        metaByPayment.set(meta.payment_id, meta.transaction_kind);
+      }
+    }
+
+    transactions = [
+      ...(packages || []).map((row) => ({
+        id: row.id,
+        transaction_date: row.transaction_date,
+        created_at: row.created_at,
+        kind: (row.transaction_type === "SALE" ? "SALE_BOOKING" : "PURCHASE_BOOKING") as LedgerTransaction["kind"],
+        service_type: "PACKAGE",
+        ref_no: row.ub_number,
+        description: "PACKAGE Booking",
+        total_pkr: Number(row.total_pkr) || 0,
+        status: row.status as "ACTIVE" | "VOID",
+      })),
+      ...(payments || []).map((row) => ({
+        id: row.id,
+        transaction_date: row.transaction_date,
+        created_at: row.created_at,
+        kind: "PAYMENT" as const,
+        service_type: row.payment_type,
+        ref_no: row.receipt_no,
+        description: row.description || "Payment",
+        total_pkr: Number(row.paid_amount) || 0,
+        status: row.status as "ACTIVE" | "VOID",
+        payment_kind: metaByPayment.get(row.id),
+      })),
+    ].sort((a, b) => {
+      const dateCmp = String(a.transaction_date).localeCompare(String(b.transaction_date));
+      if (dateCmp !== 0) return dateCmp;
+      return String(a.created_at).localeCompare(String(b.created_at));
+    });
+  } else {
+    const database = await db();
+    transactions = await database.select<LedgerTransaction[]>(
+      `SELECT * FROM (
       SELECT 
         id,
         transaction_date,
@@ -112,8 +173,9 @@ export async function getChronologicalLedger(companyId: string, party: Party): P
       WHERE p.company_id = $1 AND p.party_id = $2
     ) q
     ORDER BY q.transaction_date ASC, q.created_at ASC`,
-    [companyId, party.id],
-  );
+      [companyId, party.id],
+    );
+  }
 
   const isVendor = party.account_type === "VENDOR";
   let running_balance = 0;

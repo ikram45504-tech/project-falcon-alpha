@@ -15,9 +15,15 @@ vi.mock("@tauri-apps/plugin-sql", () => {
   };
 });
 
+vi.mock("./miscDb", () => ({
+  initMiscDatabase: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe("LedgerEngine", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Force desktop path so SQLite mocks are used (jsdom has no Tauri runtime).
+    (window as any).__TAURI_INTERNALS__ = {};
   });
 
   it("calculates customer receivable balances correctly", async () => {

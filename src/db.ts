@@ -2,6 +2,12 @@ import Database from "@tauri-apps/plugin-sql";
 import { supabase } from "./supabaseClient";
 import { createPasswordRecord, verifyPassword } from "./security";
 import { hasPermission, Permission, UserRole } from "./permissions";
+import {
+  applyCloudOperation,
+  queueSync as enqueueCloudSync,
+  syncPackageBookingVoid,
+  type SyncOperation as CloudSyncOperation,
+} from "./cloudSync";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -2416,6 +2422,18 @@ export async function updateParty(partyId: string, companyId: string, input: Par
 }
 
 export async function getPartyById(companyId: string, partyId: string) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { data, error } = await supabase
+      .from("parties")
+      .select("id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at")
+      .eq("company_id", companyId)
+      .eq("id", partyId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data as Party | null) ?? null;
+  }
+
   const database = await db();
 
   const rows = await database.select<Party[]>(
@@ -3114,8 +3132,38 @@ async function validatePackageBooking(companyId: string, input: PackageBookingIn
 }
 
 export async function getPackageBookings(companyId: string, search = "") {
-  const database = await db();
+  const isTauri = "__TAURI_INTERNALS__" in window;
   const clean = search.trim();
+
+  if (!isTauri) {
+    let query = supabase
+      .from("package_bookings")
+      .select("*, parties(name), package_booking_lines(*)")
+      .eq("company_id", companyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (clean) {
+      query = query.or(
+        `ub_number.ilike.%${clean}%,package_description.ilike.%${clean}%,customer_contact.ilike.%${clean}%,notes.ilike.%${clean}%`,
+      );
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    return (data || []).map((row: any) => ({
+      ...row,
+      counterparty_name: row.parties?.name || "",
+      lines: (row.package_booking_lines || []).sort(
+        (a: PackageBookingLine, b: PackageBookingLine) => a.sort_order - b.sort_order,
+      ),
+      parties: undefined,
+      package_booking_lines: undefined,
+    })) as PackageBooking[];
+  }
+
+  const database = await db();
   const term = `%${clean}%`;
 
   const headers = await database.select<Omit<PackageBooking, "lines">[]>(
@@ -3305,17 +3353,36 @@ export async function updatePackageBooking(
 
 export async function voidPackageBooking(companyId: string, bookingId: string, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "void_bookings");
-  const database = await db();
-  const rows = await database.select<Array<{ ub_number: string }>>(
-    `SELECT ub_number FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId],
-  );
-  await database.execute(
-    `UPDATE package_bookings
-     SET status='VOID', updated_at=$1, updated_by_user_id=$2
-     WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-    [new Date().toISOString(), actorUserId, bookingId, companyId],
-  );
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  const now = new Date().toISOString();
+  let ubNumber = bookingId;
+
+  if (!isTauri) {
+    const { data } = await supabase
+      .from("package_bookings")
+      .select("ub_number")
+      .eq("id", bookingId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    ubNumber = data?.ub_number || bookingId;
+  } else {
+    const database = await db();
+    const rows = await database.select<Array<{ ub_number: string }>>(
+      `SELECT ub_number FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [bookingId, companyId],
+    );
+    ubNumber = rows[0]?.ub_number || bookingId;
+    await database.execute(
+      `UPDATE package_bookings
+       SET status='VOID', updated_at=$1, updated_by_user_id=$2
+       WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
+      [now, actorUserId, bookingId, companyId],
+    );
+  }
+
+  // Web writes cloud directly; desktop queues after local SQLite update.
+  await syncPackageBookingVoid(bookingId, now, actorUserId);
+
   if (actorUserId)
     await createAuditLog(
       companyId,
@@ -3323,7 +3390,7 @@ export async function voidPackageBooking(companyId: string, bookingId: string, a
       "BOOKING_VOIDED",
       "PACKAGE",
       bookingId,
-      `Package booking ${rows[0]?.ub_number || bookingId} voided.`,
+      `Package booking ${ubNumber} voided.`,
     );
 }
 
@@ -5079,7 +5146,7 @@ export async function dangerouslyEraseAllData(companyId: string) {
 
 // --- Phase 3.2 Offline-First Sync Engine ---
 
-export type SyncOperation = "INSERT" | "UPDATE" | "DELETE";
+export type SyncOperation = CloudSyncOperation;
 
 export type SyncQueueEntry = {
   id: string;
@@ -5093,7 +5160,7 @@ export type SyncQueueEntry = {
 };
 
 /**
- * Pushes a new operation to the local SQLite sync_queue.
+ * Desktop: enqueue for background push. Web: push to Supabase immediately.
  */
 export async function queueSync(
   operation: SyncOperation,
@@ -5101,33 +5168,7 @@ export async function queueSync(
   recordId: string,
   payload: Record<string, any>,
 ) {
-  const isTauri = "__TAURI_INTERNALS__" in window;
-
-  // Web Mode: Bypass local SQLite queue and push directly to Cloud
-  if (!isTauri) {
-    if (operation === "INSERT") {
-      const { error } = await supabase.from(tableName).insert(payload);
-      if (error && error.code !== "23505") throw new Error(error.message);
-    } else if (operation === "UPDATE") {
-      const { error } = await supabase.from(tableName).update(payload).eq("id", recordId);
-      if (error) throw new Error(error.message);
-    } else if (operation === "DELETE") {
-      const { error } = await supabase.from(tableName).delete().eq("id", recordId);
-      if (error) throw new Error(error.message);
-    }
-    return;
-  }
-
-  // Desktop Mode: Queue in local SQLite for background worker
-  const database = await db();
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  await database.execute(
-    `INSERT INTO sync_queue (id, operation, table_name, record_id, payload, created_at, status, error_message)
-     VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', '')`,
-    [id, operation, tableName, recordId, JSON.stringify(payload), now],
-  );
+  await enqueueCloudSync(operation, tableName, recordId, payload);
 }
 
 let isSyncRunning = false;
@@ -5149,29 +5190,8 @@ export async function processSyncQueue() {
 
     for (const job of pending) {
       try {
-        const payload = JSON.parse(job.payload);
-
-        if (job.operation === "INSERT") {
-          const { error } = await supabase.from(job.table_name).insert(payload);
-          if (error) {
-            // Handle conflicts (e.g., 23505 = unique_violation in Postgres)
-            if (error.code === "23505") {
-              console.warn(
-                `Duplicate conflict detected for ${job.table_name} ${job.record_id}. Using First-Write-Wins.`,
-              );
-            } else {
-              throw error;
-            }
-          }
-        } else if (job.operation === "UPDATE") {
-          const { error } = await supabase.from(job.table_name).update(payload).eq("id", job.record_id);
-          if (error) throw error;
-        } else if (job.operation === "DELETE") {
-          const { error } = await supabase.from(job.table_name).delete().eq("id", job.record_id);
-          if (error) throw error;
-        }
-
-        // If successful (or successfully rejected due to known conflict), remove from queue
+        const payload = JSON.parse(job.payload) as Record<string, unknown>;
+        await applyCloudOperation(job.operation, job.table_name, job.record_id, payload);
         await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
       } catch (jobError: any) {
         console.error("Sync job failed:", jobError);

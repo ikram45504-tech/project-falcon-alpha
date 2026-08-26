@@ -1,5 +1,13 @@
 import Database from "@tauri-apps/plugin-sql";
 import { ensurePaymentDocumentUniqueness, runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
+import {
+  isDesktopApp,
+  syncPaymentBundle,
+  syncPaymentVoid,
+  type PaymentEntrySync,
+  type PaymentMetaSync,
+} from "./cloudSync";
+import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -106,6 +114,7 @@ async function withBusyRetry<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 export async function initPaymentV2Database() {
+  if (!isDesktopApp()) return;
   if (initializationPromise) return initializationPromise;
   initializationPromise = (async () => {
     const database = await db();
@@ -181,15 +190,31 @@ export async function getNextPaymentDocumentNumber(
   kind: PaymentTransactionKind,
   method: PaymentMethod,
 ) {
-  const database = await ready();
   const prefix = paymentDocumentPrefix(kind, method);
+  const matcher = new RegExp(`^${escapeRegex(prefix)}(\\d+)$`, "i");
+  let max = 0;
+
+  if (!isDesktopApp()) {
+    const { data, error } = await supabase
+      .from("payment_entries")
+      .select("receipt_no")
+      .eq("company_id", companyId)
+      .ilike("receipt_no", `${prefix}%`);
+    if (error) throw new Error(error.message);
+    for (const row of data || []) {
+      const match = matcher.exec(String(row.receipt_no || "").trim());
+      if (!match) continue;
+      max = Math.max(max, Number(match[1]) || 0);
+    }
+    return `${prefix}${String(max + 1).padStart(4, "0")}`;
+  }
+
+  const database = await ready();
   const rows = await database.select<ReceiptRow[]>(
     `SELECT id,receipt_no FROM payment_entries
      WHERE company_id=$1 AND receipt_no LIKE $2 COLLATE NOCASE`,
     [companyId, `${prefix}%`],
   );
-  const matcher = new RegExp(`^${escapeRegex(prefix)}(\\d+)$`, "i");
-  let max = 0;
   for (const row of rows) {
     const match = matcher.exec(String(row.receipt_no || "").trim());
     if (!match) continue;
@@ -199,6 +224,17 @@ export async function getNextPaymentDocumentNumber(
 }
 
 export async function getPaymentV2Meta(companyId: string, paymentId: string) {
+  if (!isDesktopApp()) {
+    const { data, error } = await supabase
+      .from("payment_v2_meta")
+      .select("*")
+      .eq("company_id", companyId)
+      .eq("payment_id", paymentId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data as PaymentV2Meta | null) ?? null;
+  }
+
   const database = await ready();
   const rows = await database.select<PaymentV2Meta[]>(
     `SELECT payment_id,company_id,transaction_kind,settlement_account,reference,
@@ -214,6 +250,12 @@ export async function getPaymentV2Meta(companyId: string, paymentId: string) {
 }
 
 export async function getPaymentV2MetaMap(companyId: string) {
+  if (!isDesktopApp()) {
+    const { data, error } = await supabase.from("payment_v2_meta").select("*").eq("company_id", companyId);
+    if (error) throw new Error(error.message);
+    return new Map((data as PaymentV2Meta[] | null)?.map((row) => [row.payment_id, row]) || []);
+  }
+
   const database = await ready();
   const rows = await database.select<PaymentV2Meta[]>(
     `SELECT payment_id,company_id,transaction_kind,settlement_account,reference,
@@ -231,7 +273,7 @@ function expectedAccountType(kind: PaymentTransactionKind) {
   return kind === "PARTY_RECEIPT" || kind === "PARTY_REFUND" ? "PARTY" : "VENDOR";
 }
 
-async function validateAndResolveAccount(database: Database, companyId: string, input: PaymentV2Input) {
+async function validateAndResolveAccount(companyId: string, input: PaymentV2Input) {
   if (!input.partyId) throw new Error("Select a Party / Vendor account.");
   if (!input.transactionDate) throw new Error("Payment date is required.");
   if (!input.documentNo.trim()) throw new Error("Receipt / Voucher number is required.");
@@ -244,12 +286,26 @@ async function validateAndResolveAccount(database: Database, companyId: string, 
   const roe = input.currency === "SAR" ? Math.max(0, Number(input.roe) || 0) : 0;
   if (input.currency === "SAR" && roe <= 0) throw new Error("ROE is required for a SAR payment.");
 
-  const accounts = await database.select<AccountRow[]>(
-    `SELECT id,name,account_type,status FROM parties
-     WHERE company_id=$1 AND id=$2 LIMIT 1`,
-    [companyId, input.partyId],
-  );
-  const account = accounts[0];
+  let account: AccountRow | undefined;
+  if (isDesktopApp()) {
+    const database = await ready();
+    const accounts = await database.select<AccountRow[]>(
+      `SELECT id,name,account_type,status FROM parties
+       WHERE company_id=$1 AND id=$2 LIMIT 1`,
+      [companyId, input.partyId],
+    );
+    account = accounts[0];
+  } else {
+    const { data, error } = await supabase
+      .from("parties")
+      .select("id,name,account_type,status")
+      .eq("company_id", companyId)
+      .eq("id", input.partyId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    account = (data as AccountRow | null) || undefined;
+  }
+
   const expected = expectedAccountType(input.transactionKind);
   if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
     throw new Error(
@@ -262,12 +318,25 @@ async function validateAndResolveAccount(database: Database, companyId: string, 
   return { account, amount, roe, paidAmount: input.currency === "SAR" ? amount * roe : amount };
 }
 
-async function ensureDocumentAvailable(
-  database: Database,
-  companyId: string,
-  documentNo: string,
-  excludePaymentId = "",
-) {
+async function ensureDocumentAvailable(companyId: string, documentNo: string, excludePaymentId = "") {
+  if (!isDesktopApp()) {
+    let query = supabase
+      .from("payment_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .ilike("receipt_no", documentNo.trim());
+    if (excludePaymentId) query = query.neq("id", excludePaymentId);
+    const { count, error } = await query;
+    if (error) throw new Error(error.message);
+    if ((count || 0) > 0) {
+      throw new Error(
+        `${documentNo.trim()} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
+      );
+    }
+    return;
+  }
+
+  const database = await ready();
   const rows = await database.select<CountRow[]>(
     `SELECT COUNT(*) AS count FROM payment_entries
      WHERE company_id=$1 AND receipt_no=$2 COLLATE NOCASE AND ($3='' OR id<>$3)`,
@@ -278,6 +347,67 @@ async function ensureDocumentAvailable(
       `${documentNo.trim()} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
     );
   }
+}
+
+function buildPaymentSyncPayloads(
+  companyId: string,
+  paymentId: string,
+  input: PaymentV2Input,
+  accountName: string,
+  amount: number,
+  roe: number,
+  paidAmount: number,
+  userId: string,
+  now: string,
+  createdAt: string,
+  status: "ACTIVE" | "VOID" = "ACTIVE",
+): { entry: PaymentEntrySync; meta: PaymentMetaSync } {
+  const documentNo = input.documentNo.trim().toUpperCase();
+  const settlement = input.settlementAccount.trim();
+  const movement = movementAccounts(input.transactionKind, accountName, settlement);
+  return {
+    entry: {
+      id: paymentId,
+      company_id: companyId,
+      party_id: input.partyId,
+      transaction_date: input.transactionDate,
+      receipt_no: documentNo,
+      from_account: movement.from,
+      to_account: movement.to,
+      description: input.description.trim(),
+      payment_type: input.paymentType,
+      currency: input.currency,
+      amount_entered: amount,
+      sar: input.currency === "SAR" ? amount : 0,
+      roe,
+      paid_amount: paidAmount,
+      status,
+      created_at: createdAt,
+      updated_at: now,
+      created_by_user_id: userId,
+      updated_by_user_id: userId,
+    },
+    meta: {
+      payment_id: paymentId,
+      company_id: companyId,
+      transaction_kind: input.transactionKind,
+      settlement_account: settlement,
+      reference: input.reference.trim(),
+      bank_name: input.bankName.trim(),
+      bank_transaction_reference: input.bankTransactionReference.trim(),
+      account_title: input.accountTitle.trim(),
+      account_last_digits: input.accountLastDigits.trim(),
+      cheque_no: input.chequeNo.trim(),
+      transfer_date: input.transferDate,
+      handled_by: input.handledBy.trim(),
+      location: input.location.trim(),
+      internal_notes: input.internalNotes.trim(),
+      created_by_user_id: userId,
+      updated_by_user_id: userId,
+      created_at: createdAt,
+      updated_at: now,
+    },
+  };
 }
 
 function movementAccounts(kind: PaymentTransactionKind, accountName: string, settlementAccount: string) {
@@ -357,71 +487,86 @@ function auditStatement(
 }
 
 export async function createPaymentV2(companyId: string, input: PaymentV2Input, userId = "") {
-  const database = await ready();
-  const { account, amount, roe, paidAmount } = await validateAndResolveAccount(database, companyId, input);
+  const { account, amount, roe, paidAmount } = await validateAndResolveAccount(companyId, input);
   const documentNo = input.documentNo.trim().toUpperCase();
   const settlement = input.settlementAccount.trim();
   const movement = movementAccounts(input.transactionKind, account.name, settlement);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  await ensureDocumentAvailable(database, companyId, documentNo);
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `INSERT INTO payment_entries
-        (id,company_id,party_id,transaction_date,receipt_no,from_account,to_account,
-         description,payment_type,currency,amount_entered,sar,roe,paid_amount,status,created_at,updated_at,
-         created_by_user_id,updated_by_user_id)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15,$16,$16)`,
-      params: [
-        id,
-        companyId,
-        input.partyId,
-        input.transactionDate,
-        documentNo,
-        movement.from,
-        movement.to,
-        input.description.trim(),
-        input.paymentType,
-        input.currency,
-        amount,
-        input.currency === "SAR" ? amount : 0,
-        roe,
-        paidAmount,
-        now,
-        userId,
-      ],
-    },
-    metaStatement(companyId, id, input, userId, now),
-  ];
-  const audit = auditStatement(
+  await ensureDocumentAvailable(companyId, documentNo);
+
+  if (isDesktopApp()) {
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `INSERT INTO payment_entries
+          (id,company_id,party_id,transaction_date,receipt_no,from_account,to_account,
+           description,payment_type,currency,amount_entered,sar,roe,paid_amount,status,created_at,updated_at,
+           created_by_user_id,updated_by_user_id)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15,$16,$16)`,
+        params: [
+          id,
+          companyId,
+          input.partyId,
+          input.transactionDate,
+          documentNo,
+          movement.from,
+          movement.to,
+          input.description.trim(),
+          input.paymentType,
+          input.currency,
+          amount,
+          input.currency === "SAR" ? amount : 0,
+          roe,
+          paidAmount,
+          now,
+          userId,
+        ],
+      },
+      metaStatement(companyId, id, input, userId, now),
+    ];
+    const audit = auditStatement(
+      companyId,
+      userId,
+      "PAYMENT_CREATED",
+      id,
+      `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`,
+      now,
+    );
+    if (audit) statements.push(audit);
+
+    try {
+      await runAtomicTransaction(statements);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
+        // eslint-disable-next-line
+        throw new Error(
+          `${documentNo} was just used by another payment. Return to Section 01 and generate the next Receipt / Voucher number.`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  const payloads = buildPaymentSyncPayloads(
     companyId,
-    userId,
-    "PAYMENT_CREATED",
     id,
-    `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`,
+    input,
+    account.name,
+    amount,
+    roe,
+    paidAmount,
+    userId,
+    now,
     now,
   );
-  if (audit) statements.push(audit);
-
-  try {
-    await runAtomicTransaction(statements);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
-      // eslint-disable-next-line
-      throw new Error(
-        `${documentNo} was just used by another payment. Return to Section 01 and generate the next Receipt / Voucher number.`,
-      );
-    }
-    throw error;
-  }
+  await syncPaymentBundle(payloads.entry, payloads.meta);
   return id;
 }
 
 export async function updatePaymentV2(companyId: string, paymentId: string, input: PaymentV2Input, userId = "") {
-  const database = await ready();
-  const { account, amount, roe, paidAmount } = await validateAndResolveAccount(database, companyId, input);
+  const { account, amount, roe, paidAmount } = await validateAndResolveAccount(companyId, input);
   const existingMeta = await getPaymentV2Meta(companyId, paymentId);
   if (existingMeta && existingMeta.transaction_kind !== input.transactionKind) {
     throw new Error("Payment direction is locked after the Receipt / Voucher is saved.");
@@ -430,85 +575,117 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
   const settlement = input.settlementAccount.trim();
   const movement = movementAccounts(input.transactionKind, account.name, settlement);
   const now = new Date().toISOString();
+  const createdAt = existingMeta?.created_at || now;
 
-  await ensureDocumentAvailable(database, companyId, documentNo, paymentId);
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `UPDATE payment_entries SET
-        party_id=$1,transaction_date=$2,receipt_no=$3,from_account=$4,to_account=$5,
-        description=$6,payment_type=$7,currency=$8,amount_entered=$9,sar=$10,roe=$11,
-        paid_amount=$12,updated_at=$13,updated_by_user_id=$14
-        WHERE id=$15 AND company_id=$16 AND status='ACTIVE'`,
-      params: [
-        input.partyId,
-        input.transactionDate,
-        documentNo,
-        movement.from,
-        movement.to,
-        input.description.trim(),
-        input.paymentType,
-        input.currency,
-        amount,
-        input.currency === "SAR" ? amount : 0,
-        roe,
-        paidAmount,
-        now,
-        userId,
-        paymentId,
-        companyId,
-      ],
-    },
-    metaStatement(companyId, paymentId, input, userId, now),
-  ];
-  const audit = auditStatement(
-    companyId,
-    userId,
-    "PAYMENT_UPDATED",
-    paymentId,
-    `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`,
-    now,
-  );
-  if (audit) statements.push(audit);
+  await ensureDocumentAvailable(companyId, documentNo, paymentId);
 
-  try {
-    await runAtomicTransaction(statements);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
-      // eslint-disable-next-line
-      throw new Error(
-        `${documentNo} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
-      );
-    }
-    throw error;
-  }
-}
-
-export async function voidPaymentV2(companyId: string, paymentId: string, userId = "") {
-  const database = await ready();
-  const rows = await database.select<Array<{ receipt_no: string; paid_amount: number }>>(
-    `SELECT receipt_no,paid_amount FROM payment_entries WHERE company_id=$1 AND id=$2 LIMIT 1`,
-    [companyId, paymentId],
-  );
-  const record = rows[0];
-  const now = new Date().toISOString();
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `UPDATE payment_entries SET status='VOID',updated_at=$1,updated_by_user_id=$2
-        WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-      params: [now, userId, paymentId, companyId],
-    },
-  ];
-  if (record) {
+  if (isDesktopApp()) {
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `UPDATE payment_entries SET
+          party_id=$1,transaction_date=$2,receipt_no=$3,from_account=$4,to_account=$5,
+          description=$6,payment_type=$7,currency=$8,amount_entered=$9,sar=$10,roe=$11,
+          paid_amount=$12,updated_at=$13,updated_by_user_id=$14
+          WHERE id=$15 AND company_id=$16 AND status='ACTIVE'`,
+        params: [
+          input.partyId,
+          input.transactionDate,
+          documentNo,
+          movement.from,
+          movement.to,
+          input.description.trim(),
+          input.paymentType,
+          input.currency,
+          amount,
+          input.currency === "SAR" ? amount : 0,
+          roe,
+          paidAmount,
+          now,
+          userId,
+          paymentId,
+          companyId,
+        ],
+      },
+      metaStatement(companyId, paymentId, input, userId, now),
+    ];
     const audit = auditStatement(
       companyId,
       userId,
-      "PAYMENT_VOIDED",
+      "PAYMENT_UPDATED",
       paymentId,
-      `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)}`,
+      `${input.transactionKind} ${documentNo} - PKR ${paidAmount.toFixed(2)}`,
       now,
     );
     if (audit) statements.push(audit);
+
+    try {
+      await runAtomicTransaction(statements);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
+        // eslint-disable-next-line
+        throw new Error(
+          `${documentNo} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
+        );
+      }
+      throw error;
+    }
   }
-  await runAtomicTransaction(statements);
+
+  const payloads = buildPaymentSyncPayloads(
+    companyId,
+    paymentId,
+    input,
+    account.name,
+    amount,
+    roe,
+    paidAmount,
+    userId,
+    now,
+    createdAt,
+  );
+  await syncPaymentBundle(payloads.entry, payloads.meta);
+}
+
+export async function voidPaymentV2(companyId: string, paymentId: string, userId = "") {
+  const now = new Date().toISOString();
+  let record: { receipt_no: string; paid_amount: number } | null = null;
+
+  if (isDesktopApp()) {
+    const database = await ready();
+    const rows = await database.select<Array<{ receipt_no: string; paid_amount: number }>>(
+      `SELECT receipt_no,paid_amount FROM payment_entries WHERE company_id=$1 AND id=$2 LIMIT 1`,
+      [companyId, paymentId],
+    );
+    record = rows[0] || null;
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `UPDATE payment_entries SET status='VOID',updated_at=$1,updated_by_user_id=$2
+          WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
+        params: [now, userId, paymentId, companyId],
+      },
+    ];
+    if (record) {
+      const audit = auditStatement(
+        companyId,
+        userId,
+        "PAYMENT_VOIDED",
+        paymentId,
+        `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)}`,
+        now,
+      );
+      if (audit) statements.push(audit);
+    }
+    await runAtomicTransaction(statements);
+  } else {
+    const { data } = await supabase
+      .from("payment_entries")
+      .select("receipt_no,paid_amount")
+      .eq("company_id", companyId)
+      .eq("id", paymentId)
+      .maybeSingle();
+    record = data;
+  }
+
+  await syncPaymentVoid(paymentId, now, userId);
 }

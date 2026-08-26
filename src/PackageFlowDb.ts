@@ -1,6 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { BookingTransactionType, PackageBookingLineInput, PackageBooking, PackageBookingLine } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
+import { isDesktopApp, queueSync, syncPackageBookingBundle } from "./cloudSync";
 
 import { supabase } from "./supabaseClient";
 
@@ -124,11 +125,24 @@ async function validatePackageUbAvailability(
   counterpartyId: string,
   ubNumber: string,
 ) {
-  const database = await db();
   const normalized = normalizeUb(ubNumber);
-  const rows = await database.select<
-    Array<{ transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>
-  >(`SELECT transaction_type,counterparty_id,ub_number FROM package_bookings WHERE company_id=$1`, [companyId]);
+  let rows: Array<{ transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }> = [];
+
+  if (isDesktopApp()) {
+    const database = await db();
+    rows = await database.select(
+      `SELECT transaction_type,counterparty_id,ub_number FROM package_bookings WHERE company_id=$1 AND status='ACTIVE'`,
+      [companyId],
+    );
+  } else {
+    const { data, error } = await supabase
+      .from("package_bookings")
+      .select("transaction_type,counterparty_id,ub_number")
+      .eq("company_id", companyId)
+      .eq("status", "ACTIVE");
+    if (error) throw new Error(error.message);
+    rows = (data || []) as typeof rows;
+  }
 
   const duplicate = rows.find((row) => {
     if (normalizeUb(row.ub_number) !== normalized) return false;
@@ -145,6 +159,21 @@ async function validatePackageUbAvailability(
   throw new Error(
     `This Vendor already has a Package Purchase booking for ${ubNumber}. Open that booking from the Package Register instead.`,
   );
+}
+
+function buildPackageLinePayloads(bookingId: string, calculated: CalculatedLine[]) {
+  return calculated.map((line) => ({
+    id: crypto.randomUUID(),
+    booking_id: bookingId,
+    passenger_type: line.passengerType,
+    passenger_name: line.passengerName,
+    package_type: line.packageType,
+    rate_per_person: line.ratePerPerson,
+    person_count: line.personCount,
+    qty_is_explicit: line.qtyIsExplicit,
+    line_total_pkr: line.lineTotalPkr,
+    sort_order: line.sortOrder,
+  }));
 }
 
 export async function getPackageBookings(companyId: string) {
@@ -245,13 +274,16 @@ function calculateLines(lines: PackageBookingLineInput[]) {
   return { calculated, totalPkr: calculated.reduce((sum, line) => sum + line.lineTotalPkr, 0) };
 }
 
-function insertLineStatements(bookingId: string, lines: CalculatedLine[]): AtomicSqlStatement[] {
+function insertLineStatements(
+  bookingId: string,
+  lines: Array<CalculatedLine & { id: string }>,
+): AtomicSqlStatement[] {
   return lines.map((line) => ({
     sql: `INSERT INTO package_booking_lines
       (id,booking_id,passenger_type,passenger_name,package_type,rate_per_person,person_count,qty_is_explicit,line_total_pkr,sort_order)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
     params: [
-      crypto.randomUUID(),
+      line.id,
       bookingId,
       line.passengerType,
       line.passengerName,
@@ -279,37 +311,80 @@ export async function createPackageCommercialBooking(
   const { calculated, totalPkr } = calculateLines(input.lines);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `INSERT INTO package_bookings
-        (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,
-         package_description,departure_date,return_date,no_of_days,ziarat_included,customer_contact,notes,
-         total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
-        VALUES ($1,$2,$3,$4,$5,$6,'','','',0,'','','',$7,'ACTIVE',$8,$8,$9,$9)`,
-      params: [
-        id,
-        companyId,
-        input.transactionType,
-        input.counterpartyId,
-        input.transactionDate,
-        input.ubNumber.trim().toUpperCase(),
-        totalPkr,
-        now,
-        actorUserId,
-      ],
-    },
-    ...insertLineStatements(id, calculated),
-  ];
-  const audit = auditStatement(
-    companyId,
-    actorUserId,
-    "BOOKING_CREATED",
+  const ubNumber = input.ubNumber.trim().toUpperCase();
+  const lineRows = buildPackageLinePayloads(id, calculated);
+  const lineStatements = insertLineStatements(
     id,
-    `${input.transactionType} ${input.ubNumber} - PKR ${totalPkr}`,
-    now,
+    lineRows.map((line) => ({
+      id: line.id,
+      passengerType: line.passenger_type as CalculatedLine["passengerType"],
+      passengerName: line.passenger_name,
+      packageType: line.package_type,
+      ratePerPerson: line.rate_per_person,
+      personCount: line.person_count,
+      qtyIsExplicit: line.qty_is_explicit,
+      lineTotalPkr: line.line_total_pkr,
+      sortOrder: line.sort_order,
+    })),
   );
-  if (audit) statements.push(audit);
-  await runAtomicTransaction(statements);
+
+  const header = {
+    id,
+    company_id: companyId,
+    transaction_type: input.transactionType,
+    counterparty_id: input.counterpartyId,
+    transaction_date: input.transactionDate,
+    ub_number: ubNumber,
+    package_description: "",
+    departure_date: "",
+    return_date: "",
+    no_of_days: 0,
+    ziarat_included: "",
+    customer_contact: "",
+    notes: "",
+    total_pkr: totalPkr,
+    status: "ACTIVE",
+    created_at: now,
+    updated_at: now,
+    created_by_user_id: actorUserId,
+    updated_by_user_id: actorUserId,
+  };
+
+  if (isDesktopApp()) {
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `INSERT INTO package_bookings
+          (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,
+           package_description,departure_date,return_date,no_of_days,ziarat_included,customer_contact,notes,
+           total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+          VALUES ($1,$2,$3,$4,$5,$6,'','','',0,'','','',$7,'ACTIVE',$8,$8,$9,$9)`,
+        params: [
+          id,
+          companyId,
+          input.transactionType,
+          input.counterpartyId,
+          input.transactionDate,
+          ubNumber,
+          totalPkr,
+          now,
+          actorUserId,
+        ],
+      },
+      ...lineStatements,
+    ];
+    const audit = auditStatement(
+      companyId,
+      actorUserId,
+      "BOOKING_CREATED",
+      id,
+      `${input.transactionType} ${input.ubNumber} - PKR ${totalPkr}`,
+      now,
+    );
+    if (audit) statements.push(audit);
+    await runAtomicTransaction(statements);
+  }
+
+  await syncPackageBookingBundle(header, lineRows);
   return id;
 }
 
@@ -322,34 +397,93 @@ export async function updatePackageCommercialBooking(
   await requirePermission(companyId, actorUserId, "edit_bookings");
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   const { calculated, totalPkr } = calculateLines(input.lines);
-  const database = await db();
-  const rows = await database.select<Array<{ ub_number: string; status: string }>>(
-    `SELECT ub_number,status FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId],
-  );
-  const current = rows[0];
+  const now = new Date().toISOString();
+
+  let current: { ub_number: string; status: string; created_at: string; transaction_type: string; counterparty_id: string } | null =
+    null;
+
+  if (isDesktopApp()) {
+    const database = await db();
+    const rows = await database.select<
+      Array<{
+        ub_number: string;
+        status: string;
+        created_at: string;
+        transaction_type: string;
+        counterparty_id: string;
+      }>
+    >(
+      `SELECT ub_number,status,created_at,transaction_type,counterparty_id FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [bookingId, companyId],
+    );
+    current = rows[0] || null;
+  } else {
+    const { data, error } = await supabase
+      .from("package_bookings")
+      .select("ub_number,status,created_at,transaction_type,counterparty_id")
+      .eq("id", bookingId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    current = data;
+  }
+
   if (!current || current.status !== "ACTIVE") throw new Error("This Package booking is no longer active.");
 
-  const now = new Date().toISOString();
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `UPDATE package_bookings SET transaction_date=$1,total_pkr=$2,updated_at=$3,updated_by_user_id=$4
-        WHERE id=$5 AND company_id=$6 AND status='ACTIVE'`,
-      params: [input.transactionDate, totalPkr, now, actorUserId, bookingId, companyId],
-    },
-    { sql: `DELETE FROM package_booking_lines WHERE booking_id=$1`, params: [bookingId] },
-    ...insertLineStatements(bookingId, calculated),
-  ];
-  const audit = auditStatement(
-    companyId,
-    actorUserId,
-    "BOOKING_UPDATED",
+  const lineRows = buildPackageLinePayloads(bookingId, calculated);
+  const lineStatements = insertLineStatements(
     bookingId,
-    `${current.ub_number} commercial Package details updated - PKR ${totalPkr}`,
-    now,
+    lineRows.map((line) => ({
+      id: line.id,
+      passengerType: line.passenger_type as CalculatedLine["passengerType"],
+      passengerName: line.passenger_name,
+      packageType: line.package_type,
+      ratePerPerson: line.rate_per_person,
+      personCount: line.person_count,
+      qtyIsExplicit: line.qty_is_explicit,
+      lineTotalPkr: line.line_total_pkr,
+      sortOrder: line.sort_order,
+    })),
   );
-  if (audit) statements.push(audit);
-  await runAtomicTransaction(statements);
+
+  if (isDesktopApp()) {
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `UPDATE package_bookings SET transaction_date=$1,total_pkr=$2,updated_at=$3,updated_by_user_id=$4
+          WHERE id=$5 AND company_id=$6 AND status='ACTIVE'`,
+        params: [input.transactionDate, totalPkr, now, actorUserId, bookingId, companyId],
+      },
+      { sql: `DELETE FROM package_booking_lines WHERE booking_id=$1`, params: [bookingId] },
+      ...lineStatements,
+    ];
+    const audit = auditStatement(
+      companyId,
+      actorUserId,
+      "BOOKING_UPDATED",
+      bookingId,
+      `${current.ub_number} commercial Package details updated - PKR ${totalPkr}`,
+      now,
+    );
+    if (audit) statements.push(audit);
+    await runAtomicTransaction(statements);
+  }
+
+  await syncPackageBookingBundle(
+    {
+      id: bookingId,
+      company_id: companyId,
+      transaction_type: current.transaction_type,
+      counterparty_id: current.counterparty_id,
+      transaction_date: input.transactionDate,
+      ub_number: current.ub_number,
+      total_pkr: totalPkr,
+      status: "ACTIVE",
+      created_at: current.created_at,
+      updated_at: now,
+      updated_by_user_id: actorUserId,
+    },
+    lineRows,
+  );
 }
 
 export async function updatePackageAdditionalDetails(
@@ -366,44 +500,94 @@ export async function updatePackageAdditionalDetails(
   if (!["", "YES", "NO"].includes(input.ziaratIncluded))
     throw new Error("Ziarat Included must be Yes, No, or left blank.");
 
-  const database = await db();
-  const rows = await database.select<Array<{ ub_number: string; status: string }>>(
-    `SELECT ub_number,status FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId],
-  );
-  const current = rows[0];
+  const now = new Date().toISOString();
+  let current: {
+    ub_number: string;
+    status: string;
+    created_at: string;
+    transaction_type: string;
+    counterparty_id: string;
+    transaction_date: string;
+    total_pkr: number;
+  } | null = null;
+
+  if (isDesktopApp()) {
+    const database = await db();
+    const rows = await database.select<NonNullable<typeof current>[]>(
+      `SELECT ub_number,status,created_at,transaction_type,counterparty_id,transaction_date,total_pkr
+       FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [bookingId, companyId],
+    );
+    current = rows[0] || null;
+  } else {
+    const { data, error } = await supabase
+      .from("package_bookings")
+      .select("ub_number,status,created_at,transaction_type,counterparty_id,transaction_date,total_pkr")
+      .eq("id", bookingId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    current = data;
+  }
+
   if (!current || current.status !== "ACTIVE") throw new Error("This Package booking is no longer active.");
 
-  const now = new Date().toISOString();
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `UPDATE package_bookings
-        SET package_description=$1,departure_date=$2,return_date=$3,no_of_days=$4,
-            ziarat_included=$5,customer_contact=$6,notes=$7,updated_at=$8,updated_by_user_id=$9
-        WHERE id=$10 AND company_id=$11 AND status='ACTIVE'`,
-      params: [
-        input.packageDescription.trim(),
-        input.departureDate,
-        input.returnDate,
-        Math.max(0, Math.trunc(Number(input.noOfDays) || 0)),
-        input.ziaratIncluded,
-        input.customerContact.trim(),
-        input.notes.trim(),
-        now,
-        actorUserId,
-        bookingId,
-        companyId,
-      ],
-    },
-  ];
-  const audit = auditStatement(
-    companyId,
-    actorUserId,
-    "BOOKING_DETAILS_UPDATED",
-    bookingId,
-    `${current.ub_number} additional Package details updated.`,
-    now,
-  );
-  if (audit) statements.push(audit);
-  await runAtomicTransaction(statements);
+  const details = {
+    package_description: input.packageDescription.trim(),
+    departure_date: input.departureDate,
+    return_date: input.returnDate,
+    no_of_days: Math.max(0, Math.trunc(Number(input.noOfDays) || 0)),
+    ziarat_included: input.ziaratIncluded,
+    customer_contact: input.customerContact.trim(),
+    notes: input.notes.trim(),
+    updated_at: now,
+    updated_by_user_id: actorUserId,
+  };
+
+  if (isDesktopApp()) {
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `UPDATE package_bookings
+          SET package_description=$1,departure_date=$2,return_date=$3,no_of_days=$4,
+              ziarat_included=$5,customer_contact=$6,notes=$7,updated_at=$8,updated_by_user_id=$9
+          WHERE id=$10 AND company_id=$11 AND status='ACTIVE'`,
+        params: [
+          details.package_description,
+          details.departure_date,
+          details.return_date,
+          details.no_of_days,
+          details.ziarat_included,
+          details.customer_contact,
+          details.notes,
+          now,
+          actorUserId,
+          bookingId,
+          companyId,
+        ],
+      },
+    ];
+    const audit = auditStatement(
+      companyId,
+      actorUserId,
+      "BOOKING_DETAILS_UPDATED",
+      bookingId,
+      `${current.ub_number} additional Package details updated.`,
+      now,
+    );
+    if (audit) statements.push(audit);
+    await runAtomicTransaction(statements);
+  }
+
+  await queueSync("UPSERT", "package_bookings", bookingId, {
+    id: bookingId,
+    company_id: companyId,
+    transaction_type: current.transaction_type,
+    counterparty_id: current.counterparty_id,
+    transaction_date: current.transaction_date,
+    ub_number: current.ub_number,
+    total_pkr: current.total_pkr,
+    status: "ACTIVE",
+    created_at: current.created_at,
+    ...details,
+  });
 }
