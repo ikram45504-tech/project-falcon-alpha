@@ -2482,10 +2482,10 @@ export async function deleteParty(partyId: string, companyId: string, actorUserI
 
 export async function deleteBooking(bookingId: string, companyId: string, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "edit_bookings");
+  const isTauri = "__TAURI_INTERNALS__" in window;
   const database = await db();
 
-  const tables = [
-    "package_bookings",
+  const bookingChildTables = [
     "package_booking_lines",
     "package_operational_meta",
     "package_operational_passengers",
@@ -2493,24 +2493,19 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "package_operational_flights",
     "package_operational_flight_stopovers",
     "package_movement_events",
-    "ticket_bookings",
     "ticket_booking_lines",
     "ticket_operational_meta",
     "ticket_operational_passengers",
     "ticket_operational_flights",
-    "hotel_bookings",
     "hotel_booking_lines",
-    "visa_bookings",
     "visa_booking_lines",
     "visa_passport_details",
     "visa_transport_fleet",
     "visa_operational_meta",
     "visa_operational_passengers",
-    "transport_bookings",
     "transport_booking_lines",
     "transport_operational_meta",
     "transport_operational_sectors",
-    "misc_bookings",
     "misc_booking_lines",
     "misc_booking_details",
     "misc_operational_meta",
@@ -2518,17 +2513,34 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "misc_commercial_family_refs",
   ];
 
-  for (const table of tables) {
+  const bookingHeaderTables = [
+    "package_bookings",
+    "ticket_bookings",
+    "hotel_bookings",
+    "visa_bookings",
+    "transport_bookings",
+    "misc_bookings",
+  ];
+
+  for (const table of bookingChildTables) {
     try {
-      // Lines tables might use booking_id, header tables use id
-      if (table.includes("bookings") && !table.includes("lines")) {
-        await database.execute(`DELETE FROM ${table} WHERE id=$1 AND company_id=$2`, [bookingId, companyId]);
-        await queueSync("DELETE", table, bookingId, {});
-      } else {
+      if (isTauri) {
         await database.execute(`DELETE FROM ${table} WHERE booking_id=$1`, [bookingId]);
-        // Note: we don't queueSync deletes for line items directly since we only sync headers currently,
-        // but for a full delete, deleting the header cascades or orphan lines are ignored.
+      } else {
+        const { error } = await supabase.from(table).delete().eq("booking_id", bookingId);
+        if (error) console.warn(`Could not delete from ${table} in cloud:`, error.message);
       }
+    } catch (e) {
+      console.warn(`Could not delete from ${table}`, e);
+    }
+  }
+
+  for (const table of bookingHeaderTables) {
+    try {
+      if (isTauri) {
+        await database.execute(`DELETE FROM ${table} WHERE id=$1 AND company_id=$2`, [bookingId, companyId]);
+      }
+      await queueSync("DELETE", table, bookingId, {});
     } catch (e) {
       console.warn(`Could not delete from ${table}`, e);
     }
@@ -5444,6 +5456,41 @@ export async function executePullSync(options?: { companyId?: string; fullResync
   let highestTimestampSeen = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
   let partiesPulled = 0;
   let partiesRemoved = 0;
+  let bookingsRemoved = 0;
+
+  async function reconcileDeletedRows(table: string, childTables: string[] = []) {
+    const { data: cloudRows, error: cloudError } = await supabase
+      .from(table)
+      .select("id")
+      .eq("company_id", companyId)
+      .limit(5000);
+
+    if (cloudError) {
+      console.error(`${table} delete reconcile failed:`, cloudError.message);
+      return 0;
+    }
+
+    const cloudIds = new Set((cloudRows || []).map((row) => String(row.id)));
+    const localRows = await database.select<Array<{ id: string }>>(
+      `SELECT id FROM ${table} WHERE company_id = $1`,
+      [companyId],
+    );
+
+    let removed = 0;
+    for (const local of localRows) {
+      if (cloudIds.has(local.id)) continue;
+      for (const childTable of childTables) {
+        try {
+          await database.execute(`DELETE FROM ${childTable} WHERE booking_id = $1`, [local.id]);
+        } catch (err) {
+          console.warn(`Could not delete orphaned rows from ${childTable}:`, err);
+        }
+      }
+      await database.execute(`DELETE FROM ${table} WHERE id = $1 AND company_id = $2`, [local.id, companyId]);
+      removed += 1;
+    }
+    return removed;
+  }
 
   for (const table of ROOT_TABLES) {
     let query = supabase.from(table).select("*").eq("company_id", companyId).limit(1000);
@@ -5521,13 +5568,22 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     console.error("Party delete reconcile error:", err);
   }
 
+  // Reconcile deletes for booking headers removed in cloud (e.g. web test delete).
+  for (const table of Object.keys(CHILD_TABLES)) {
+    try {
+      bookingsRemoved += await reconcileDeletedRows(table, CHILD_TABLES[table]);
+    } catch (err) {
+      console.error(`${table} delete reconcile error:`, err);
+    }
+  }
+
   if (highestTimestampSeen !== (metaRows[0]?.value || "2000-01-01T00:00:00.000Z")) {
     await database.execute(`INSERT OR REPLACE INTO sync_metadata (key, value) VALUES ('last_pull_sync', $1)`, [
       highestTimestampSeen,
     ]);
   }
 
-  return { companyId, partiesPulled, partiesRemoved };
+  return { companyId, partiesPulled, partiesRemoved, bookingsRemoved };
 }
 
 /**

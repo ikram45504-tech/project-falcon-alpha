@@ -1,6 +1,8 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { BookingTransactionType, TicketPassengerType } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
+import { isDesktopApp, syncTicketBookingBundle } from "./cloudSync";
+import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -156,13 +158,28 @@ async function validateCounterparty(
 ) {
   if (!counterpartyId)
     throw new Error(transactionType === "SALE" ? "Select a Party / Customer." : "Select a Vendor / Supplier.");
-  const database = await db();
-  const rows = await database.select<Array<{ account_type: string; status: string }>>(
-    `SELECT account_type,status FROM parties WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [counterpartyId, companyId],
-  );
+
+  let account: { account_type: string; status: string } | null | undefined;
+
+  if (isDesktopApp()) {
+    const database = await db();
+    const rows = await database.select<Array<{ account_type: string; status: string }>>(
+      `SELECT account_type,status FROM parties WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [counterpartyId, companyId],
+    );
+    account = rows[0];
+  } else {
+    const { data } = await supabase
+      .from("parties")
+      .select("account_type, status")
+      .eq("id", counterpartyId)
+      .eq("company_id", companyId)
+      .single();
+    account = data;
+  }
+
   const expected = transactionType === "SALE" ? "PARTY" : "VENDOR";
-  if (!rows[0] || rows[0].status !== "ACTIVE" || rows[0].account_type !== expected) {
+  if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
     throw new Error(
       transactionType === "SALE" ? "Select an active Party / Customer." : "Select an active Vendor / Supplier.",
     );
@@ -175,11 +192,25 @@ async function validateUbAvailability(
   counterpartyId: string,
   ubNumber: string,
 ) {
-  const database = await db();
-  const rows = await database.select<
-    Array<{ transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>
-  >(`SELECT transaction_type,counterparty_id,ub_number FROM ticket_bookings WHERE company_id=$1`, [companyId]);
   const normalized = normalizeUb(ubNumber);
+  let rows: Array<{ transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }> = [];
+
+  if (isDesktopApp()) {
+    const database = await db();
+    rows = await database.select(
+      `SELECT transaction_type,counterparty_id,ub_number FROM ticket_bookings WHERE company_id=$1 AND status='ACTIVE'`,
+      [companyId],
+    );
+  } else {
+    const { data, error } = await supabase
+      .from("ticket_bookings")
+      .select("transaction_type,counterparty_id,ub_number")
+      .eq("company_id", companyId)
+      .eq("status", "ACTIVE");
+    if (error) throw new Error(error.message);
+    rows = (data || []) as typeof rows;
+  }
+
   const duplicate = rows.find(
     (row) =>
       normalizeUb(row.ub_number) === normalized &&
@@ -364,38 +395,86 @@ export async function createTicketCommercialBooking(companyId: string, input: Ti
   const first = calculated[0];
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `INSERT INTO ticket_bookings
-        (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,airline_name,pnr,sector,departure_date,return_date,flight_no,departure_time,arrival_time,baggage,ticket_status,customer_contact,notes,total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'','','','','','','','','',$10,'ACTIVE',$11,$11,$12,$12)`,
-      params: [
-        id,
-        companyId,
-        input.transactionType,
-        input.counterpartyId,
-        input.transactionDate,
-        normalizeUb(input.ubNumber),
-        first.airlineName,
-        first.pnr,
-        first.ticketRoute,
-        totalPkr,
-        now,
-        actorUserId,
-      ],
-    },
-    ...lineStatements(id, calculated),
-  ];
-  const audit = auditStatement(
-    companyId,
-    actorUserId,
-    "BOOKING_CREATED",
+  const ubNumber = normalizeUb(input.ubNumber);
+  const lineRows = calculated.map((line) => ({
+    id: crypto.randomUUID(),
+    booking_id: id,
+    passenger_type: line.passengerType,
+    passenger_name: line.passengerName,
+    airline_name: line.airlineName,
+    pnr: line.pnr,
+    flight_type: line.flightType,
+    ticket_route: line.ticketRoute,
+    eticket_reference: line.legacyEticketReference || "",
+    rate_per_ticket: line.ratePerTicket,
+    ticket_count: line.ticketCount,
+    qty_is_explicit: 1,
+    line_total_pkr: line.lineTotalPkr,
+    sort_order: line.sortOrder,
+  }));
+  const header = {
     id,
-    `${input.transactionType} ${input.ubNumber} - PKR ${totalPkr}`,
-    now,
-  );
-  if (audit) statements.push(audit);
-  await runAtomicTransaction(statements);
+    company_id: companyId,
+    transaction_type: input.transactionType,
+    counterparty_id: input.counterpartyId,
+    transaction_date: input.transactionDate,
+    ub_number: ubNumber,
+    airline_name: first.airlineName,
+    pnr: first.pnr,
+    sector: first.ticketRoute,
+    departure_date: "",
+    return_date: "",
+    flight_no: "",
+    departure_time: "",
+    arrival_time: "",
+    baggage: "",
+    ticket_status: "",
+    customer_contact: "",
+    notes: "",
+    total_pkr: totalPkr,
+    status: "ACTIVE",
+    created_at: now,
+    updated_at: now,
+    created_by_user_id: actorUserId,
+    updated_by_user_id: actorUserId,
+  };
+
+  if (isDesktopApp()) {
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `INSERT INTO ticket_bookings
+          (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,airline_name,pnr,sector,departure_date,return_date,flight_no,departure_time,arrival_time,baggage,ticket_status,customer_contact,notes,total_pkr,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'','','','','','','','','',$10,'ACTIVE',$11,$11,$12,$12)`,
+        params: [
+          id,
+          companyId,
+          input.transactionType,
+          input.counterpartyId,
+          input.transactionDate,
+          ubNumber,
+          first.airlineName,
+          first.pnr,
+          first.ticketRoute,
+          totalPkr,
+          now,
+          actorUserId,
+        ],
+      },
+      ...lineStatements(id, calculated),
+    ];
+    const audit = auditStatement(
+      companyId,
+      actorUserId,
+      "BOOKING_CREATED",
+      id,
+      `${input.transactionType} ${input.ubNumber} - PKR ${totalPkr}`,
+      now,
+    );
+    if (audit) statements.push(audit);
+    await runAtomicTransaction(statements);
+  }
+
+  await syncTicketBookingBundle(header, lineRows);
   return id;
 }
 

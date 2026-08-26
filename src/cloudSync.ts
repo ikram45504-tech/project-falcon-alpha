@@ -174,6 +174,59 @@ export async function syncPaymentBundle(entry: PaymentEntrySync, meta: PaymentMe
   await queueSync("UPSERT", "payment_v2_meta", meta.payment_id, meta as unknown as Record<string, unknown>);
 }
 
+export type TicketBookingSyncHeader = {
+  id: string;
+  company_id: string;
+  transaction_type: string;
+  counterparty_id: string;
+  transaction_date: string;
+  ub_number: string;
+  airline_name?: string;
+  pnr?: string;
+  sector?: string;
+  departure_date?: string;
+  return_date?: string;
+  flight_no?: string;
+  departure_time?: string;
+  arrival_time?: string;
+  baggage?: string;
+  ticket_status?: string;
+  customer_contact?: string;
+  notes?: string;
+  total_pkr: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  created_by_user_id?: string;
+  updated_by_user_id?: string;
+};
+
+export type TicketBookingSyncLine = {
+  id: string;
+  booking_id: string;
+  passenger_type: string;
+  passenger_name: string;
+  airline_name: string;
+  pnr: string;
+  flight_type: string;
+  ticket_route: string;
+  eticket_reference: string;
+  rate_per_ticket: number;
+  ticket_count: number;
+  qty_is_explicit: number;
+  line_total_pkr: number;
+  sort_order: number;
+};
+
+/** Upsert ticket header + replace all commercial lines in the cloud. */
+export async function syncTicketBookingBundle(header: TicketBookingSyncHeader, lines: TicketBookingSyncLine[]) {
+  await queueSync("UPSERT", "ticket_bookings", header.id, header as unknown as Record<string, unknown>);
+  await queueSync("REPLACE_CHILDREN", "ticket_booking_lines", header.id, {
+    parent_column: "booking_id",
+    rows: lines,
+  });
+}
+
 export async function syncPackageBookingVoid(bookingId: string, updatedAt: string, updatedByUserId: string) {
   await queueSync("UPDATE", "package_bookings", bookingId, {
     status: "VOID",
