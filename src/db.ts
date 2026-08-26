@@ -2276,37 +2276,64 @@ export async function getParties(companyId: string, search = "") {
   );
 }
 
+function accountLabel(accountType: PartyInput["accountType"] | string) {
+  if (accountType === "VENDOR") return "Vendor";
+  if (accountType === "PARTY") return "Party";
+  return "Account";
+}
+
+async function assertUniqueAccountName(
+  companyId: string,
+  accountType: PartyInput["accountType"],
+  name: string,
+  excludeId = "",
+) {
+  const cleanName = name.trim();
+  const isTauri = "__TAURI_INTERNALS__" in window;
+
+  if (!isTauri) {
+    let query = supabase
+      .from("parties")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("account_type", accountType)
+      .ilike("name", cleanName)
+      .limit(1);
+    if (excludeId) query = query.neq("id", excludeId);
+    const { data: duplicate, error } = await query;
+    if (error) throw new Error(error.message);
+    if (duplicate && duplicate.length > 0) {
+      throw new Error(
+        `A ${accountLabel(accountType).toLowerCase()} named "${cleanName}" already exists. Party and Vendor can share the same name, but two ${accountLabel(accountType).toLowerCase()}s cannot.`,
+      );
+    }
+    return;
+  }
+
+  const database = await db();
+  const duplicate = await database.select<CountRow[]>(
+    `SELECT COUNT(*) AS count
+     FROM parties
+     WHERE company_id = $1
+       AND account_type = $2
+       AND name = $3 COLLATE NOCASE
+       AND ($4 = '' OR id <> $4)`,
+    [companyId, accountType, cleanName, excludeId],
+  );
+
+  if (Number(duplicate[0]?.count ?? 0) > 0) {
+    throw new Error(
+      `A ${accountLabel(accountType).toLowerCase()} named "${cleanName}" already exists. Party and Vendor can share the same name, but two ${accountLabel(accountType).toLowerCase()}s cannot.`,
+    );
+  }
+}
+
 export async function createParty(companyId: string, input: PartyInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "edit_parties");
   const database = await db();
   const now = new Date().toISOString();
 
-  const isTauri = "__TAURI_INTERNALS__" in window;
-
-  if (!isTauri) {
-    const { data: duplicate } = await supabase
-      .from("parties")
-      .select("id")
-      .eq("company_id", companyId)
-      .ilike("name", input.name.trim())
-      .limit(1);
-
-    if (duplicate && duplicate.length > 0) {
-      throw new Error("A party with this name already exists in this company.");
-    }
-  } else {
-    const database = await db();
-    const duplicate = await database.select<CountRow[]>(
-      `SELECT COUNT(*) AS count
-       FROM parties
-       WHERE company_id = $1 AND name = $2 COLLATE NOCASE`,
-      [companyId, input.name.trim()],
-    );
-
-    if (Number(duplicate[0]?.count ?? 0) > 0) {
-      throw new Error("A party with this name already exists in this company.");
-    }
-  }
+  await assertUniqueAccountName(companyId, input.accountType, input.name);
 
   const id = crypto.randomUUID();
 
@@ -2364,18 +2391,7 @@ export async function updateParty(partyId: string, companyId: string, input: Par
   await requirePermission(companyId, actorUserId, "edit_parties");
   const database = await db();
 
-  const duplicate = await database.select<CountRow[]>(
-    `SELECT COUNT(*) AS count
-     FROM parties
-     WHERE company_id = $1
-       AND name = $2 COLLATE NOCASE
-       AND id <> $3`,
-    [companyId, input.name.trim(), partyId],
-  );
-
-  if (Number(duplicate[0]?.count ?? 0) > 0) {
-    throw new Error("Another party with this name already exists.");
-  }
+  await assertUniqueAccountName(companyId, input.accountType, input.name, partyId);
 
   await database.execute(
     `UPDATE parties
