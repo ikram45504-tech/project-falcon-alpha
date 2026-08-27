@@ -354,7 +354,9 @@ export async function flushDesktopSyncQueue() {
         message,
         job.id,
       ]);
-      throw new Error(`Cloud sync failed: ${message}`, { cause: jobError });
+      const wrapped = new Error(`Cloud sync failed: ${message}`);
+      Object.assign(wrapped, { cause: jobError });
+      throw wrapped;
     }
   }
 }

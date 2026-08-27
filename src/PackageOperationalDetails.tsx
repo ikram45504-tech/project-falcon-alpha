@@ -5,6 +5,7 @@ import {
   buildPackageMovementEvents,
   getPackageOperationalDetails,
   savePackageOperationalDetails,
+  syncPackagePassengerRoster,
   type PackageFlightJourney,
   type PackageFlightType,
   type PackageOperationalFlight,
@@ -108,22 +109,7 @@ export default function PackageOperationalDetails({
   const totalPax = adultPax + childPax + infantPax;
 
   function syncPassengers(current: PassengerRow[]) {
-    const desired: PackagePassengerType[] = [
-      ...Array(Math.max(0, adultPax)).fill("ADULT" as PackagePassengerType),
-      ...Array(Math.max(0, childPax)).fill("CHILD" as PackagePassengerType),
-      ...Array(Math.max(0, infantPax)).fill("INFANT" as PackagePassengerType),
-    ];
-    const pools: Record<PackagePassengerType, PassengerRow[]> = {
-      ADULT: current.filter((x) => x.passengerType === "ADULT"),
-      CHILD: current.filter((x) => x.passengerType === "CHILD"),
-      INFANT: current.filter((x) => x.passengerType === "INFANT"),
-    };
-    const used: Record<PackagePassengerType, number> = { ADULT: 0, CHILD: 0, INFANT: 0 };
-    return desired.map((type) => {
-      const existing = pools[type][used[type]];
-      used[type] += 1;
-      return existing || blankPassenger(type);
-    });
+    return syncPackagePassengerRoster(current, { adult: adultPax, child: childPax, infant: infantPax }, blankPassenger);
   }
 
   useEffect(() => {
@@ -134,9 +120,8 @@ export default function PackageOperationalDetails({
       try {
         const saved = await getPackageOperationalDetails(companyId, bookingId);
         if (cancelled) return;
-        setPassengers(
-          saved.passengers.length ? saved.passengers.map(({ sortOrder: _sort, ...item }) => item) : syncPassengers([]),
-        );
+        const loadedPassengers = saved.passengers.map(({ sortOrder: _sort, ...item }) => item);
+        setPassengers(syncPassengers(loadedPassengers));
         setHotels(saved.hotels.length ? saved.hotels.map(({ sortOrder: _sort, ...item }) => item) : [blankHotel()]);
         const outbound = saved.flights.find((x) => x.journey === "OUTBOUND"),
           returning = saved.flights.find((x) => x.journey === "RETURN");
@@ -165,6 +150,11 @@ export default function PackageOperationalDetails({
       cancelled = true;
     };
   }, [companyId, bookingId]);
+
+  useEffect(() => {
+    if (loading) return;
+    setPassengers((current) => syncPassengers(current));
+  }, [adultPax, childPax, infantPax, loading]);
 
   const activeStopovers = useMemo(
     () =>
