@@ -5292,12 +5292,16 @@ export function setBackgroundSyncCompanyId(companyId: string) {
 
 /**
  * Polls the sync_queue and pushes changes to Supabase when online.
+ * Retries FAILED jobs as well so a transient error does not permanently stall amendments.
  */
 export async function processSyncQueue() {
   if (!navigator.onLine) return;
 
   try {
     const database = await db();
+    // Re-queue previously failed jobs so amendments/cancellations can recover after a transient error.
+    await database.execute(`UPDATE sync_queue SET status = 'PENDING' WHERE status = 'FAILED'`);
+
     const pending = await database.select<SyncQueueEntry[]>(
       "SELECT * FROM sync_queue WHERE status = 'PENDING' ORDER BY created_at ASC",
     );
@@ -5333,6 +5337,11 @@ async function runSyncPass(source: "interval" | "focus" | "online" | "manual", f
   syncPassInFlight = true;
   try {
     await processSyncQueue();
+    // Manual Sync also re-pushes local package adjustments that never reached the cloud
+    // (e.g. amendments saved while queue jobs failed or before sync wiring).
+    if (source === "manual" && backgroundCompanyId) {
+      await pushLocalPackageAdjustmentRepair(backgroundCompanyId);
+    }
     const result = await executePullSync({
       companyId: backgroundCompanyId || undefined,
       fullResync,
@@ -5347,6 +5356,50 @@ async function runSyncPass(source: "interval" | "focus" | "online" | "manual", f
     return result;
   } finally {
     syncPassInFlight = false;
+  }
+}
+
+/** Push local package totals/lines/adjustments for bookings that have adjustment history. */
+async function pushLocalPackageAdjustmentRepair(companyId: string) {
+  const database = await db();
+  const adjustments = await database.select<Record<string, unknown>[]>(
+    `SELECT * FROM package_booking_adjustments WHERE company_id = $1 ORDER BY revision_no ASC, created_at ASC`,
+    [companyId],
+  );
+  if (!adjustments.length) return;
+
+  const bookingIds = Array.from(new Set(adjustments.map((row) => String(row.booking_id || ""))));
+  for (const bookingId of bookingIds) {
+    if (!bookingId) continue;
+    const headers = await database.select<Record<string, unknown>[]>(
+      `SELECT id, total_pkr, updated_at, updated_by_user_id FROM package_bookings WHERE company_id = $1 AND id = $2 LIMIT 1`,
+      [companyId, bookingId],
+    );
+    const header = headers[0];
+    if (!header) continue;
+
+    const lines = await database.select<Record<string, unknown>[]>(
+      `SELECT id, booking_id, passenger_type, passenger_name, package_type, rate_per_person, person_count,
+              qty_is_explicit, line_total_pkr, sort_order
+       FROM package_booking_lines WHERE booking_id = $1 ORDER BY sort_order ASC`,
+      [bookingId],
+    );
+
+    await applyCloudOperation("UPDATE", "package_bookings", bookingId, {
+      total_pkr: header.total_pkr,
+      updated_at: header.updated_at || new Date().toISOString(),
+      updated_by_user_id: header.updated_by_user_id || "",
+    });
+    await applyCloudOperation("REPLACE_CHILDREN", "package_booking_lines", bookingId, {
+      parent_column: "booking_id",
+      rows: lines,
+    });
+  }
+
+  for (const adjustment of adjustments) {
+    const id = String(adjustment.id || "");
+    if (!id) continue;
+    await applyCloudOperation("UPSERT", "package_booking_adjustments", id, adjustment);
   }
 }
 
@@ -5566,19 +5619,22 @@ export async function executePullSync(options?: { companyId?: string; fullResync
 
         const children = CHILD_TABLES[table];
         if (children && (row as any).id) {
+          const bookingId = String((row as any).id);
           for (const childTable of children) {
             const { data: childData, error: childError } = await supabase
               .from(childTable)
               .select("*")
-              .eq("booking_id", (row as any).id);
+              .eq("booking_id", bookingId);
 
             if (childError) {
               console.error(`Pull sync child query failed for ${childTable}:`, childError.message);
               continue;
             }
-            if (!childData || childData.length === 0) continue;
 
-            for (const childRow of childData) {
+            // Replace local children with cloud snapshot (including empty = all cancelled).
+            await database.execute(`DELETE FROM ${childTable} WHERE booking_id = $1`, [bookingId]);
+
+            for (const childRow of childData || []) {
               await upsertCloudRow(childTable, childRow as Record<string, unknown>);
             }
           }

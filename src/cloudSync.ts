@@ -320,3 +320,41 @@ export async function syncPackageAdjustmentBundle(input: {
   });
   await queueSync("UPSERT", "package_booking_adjustments", String(input.adjustment.id), input.adjustment);
 }
+
+/**
+ * Desktop: immediately push PENDING/FAILED sync_queue jobs to Supabase.
+ * Used after package adjustments so web sees the change without waiting for the 5s timer.
+ */
+export async function flushDesktopSyncQueue() {
+  if (!isDesktopApp() || !navigator.onLine) return;
+
+  const database = await Database.load(DB_PATH);
+  await database.execute(`UPDATE sync_queue SET status = 'PENDING' WHERE status = 'FAILED'`);
+  const pending = await database.select<
+    Array<{
+      id: string;
+      operation: SyncOperation;
+      table_name: string;
+      record_id: string;
+      payload: string;
+    }>
+  >(
+    "SELECT id, operation, table_name, record_id, payload FROM sync_queue WHERE status = 'PENDING' ORDER BY created_at ASC",
+  );
+
+  for (const job of pending) {
+    try {
+      const payload = JSON.parse(job.payload) as Record<string, unknown>;
+      await applyCloudOperation(job.operation, job.table_name, job.record_id, payload);
+      await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
+    } catch (jobError: unknown) {
+      const message = jobError instanceof Error ? jobError.message : String(jobError);
+      console.error("Sync job failed:", jobError);
+      await database.execute("UPDATE sync_queue SET status = 'FAILED', error_message = $1 WHERE id = $2", [
+        message,
+        job.id,
+      ]);
+      throw new Error(`Cloud sync failed: ${message}`, { cause: jobError });
+    }
+  }
+}

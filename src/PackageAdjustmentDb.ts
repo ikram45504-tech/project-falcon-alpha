@@ -1,7 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { PackageBookingLineInput, PackagePassengerType } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
-import { isDesktopApp, syncPackageAdjustmentBundle } from "./cloudSync";
+import { isDesktopApp, syncPackageAdjustmentBundle, flushDesktopSyncQueue } from "./cloudSync";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -487,6 +487,11 @@ async function writeAdjustment(
       created_at: now,
     },
   });
+
+  // Desktop: push immediately so amendments/cancellations do not sit only in local SQLite.
+  if (isDesktopApp()) {
+    await flushDesktopSyncQueue();
+  }
 }
 
 export async function savePackageCorrectionOrAmendment(
