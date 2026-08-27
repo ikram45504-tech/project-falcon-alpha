@@ -178,6 +178,7 @@ async function select<T>(database: Database, sql: string, bindValues: unknown[] 
   return retry(() => database.select<T>(sql, bindValues));
 }
 
+import { packageAdjustmentEffectiveTotal } from "./pricingEngines";
 import { requirePermission } from "./db";
 export async function initPackageAdjustmentDatabase() {
   if (initializationPromise) return initializationPromise;
@@ -512,10 +513,15 @@ export async function savePackageCorrectionOrAmendment(
   const revisedLines = calculateLines(input.lines);
   const previousBase = baseTotal(currentLines);
   const revisedBase = revisedLines.reduce((sum, line) => sum + line.lineTotalPkr, 0);
-  const carriedFinancialAdjustments = Number(booking.total_pkr || 0) - previousBase;
   const charge = input.adjustmentType === "AMENDMENT" ? Math.max(0, Number(input.amendmentChargePkr) || 0) : 0;
   const credit = input.adjustmentType === "AMENDMENT" ? Math.max(0, Number(input.creditPkr) || 0) : 0;
-  const effectiveTotal = revisedBase + carriedFinancialAdjustments + charge - credit;
+  const effectiveTotal = packageAdjustmentEffectiveTotal({
+    previousTotal: Number(booking.total_pkr || 0),
+    previousBase,
+    revisedBase,
+    charge,
+    credit,
+  });
   if (effectiveTotal < 0)
     throw new Error("This adjustment would make the booking value negative. Reduce the credit amount.");
   const delta = effectiveTotal - Number(booking.total_pkr || 0);

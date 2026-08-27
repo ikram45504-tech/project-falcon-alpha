@@ -400,3 +400,16 @@ export function calculatePackageSummary(rows: PackageRowPricing[]) {
     grandTotal: amount.ADULT + amount.CHILD + amount.INFANT,
   };
 }
+
+export function packageAdjustmentEffectiveTotal(input: {
+  previousTotal: number;
+  previousBase: number;
+  revisedBase: number;
+  charge: number;
+  credit: number;
+}) {
+  const carriedFinancialAdjustments = Number(input.previousTotal || 0) - Number(input.previousBase || 0);
+  return (
+    Number(input.revisedBase || 0) + carriedFinancialAdjustments + Number(input.charge || 0) - Number(input.credit || 0)
+  );
+}

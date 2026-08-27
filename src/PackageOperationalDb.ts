@@ -1,5 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
-import { isDesktopApp, syncPackageOperationalBundle } from "./cloudSync";
+import { flushDesktopSyncQueue, isDesktopApp, queueSync, syncPackageOperationalBundle } from "./cloudSync";
 import { supabase } from "./supabaseClient";
 import type { PackagePassengerType } from "./db";
 
@@ -150,6 +150,54 @@ async function ensureTables() {
     });
   }
   return tablesReady;
+}
+
+export function syncPackagePassengerRoster<T extends { passengerType: PackagePassengerType }>(
+  current: T[],
+  counts: { adult: number; child: number; infant: number },
+  createBlank: (type: PackagePassengerType) => T,
+): T[] {
+  const desired: PackagePassengerType[] = [
+    ...Array(Math.max(0, Math.trunc(counts.adult) || 0)).fill("ADULT" as PackagePassengerType),
+    ...Array(Math.max(0, Math.trunc(counts.child) || 0)).fill("CHILD" as PackagePassengerType),
+    ...Array(Math.max(0, Math.trunc(counts.infant) || 0)).fill("INFANT" as PackagePassengerType),
+  ];
+  const pools: Record<PackagePassengerType, T[]> = {
+    ADULT: current.filter((item) => item.passengerType === "ADULT"),
+    CHILD: current.filter((item) => item.passengerType === "CHILD"),
+    INFANT: current.filter((item) => item.passengerType === "INFANT"),
+  };
+  const used: Record<PackagePassengerType, number> = { ADULT: 0, CHILD: 0, INFANT: 0 };
+  return desired.map((type) => {
+    const existing = pools[type][used[type]];
+    used[type] += 1;
+    return existing || createBlank(type);
+  });
+}
+
+export function derivePackageTravelWindow(
+  flights: Array<{ journey: PackageFlightJourney; departureDate: string }>,
+  hotels: Array<{ checkIn: string; checkOut: string }> = [],
+) {
+  const outbound = flights.find((item) => item.journey === "OUTBOUND")?.departureDate || "";
+  const returning = flights.find((item) => item.journey === "RETURN")?.departureDate || "";
+  const hotelIns = hotels
+    .map((item) => item.checkIn)
+    .filter(Boolean)
+    .sort();
+  const hotelOuts = hotels
+    .map((item) => item.checkOut)
+    .filter(Boolean)
+    .sort();
+  const departureDate = outbound || hotelIns[0] || "";
+  const returnDate = returning || hotelOuts[hotelOuts.length - 1] || "";
+  let noOfDays = 0;
+  if (departureDate && returnDate && returnDate >= departureDate) {
+    const [dy, dm, dd] = departureDate.split("-").map(Number);
+    const [ry, rm, rd] = returnDate.split("-").map(Number);
+    noOfDays = Math.max(0, Math.floor((Date.UTC(ry, rm - 1, rd) - Date.UTC(dy, dm - 1, dd)) / 86400000));
+  }
+  return { departureDate, returnDate, noOfDays };
 }
 
 function viaText(
@@ -666,6 +714,28 @@ export async function savePackageOperationalDetails(
     stopovers,
     movementEvents,
   });
+
+  // Keep the commercial header in the same travel window so desktop incremental pull
+  // (which keys off package_bookings.updated_at) also re-fetches operational children.
+  const travel = derivePackageTravelWindow(
+    input.flights.map((flight) => ({ journey: flight.journey, departureDate: flight.departureDate })),
+    input.hotels.map((hotel) => ({ checkIn: hotel.checkIn, checkOut: hotel.checkOut })),
+  );
+  const headerPatch = {
+    departure_date: travel.departureDate,
+    return_date: travel.returnDate,
+    no_of_days: travel.noOfDays,
+    updated_at: now,
+  };
+  if (isDesktopApp()) {
+    const database = await db();
+    await database.execute(
+      `UPDATE package_bookings SET departure_date=$1,return_date=$2,no_of_days=$3,updated_at=$4 WHERE id=$5 AND company_id=$6`,
+      [travel.departureDate, travel.returnDate, travel.noOfDays, now, bookingId, companyId],
+    );
+  }
+  await queueSync("UPDATE", "package_bookings", bookingId, headerPatch);
+  if (isDesktopApp()) await flushDesktopSyncQueue();
 
   return movement;
 }
