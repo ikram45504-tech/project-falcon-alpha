@@ -110,21 +110,24 @@ export async function applyCloudOperation(
   }
 
   if (operation === "DELETE") {
-    const idColumn = tableName === "payment_v2_meta" ? "payment_id" : "id";
+    const idColumn =
+      tableName === "payment_v2_meta" ? "payment_id" : tableName === "package_operational_meta" ? "booking_id" : "id";
     const { error } = await supabase.from(tableName).delete().eq(idColumn, recordId);
     if (error) throw new Error(error.message);
     return;
   }
 
   if (operation === "UPDATE") {
-    const idColumn = tableName === "payment_v2_meta" ? "payment_id" : "id";
+    const idColumn =
+      tableName === "payment_v2_meta" ? "payment_id" : tableName === "package_operational_meta" ? "booking_id" : "id";
     const { error } = await supabase.from(tableName).update(payload).eq(idColumn, recordId);
     if (error) throw new Error(error.message);
     return;
   }
 
   // INSERT and UPSERT both use upsert so desktop retries / web double-writes stay safe.
-  const onConflict = tableName === "payment_v2_meta" ? "payment_id" : "id";
+  const onConflict =
+    tableName === "payment_v2_meta" ? "payment_id" : tableName === "package_operational_meta" ? "booking_id" : "id";
   const { error } = await supabase.from(tableName).upsert(payload, { onConflict });
   if (error && (error as { code?: string }).code !== "23505") {
     throw new Error(error.message);
@@ -157,10 +160,7 @@ export async function queueSync(
 }
 
 /** Upsert package header + replace all commercial lines in the cloud. */
-export async function syncPackageBookingBundle(
-  header: PackageBookingSyncHeader,
-  lines: PackageBookingSyncLine[],
-) {
+export async function syncPackageBookingBundle(header: PackageBookingSyncHeader, lines: PackageBookingSyncLine[]) {
   await queueSync("UPSERT", "package_bookings", header.id, header as unknown as Record<string, unknown>);
   await queueSync("REPLACE_CHILDREN", "package_booking_lines", header.id, {
     parent_column: "booking_id",
@@ -241,4 +241,82 @@ export async function syncPaymentVoid(paymentId: string, updatedAt: string, upda
     updated_at: updatedAt,
     updated_by_user_id: updatedByUserId,
   });
+}
+
+/** Clear all known child rows for a booking in the cloud (used by permanent delete). */
+export async function syncClearBookingChildren(bookingId: string, childTables: string[]) {
+  for (const table of childTables) {
+    if (table === "package_operational_meta") {
+      await queueSync("DELETE", table, bookingId, {});
+      continue;
+    }
+    await queueSync("REPLACE_CHILDREN", table, bookingId, {
+      parent_column: "booking_id",
+      rows: [],
+    });
+  }
+}
+
+export async function syncPackageOperationalBundle(
+  bookingId: string,
+  companyId: string,
+  payload: {
+    notes: string;
+    createdAt: string;
+    updatedAt: string;
+    passengers: Record<string, unknown>[];
+    hotels: Record<string, unknown>[];
+    flights: Record<string, unknown>[];
+    stopovers: Record<string, unknown>[];
+    movementEvents: Record<string, unknown>[];
+  },
+) {
+  await queueSync("UPSERT", "package_operational_meta", bookingId, {
+    booking_id: bookingId,
+    company_id: companyId,
+    notes: payload.notes,
+    created_at: payload.createdAt,
+    updated_at: payload.updatedAt,
+  });
+  await queueSync("REPLACE_CHILDREN", "package_operational_passengers", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.passengers,
+  });
+  await queueSync("REPLACE_CHILDREN", "package_operational_hotels", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.hotels,
+  });
+  await queueSync("REPLACE_CHILDREN", "package_operational_flights", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.flights,
+  });
+  await queueSync("REPLACE_CHILDREN", "package_operational_flight_stopovers", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.stopovers,
+  });
+  await queueSync("REPLACE_CHILDREN", "package_movement_events", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.movementEvents,
+  });
+}
+
+export async function syncPackageAdjustmentBundle(input: {
+  bookingId: string;
+  companyId: string;
+  totalPkr: number;
+  updatedAt: string;
+  updatedByUserId: string;
+  lines: PackageBookingSyncLine[];
+  adjustment: Record<string, unknown>;
+}) {
+  await queueSync("UPDATE", "package_bookings", input.bookingId, {
+    total_pkr: input.totalPkr,
+    updated_at: input.updatedAt,
+    updated_by_user_id: input.updatedByUserId,
+  });
+  await queueSync("REPLACE_CHILDREN", "package_booking_lines", input.bookingId, {
+    parent_column: "booking_id",
+    rows: input.lines,
+  });
+  await queueSync("UPSERT", "package_booking_adjustments", String(input.adjustment.id), input.adjustment);
 }

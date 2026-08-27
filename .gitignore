@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local MCP secrets (tokens must not be committed)
+.cursor/mcp.json

@@ -5,6 +5,7 @@ import { hasPermission, Permission, UserRole } from "./permissions";
 import {
   applyCloudOperation,
   queueSync as enqueueCloudSync,
+  syncClearBookingChildren,
   syncPackageBookingVoid,
   type SyncOperation as CloudSyncOperation,
 } from "./cloudSync";
@@ -2497,6 +2498,7 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "package_operational_flights",
     "package_operational_flight_stopovers",
     "package_movement_events",
+    "package_booking_adjustments",
     "ticket_booking_lines",
     "ticket_operational_meta",
     "ticket_operational_passengers",
@@ -2526,13 +2528,19 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "misc_bookings",
   ];
 
+  // Always clear cloud children first (desktop previously only deleted locally).
+  await syncClearBookingChildren(bookingId, bookingChildTables);
+
   for (const table of bookingChildTables) {
     try {
       if (isTauri) {
-        await database.execute(`DELETE FROM ${table} WHERE booking_id=$1`, [bookingId]);
-      } else {
-        const { error } = await supabase.from(table).delete().eq("booking_id", bookingId);
-        if (error) console.warn(`Could not delete from ${table} in cloud:`, error.message);
+        if (table === "package_operational_meta") {
+          await database.execute(`DELETE FROM ${table} WHERE booking_id=$1`, [bookingId]);
+        } else if (table.includes("bookings") && !table.includes("lines") && !table.includes("adjustments")) {
+          // skip headers
+        } else {
+          await database.execute(`DELETE FROM ${table} WHERE booking_id=$1`, [bookingId]);
+        }
       }
     } catch (e) {
       console.warn(`Could not delete from ${table}`, e);
@@ -3416,7 +3424,7 @@ export async function voidPackageBooking(companyId: string, bookingId: string, a
   await requirePermission(companyId, actorUserId, "void_bookings");
   const isTauri = "__TAURI_INTERNALS__" in window;
   const now = new Date().toISOString();
-  let ubNumber = bookingId;
+  let ubNumber: string;
 
   if (!isTauri) {
     const { data } = await supabase
@@ -3456,6 +3464,24 @@ export async function voidPackageBooking(companyId: string, bookingId: string, a
 }
 
 export async function getCompanyPackageSummary(companyId: string) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { data, error } = await supabase
+      .from("package_bookings")
+      .select("transaction_type,total_pkr,status")
+      .eq("company_id", companyId)
+      .eq("status", "ACTIVE");
+    if (error) throw new Error(error.message);
+    const rows = data || [];
+    return {
+      sale_total: rows.filter((r) => r.transaction_type === "SALE").reduce((s, r) => s + Number(r.total_pkr || 0), 0),
+      purchase_total: rows
+        .filter((r) => r.transaction_type === "PURCHASE")
+        .reduce((s, r) => s + Number(r.total_pkr || 0), 0),
+      active_count: rows.length,
+    } as CompanyPackageSummary;
+  }
+
   const database = await db();
   const rows = await database.select<CompanyPackageSummary[]>(
     `SELECT
@@ -3470,6 +3496,25 @@ export async function getCompanyPackageSummary(companyId: string) {
 }
 
 export async function getCounterpartyPackageTotals(companyId: string) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    const { data, error } = await supabase
+      .from("package_bookings")
+      .select("counterparty_id,transaction_type,total_pkr,status")
+      .eq("company_id", companyId)
+      .eq("status", "ACTIVE");
+    if (error) throw new Error(error.message);
+    const map = new Map<string, CounterpartyPackageTotal>();
+    for (const row of data || []) {
+      const id = String(row.counterparty_id);
+      const current = map.get(id) || { counterparty_id: id, sale_total: 0, purchase_total: 0 };
+      if (row.transaction_type === "SALE") current.sale_total += Number(row.total_pkr || 0);
+      else current.purchase_total += Number(row.total_pkr || 0);
+      map.set(id, current);
+    }
+    return Array.from(map.values());
+  }
+
   const database = await db();
   return database.select<CounterpartyPackageTotal[]>(
     `SELECT
@@ -5475,10 +5520,9 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     }
 
     const cloudIds = new Set((cloudRows || []).map((row) => String(row.id)));
-    const localRows = await database.select<Array<{ id: string }>>(
-      `SELECT id FROM ${table} WHERE company_id = $1`,
-      [companyId],
-    );
+    const localRows = await database.select<Array<{ id: string }>>(`SELECT id FROM ${table} WHERE company_id = $1`, [
+      companyId,
+    ]);
 
     let removed = 0;
     for (const local of localRows) {
@@ -5558,10 +5602,9 @@ export async function executePullSync(options?: { companyId?: string; fullResync
       console.error("Party delete reconcile failed:", cloudIdsError.message);
     } else {
       const cloudIds = new Set((cloudPartyIds || []).map((row) => String(row.id)));
-      const localRows = await database.select<Array<{ id: string }>>(
-        `SELECT id FROM parties WHERE company_id = $1`,
-        [companyId],
-      );
+      const localRows = await database.select<Array<{ id: string }>>(`SELECT id FROM parties WHERE company_id = $1`, [
+        companyId,
+      ]);
       for (const local of localRows) {
         if (cloudIds.has(local.id)) continue;
         await database.execute(`DELETE FROM parties WHERE id = $1 AND company_id = $2`, [local.id, companyId]);

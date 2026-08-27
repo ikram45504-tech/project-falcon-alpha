@@ -1,0 +1,925 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 4779
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 22 Tf
+25.2999999999999972 TL
+0 g
+51.0236220472441033 785.1970866141732586 Td
+(Travel Accounting) Tj
+ET
+BT
+/F2 16 Tf
+18.3999999999999986 TL
+0 g
+51.0236220472441033 756.8506299212598378 Td
+(Deep Scan Report) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0.314 g
+51.0236220472441033 734.1734645669291695 Td
+(Generated: August 27, 2026) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0.314 g
+51.0236220472441033 717.1655905511811397 Td
+(Sources: Live Supabase + Vercel + GitHub MCP + Codebase Analysis) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0.314 g
+51.0236220472441033 700.15771653543311 Td
+(Version under review: Desktop & Web v1.0.10) Tj
+ET
+0.94 0.97 1. rg
+51.0236220472441033 666.1419685039369369 493.2327559055117376 -51.0236220472441033 re
+f
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0. g
+62.3622047244094517 646.2994488188976447 Td
+(Overall Rating: 7.8 / 10) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+62.3622047244094517 626.4569291338582389 Td
+(Phase 1 production-ready | Phase 2 polish recommended) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 592.4411811023621794 Td
+(1. Executive Summary) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 572.5986614173227736 Td
+(Overall Rating: 7.8 / 10) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 554.1734645669291695 Td
+(Phase 1 sync \(Parties, Packages, Tickets create, Payments\) is production-usable.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 535.748267716535338 Td
+(Desktop v1.0.10 tested successfully by user. Web and GitHub aligned on same commit.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 517.3230708661417339 Td
+(Hotel / Visa / Transport / Misc booking sync not yet implemented \(Phase 2\).) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 498.8978740157479592 Td
+(MCP integrations active: Supabase, Vercel, GitHub — live deep scan enabled.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 469.1340944881889072 Td
+(2. Stack Alignment \(Live Verified\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 449.2915748031495582 Td
+(GitHub Release: app-v1.0.10 | commit 21956e0) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 430.8663779527558404 Td
+(Vercel Production: READY | commit 21956e0 | main branch) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 412.4411811023621226 Td
+(Web URL: https://travel-accounting-alpha.vercel.app) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 394.0159842519684616 Td
+(Desktop: v1.0.10 installer published \(x64-setup.exe, MSI, Mac DMG\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 375.5907874015747439 Td
+(Supabase Project: riszmwqmjbkscpzfoumq.supabase.co) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 357.1655905511810261 Td
+(GitHub Repo: ikram45504-tech/project-falcon-alpha) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 338.7403937007873083 Td
+(Vercel Team: travel-soft | Project: travel-accounting | Framework: Vite) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 308.9766141732283131 Td
+(3. MCP Connection Status) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 289.1340944881889072 Td
+(Supabase MCP: CONNECTED — 20 tools \(project-scoped\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 270.7088976377951894 Td
+(Vercel MCP: CONNECTED — 37 tools \(Plugin active\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 252.2837007874014716 Td
+(GitHub MCP: CONNECTED — 44 tools, 4 resources) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 233.8585039370077538 Td
+(All three verified with live API calls on scan date.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 204.0947244094487587 Td
+(4. Live Supabase Data \(Row Counts\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 184.2522047244093528 Td
+(parties .......................... 2 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 165.827007874015635 Td
+(package_bookings ................. 1 row \(UB-1115, PURCHASE\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 147.4018110236219172 Td
+(package_booking_lines ............ 11 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 128.9766141732283131 Td
+(ticket_bookings .................. 0 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 110.5514173228345953 Td
+(ticket_booking_lines ............. 0 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 92.1262204724408775 Td
+(payment_entries .................. 0 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 73.7010236220471597 Td
+(payment_v2_meta .................. 0 rows) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.471 g
+51.0236220472441033 22.6771653543306684 Td
+(Travel Accounting Deep Scan | August 27, 2026 | Page 1 of 3) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 5104
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 785.1970866141732586 Td
+(hotel_bookings ................... 0 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 766.7718897637795408 Td
+(visa_bookings .................... 0 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 748.346692913385823 Td
+(transport_bookings ............... 0 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 729.9214960629921052 Td
+(misc_bookings .................... 0 rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 711.4962992125983874 Td
+(Total public tables in schema .. 48 tables) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 693.0711023622046696 Td
+(Ticket line columns \(airline_name, pnr, flight_type, ticket_route\): APPLIED) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 663.3073228346456744 Td
+(5. Section Ratings) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 643.4648031496062686 Td
+(Parties / Vendors ............... 9/10  OK — full bidirectional sync) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 625.0396062992125508 Td
+(Package Bookings .............. 9/10  OK — reference implementation) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 606.614409448818833 Td
+(Ticket Bookings ............... 7/10  Create OK; edit/void need polish) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 588.1892125984251152 Td
+(Payments V2 ................... 8/10  Code ready; 0 rows in cloud yet) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 569.7640157480313974 Td
+(Sync Engine ................... 8/10  Push/pull/reconcile working) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 551.3388188976377933 Td
+(Desktop App v1.0.10 ........... 8.5/10 User confirmed working) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 532.9136220472440755 Td
+(Web App \(Vercel\) .............. 8/10  Deploy aligned with v1.0.10) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 514.4884251968503577 Td
+(Hotel/Visa/Transport/Misc ..... 3/10  Desktop-only, no cloud push) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 496.0632283464566399 Td
+(Ledger / Statements ........... 5/10  Web partial \(package+payments only\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 477.6380314960629221 Td
+(Supabase RLS / Security ....... 6/10  Phase 1 OK; gaps on tickets/hotel) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 447.8742519685038701 Td
+(6. Security Findings \(Supabase Advisor\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 428.0317322834645211 Td
+(RLS OK \(with policies\): parties, package_bookings, package_booking_lines,) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 409.6065354330708033 Td
+(  payment_entries, payment_v2_meta, companies, users) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 391.1813385826770855 Td
+(RLS OFF \(ERROR\): ticket_bookings, ticket_booking_lines, audit_logs,) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 372.7561417322834245 Td
+(  booking_adjustments, package_booking_adjustments) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 354.3309448818897067 Td
+(RLS ON but NO policies \(~30 tables\): hotel, visa, transport, misc,) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 335.9057480314959889 Td
+(  operational tables — web blocked until policies added) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 317.480551181102328 Td
+(RLS uses user_metadata for company_id — flagged as insecure long-term) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 299.0553543307086102 Td
+(Recommendation: migrate to app_metadata or users table join) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 269.2915748031495013 Td
+(7. What's Working \(Confirmed\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 249.4490551181102092 Td
+( P a r t y / V e n d o r   c r e a t e ,   e d i t ,   d e l e t e   —   w e b  !”   d e s k t o p  !”   S u p a b a s e) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 231.0238582677164914 Td
+( P a c k a g e   b o o k i n g   c r e a t e / u p d a t e / v o i d   —   w e b  !”   d e s k t o p   s y n c) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 212.5986614173227736 Td
+(Package delete on web removes from desktop after Sync) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 194.1734645669290558 Td
+(Ticket booking create on web \(after schema column fix\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 175.748267716535338 Td
+(Payment V2 sync code \(create/update/void bundles\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 157.3230708661416202 Td
+(Auto sync every 5s + manual Sync button on desktop) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 138.8978740157479024 Td
+(GitHub release pipeline — Windows + Mac installers) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 120.4726771653542983 Td
+(Vercel auto-deploy from main branch) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.471 g
+51.0236220472441033 22.6771653543306684 Td
+(Travel Accounting Deep Scan | August 27, 2026 | Page 2 of 3) Tj
+ET
+endstream
+endobj
+7 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 8 0 R
+>>
+endobj
+8 0 obj
+<<
+/Length 3197
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 785.1970866141732586 Td
+(8. Needs Polish \(Priority Order\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 765.3545669291338527 Td
+(P1 — Ticket update/void cloud sync + Supabase RLS for ticket tables) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 746.9293700787401349 Td
+(P1 — Payment delete reconcile on desktop pull) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 728.5041732283464171 Td
+(P2 — Web ledger/totals \(getPartyBookingTotals Supabase branch\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 710.0789763779526993 Td
+(P2 — Hotel booking cloud sync \(mirror PackageFlowDb pattern\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 691.6537795275589815 Td
+(P3 — Visa, Transport, Misc cloud sync \(one module at a time\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 673.2285826771653774 Td
+(P3 — Operational details sync \(passengers, flights, hotels\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 654.8033858267716596 Td
+( P 4   —   F i x   R L S   u s e r _ m e t a d a t a  !’   s e c u r e   c o m p a n y   s c o p i n g) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 636.3781889763779418 Td
+(P4 — Failed sync queue auto-retry + last synced timestamp UI) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 606.614409448818833 Td
+(9. Recommended Phase Roadmap) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 586.7718897637794271 Td
+(Phase 1 \(DONE\): Parties, Packages, Ticket create, Payments, Delete reconcile) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 568.346692913385823 Td
+(Phase 2A \(Next\): Ticket edit/void, Ticket RLS, Payment delete reconcile) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 549.9214960629921052 Td
+( P h a s e   2 B :   H o t e l  !’   V i s a  !’   T r a n s p o r t  !’   M i s c   \( o n e   b y   o n e \)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 531.4962992125983874 Td
+(Phase 3: Operational details sync, Adjustments, Audit logs) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 513.0711023622046696 Td
+(Phase 4: Supabase Realtime, full RLS hardening, web statements complete) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.078 0.235 0.471 rg
+51.0236220472441033 483.3073228346456176 Td
+(10. Conclusion) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 463.4648031496062686 Td
+(The setup is real and working — not just code on paper.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 445.0396062992125508 Td
+(Desktop v1.0.10 is suitable for daily Phase 1 operations.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 426.614409448818833 Td
+(Web app matches desktop code \(commit 21956e0\).) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 408.1892125984251152 Td
+(Full MCP access now enables autonomous DB/deploy/repo checks.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0. g
+56.6929133858267775 389.7640157480314542 Td
+(Proceed with Phase 2A before expanding to hotel/visa modules.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.471 g
+51.0236220472441033 22.6771653543306684 Td
+(Travel Accounting Deep Scan | August 27, 2026 | Page 3 of 3) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R 7 0 R ]
+/Count 3
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+21 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+22 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 9 0 R
+/F2 10 0 R
+/F3 11 0 R
+/F4 12 0 R
+/F5 13 0 R
+/F6 14 0 R
+/F7 15 0 R
+/F8 16 0 R
+/F9 17 0 R
+/F10 18 0 R
+/F11 19 0 R
+/F12 20 0 R
+/F13 21 0 R
+/F14 22 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+23 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20260827040653+05'00')
+>>
+endobj
+24 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 25
+0000000000 65535 f 
+0000013662 00000 n 
+0000015495 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000004983 00000 n 
+0000005120 00000 n 
+0000010276 00000 n 
+0000010413 00000 n 
+0000013731 00000 n 
+0000013856 00000 n 
+0000013987 00000 n 
+0000014121 00000 n 
+0000014259 00000 n 
+0000014383 00000 n 
+0000014512 00000 n 
+0000014644 00000 n 
+0000014780 00000 n 
+0000014908 00000 n 
+0000015035 00000 n 
+0000015164 00000 n 
+0000015297 00000 n 
+0000015399 00000 n 
+0000015747 00000 n 
+0000015833 00000 n 
+trailer
+<<
+/Size 25
+/Root 24 0 R
+/Info 23 0 R
+/ID [ <04A16C52A7A9BDDA6A061C9A00EA0AEB> <04A16C52A7A9BDDA6A061C9A00EA0AEB> ]
+>>
+startxref
+15937
+%%EOF
