@@ -1,5 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
-import { isDesktopApp, syncPackageOperationalBundle } from "./cloudSync";
+import { flushDesktopSyncQueue, isDesktopApp, queueSync, syncPackageOperationalBundle } from "./cloudSync";
 import { supabase } from "./supabaseClient";
 import type { PackagePassengerType } from "./db";
 
@@ -666,6 +666,15 @@ export async function savePackageOperationalDetails(
     stopovers,
     movementEvents,
   });
+
+  // Bump parent header so desktop incremental pull reloads children after ops-only web edits.
+  await queueSync("UPDATE", "package_bookings", bookingId, {
+    updated_at: now,
+  });
+
+  if (isDesktopApp()) {
+    await flushDesktopSyncQueue();
+  }
 
   return movement;
 }
