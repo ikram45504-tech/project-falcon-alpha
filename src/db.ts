@@ -624,6 +624,7 @@ async function db() {
 async function ensureColumn(table: string, column: string, definition: string) {
   const database = await db();
   const columns = await database.select<Record<string, unknown>[]>(`PRAGMA table_info(${table})`);
+  if (columns.length === 0) return;
 
   const exists = columns.some((item) => String(item["name"] ?? "").toLowerCase() === column.toLowerCase());
 
@@ -892,6 +893,9 @@ async function initDatabaseOnce() {
 
   await database.execute(`CREATE INDEX IF NOT EXISTS idx_parties_company_type_name
     ON parties(company_id, account_type, name)`);
+
+  await ensureColumn("parties", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn("parties", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
 
   const { initCounterpartyTables } = await import("./CounterpartyDb");
   await initCounterpartyTables(database);
@@ -1299,12 +1303,20 @@ async function initDatabaseOnce() {
   }
 
   // SaaS-ready ownership/audit fields. These stay hidden from normal entry screens.
-  await ensureColumn("parties", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("parties", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("payment_entries", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("payment_entries", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("package_bookings", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("package_bookings", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
+  const ownershipTables = [
+    "parties",
+    "payment_entries",
+    "package_bookings",
+    "ticket_bookings",
+    "hotel_bookings",
+    "visa_bookings",
+    "transport_bookings",
+    "misc_bookings",
+  ] as const;
+  for (const table of ownershipTables) {
+    await ensureColumn(table, "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(table, "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
+  }
 
   // Phase 8 — one-time AUTH + COMPANY reset requested by the user.
   // All previous records were test data. This intentionally removes old companies,

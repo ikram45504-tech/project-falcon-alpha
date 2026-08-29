@@ -910,7 +910,7 @@ export function buildStatementPdf(data: StatementPdfData) {
     title: `${data.company.name} - Statement - ${data.party.name}`,
     subject: `Statement of Account - ${data.party.name}`,
     author: data.company.name,
-    creator: "Travel Accounting",
+    creator: "Travel Hisab by SMC Softwares",
   });
   let y = drawHeader(doc, data);
   y = drawSummary(doc, data, y);

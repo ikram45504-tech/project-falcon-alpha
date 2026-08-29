@@ -2,6 +2,8 @@ import { FormEvent, useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import TravelHisabLogo from "../TravelHisabLogo";
+import { COMPANY_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "../brand";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -37,9 +39,18 @@ export default function LoginScreen({
 
   useEffect(() => {
     if (globalAuthError) {
-      setError(`Database Error: ${globalAuthError}`);
+      setError(
+        globalAuthError.startsWith("Workspace could not start")
+          ? globalAuthError
+          : `Database Error: ${globalAuthError}`,
+      );
     }
   }, [globalAuthError]);
+
+  useEffect(() => {
+    document.documentElement.classList.add("auth-screen");
+    return () => document.documentElement.classList.remove("auth-screen");
+  }, []);
 
   const signIn = async (e: FormEvent) => {
     e.preventDefault();
@@ -106,10 +117,12 @@ export default function LoginScreen({
   return (
     <main className="center auth-login-page-v8">
       <section className="card login auth-login-card-v8">
-        <div className="mark">TA</div>
-        <span className="eyebrow blue">TRAVEL ACCOUNTING</span>
+        <div className="mark product-logo-mark">
+          <TravelHisabLogo size={52} />
+        </div>
+        <span className="eyebrow blue">{PRODUCT_NAME.toUpperCase()}</span>
         <h1>Sign in to your company</h1>
-        <p className="muted">Use your Company Code with your authorized Username or Email.</p>
+        <p className="muted auth-login-lead">{PRODUCT_TAGLINE}. Use your Company Code with Username or Email.</p>
 
         {message && <div className="alert success">{message}</div>}
         {error && <div className="alert error">{error}</div>}
@@ -160,11 +173,8 @@ export default function LoginScreen({
               checked={rememberCredentials}
               onChange={(e) => setRememberCredentials(e.target.checked)}
             />
-            <span>Remember credentials to sign in next time on this device</span>
+            <span>Remember credentials on this device</span>
           </label>
-          <small className="remember-session-help">
-            Your password is not stored. A device session is used instead.
-          </small>
 
           <button className="primary" type="submit" disabled={busy}>
             {busy ? "Signing in..." : "Sign In"}
@@ -172,7 +182,7 @@ export default function LoginScreen({
         </form>
 
         <div className="new-company-divider">
-          <span>New to Travel Accounting?</span>
+          <span>New to {PRODUCT_NAME}?</span>
         </div>
         <button
           className="create-company-login-button"
@@ -185,10 +195,9 @@ export default function LoginScreen({
           Create an Account
         </button>
 
-        <div className="platform-ready-note">
-          <b>Secure company access</b>
-          <span>Company-based sign in, controlled user permissions and protected account sessions.</span>
-        </div>
+        <p className="auth-login-footer">
+          {PRODUCT_NAME} by {COMPANY_NAME}
+        </p>
       </section>
 
       {accountCreatedNotice && (

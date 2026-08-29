@@ -6,6 +6,8 @@ import { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
 import { ROLE_LABELS, hasPermission } from "./permissions";
 
 import { useEffect } from "react";
+import TravelHisabLogo from "./TravelHisabLogo";
+import { PRODUCT_NAME } from "./brand";
 
 // Screens
 import LoginScreen from "./screens/LoginScreen";
@@ -40,7 +42,7 @@ function AppLayout() {
     // 1. Online/Offline window title
     const updateTitle = async () => {
       const status = navigator.onLine ? "Connected (Online)" : "Offline Mode";
-      const newTitle = `Travel Accounting - ${status}`;
+      const newTitle = `${PRODUCT_NAME} - ${status}`;
       document.title = newTitle;
 
       try {
@@ -453,8 +455,10 @@ function RouterContent() {
     return (
       <main className="center">
         <div className="card loading">
-          <div className="mark">TA</div>
-          <h1>Travel Accounting</h1>
+          <div className="mark product-logo-mark">
+            <TravelHisabLogo size={52} />
+          </div>
+          <h1>{PRODUCT_NAME}</h1>
           <p>{error || "Preparing your workspace..."}</p>
         </div>
       </main>
