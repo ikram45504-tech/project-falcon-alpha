@@ -1063,6 +1063,28 @@
 :root[data-theme="midnight"] .auth-login-card-v8 form label:not(.remember-company-code) {
   color: var(--text-main) !important;
 }
+:root[data-theme="midnight"] .auth-setup-page-compact {
+  background: var(--bg-app) !important;
+}
+:root[data-theme="midnight"] .auth-setup-shell {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35) !important;
+}
+:root[data-theme="midnight"] .auth-setup-form-panel {
+  background: var(--bg-card) !important;
+}
+:root[data-theme="midnight"] .auth-setup-form-head h1 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .auth-setup-form-compact label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .auth-setup-field-small {
+  color: var(--text-muted) !important;
+}
+:root[data-theme="midnight"] .auth-setup-field-small input {
+  background: var(--bg-panel) !important;
+}
 :root[data-theme="midnight"] .created-company-code {
   border-color: rgba(56, 189, 248, 0.15) !important;
   background: rgba(30, 41, 59, 0.4) !important;
@@ -3141,6 +3163,27 @@
 }
 :root[data-theme="ocean"] .auth-login-card-v8 form label:not(.remember-company-code) {
   color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .auth-setup-page-compact {
+  background: var(--bg-app) !important;
+}
+:root[data-theme="ocean"] .auth-setup-shell {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+:root[data-theme="ocean"] .auth-setup-form-panel {
+  background: var(--bg-card) !important;
+}
+:root[data-theme="ocean"] .auth-setup-form-head h1 {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .auth-setup-form-compact label {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .auth-setup-field-small {
+  color: var(--text-muted) !important;
+}
+:root[data-theme="ocean"] .auth-setup-field-small input {
+  background: var(--bg-panel) !important;
 }
 :root[data-theme="ocean"] .created-company-code {
   border-color: rgba(2, 132, 199, 0.2) !important;

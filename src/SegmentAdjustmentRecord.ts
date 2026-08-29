@@ -1,7 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { isDesktopApp, flushDesktopSyncQueue } from "./cloudSync";
 import { supabase } from "./supabaseClient";
-import type { BookingLifecycleStatus } from "./BookingLifecycle";
+import type { BookingAdjustmentKind, BookingLifecycleStatus, BookingServiceName } from "./BookingLifecycle";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 
@@ -99,44 +99,67 @@ async function select<T>(database: Database, sql: string, bindValues: unknown[] 
   return retry(() => database.select<T>(sql, bindValues));
 }
 
-let legacyBookingAdjustmentsInit: Promise<void> | null = null;
+export type StatementSegmentAdjustmentRow = {
+  id: string;
+  company_id: string;
+  service_type: BookingServiceName;
+  booking_id: string;
+  adjustment_type: BookingAdjustmentKind;
+  adjustment_date: string;
+  category: string;
+  reason: string;
+  reference: string;
+  notes: string;
+  previous_total_pkr: number;
+  previous_base_pkr: number;
+  revised_base_pkr: number;
+  charge_pkr: number;
+  credit_pkr: number;
+  account_delta_pkr: number;
+  effective_total_pkr: number;
+  before_snapshot_json: string;
+  after_snapshot_json: string;
+  cancelled_lines_json: string;
+  revision_no: number;
+  lifecycle_status: BookingLifecycleStatus;
+  created_at: string;
+};
 
-export async function initLegacyBookingAdjustmentsTable() {
-  if (legacyBookingAdjustmentsInit) return legacyBookingAdjustmentsInit;
-  legacyBookingAdjustmentsInit = (async () => {
-    const database = await db();
-    await execute(database, "PRAGMA busy_timeout = 5000");
-    await execute(
-      database,
-      `CREATE TABLE IF NOT EXISTS booking_adjustments (
-      id TEXT PRIMARY KEY,
-      company_id TEXT NOT NULL,
-      service_type TEXT NOT NULL,
-      booking_id TEXT NOT NULL,
-      adjustment_type TEXT NOT NULL,
-      adjustment_date TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT '',
-      reason TEXT NOT NULL DEFAULT '',
-      reference TEXT NOT NULL DEFAULT '',
-      notes TEXT NOT NULL DEFAULT '',
-      previous_total_pkr REAL NOT NULL DEFAULT 0,
-      previous_base_pkr REAL NOT NULL DEFAULT 0,
-      revised_base_pkr REAL NOT NULL DEFAULT 0,
-      charge_pkr REAL NOT NULL DEFAULT 0,
-      credit_pkr REAL NOT NULL DEFAULT 0,
-      account_delta_pkr REAL NOT NULL DEFAULT 0,
-      effective_total_pkr REAL NOT NULL DEFAULT 0,
-      before_snapshot_json TEXT NOT NULL DEFAULT '',
-      after_snapshot_json TEXT NOT NULL DEFAULT '',
-      cancelled_lines_json TEXT NOT NULL DEFAULT '',
-      revision_no INTEGER NOT NULL DEFAULT 2,
-      lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
-      created_by_user_id TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL
-    )`,
-    );
-  })();
-  return legacyBookingAdjustmentsInit;
+export const SEGMENT_ADJUSTMENT_TABLES: ReadonlyArray<{
+  serviceType: BookingServiceName;
+  tableName: string;
+}> = [
+  { serviceType: "PACKAGE", tableName: "package_booking_adjustments" },
+  { serviceType: "HOTEL", tableName: "hotel_booking_adjustments" },
+  { serviceType: "TICKET", tableName: "ticket_booking_adjustments" },
+  { serviceType: "VISA", tableName: "visa_booking_adjustments" },
+  { serviceType: "TRANSPORT", tableName: "transport_booking_adjustments" },
+  { serviceType: "MISC", tableName: "misc_booking_adjustments" },
+];
+
+const STATEMENT_ADJUSTMENT_SELECT = `
+  booking_id,adjustment_type,adjustment_date,
+  category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+  charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+  after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+`;
+
+export async function initAllSegmentAdjustmentTables() {
+  await Promise.all(SEGMENT_ADJUSTMENT_TABLES.map(({ tableName }) => initSegmentAdjustmentTable(tableName)));
+}
+
+export async function loadSegmentAdjustmentsForStatements(companyId: string) {
+  await initAllSegmentAdjustmentTables();
+  const database = await db();
+  const unions = SEGMENT_ADJUSTMENT_TABLES.map(
+    ({ serviceType, tableName }) =>
+      `SELECT id,company_id,'${serviceType}' AS service_type,${STATEMENT_ADJUSTMENT_SELECT} FROM ${tableName} WHERE company_id=$1`,
+  );
+  return select<StatementSegmentAdjustmentRow[]>(
+    database,
+    `${unions.join(" UNION ALL ")} ORDER BY service_type,booking_id,revision_no,created_at`,
+    [companyId],
+  );
 }
 
 export async function initSegmentAdjustmentTable(tableName: string) {

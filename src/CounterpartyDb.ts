@@ -56,6 +56,13 @@ function toParty(row: AccountRow, accountType: AccountType): Party {
 }
 
 export async function initCounterpartyTables(database: Database) {
+  async function ensureColumn(table: string, column: string, definition: string) {
+    const columns = await database.select<Record<string, unknown>[]>(`PRAGMA table_info(${table})`);
+    const exists = columns.some((item) => String(item["name"] ?? "").toLowerCase() === column.toLowerCase());
+    if (exists) return;
+    await database.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+
   await database.execute(`CREATE TABLE IF NOT EXISTS vendors (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,
@@ -90,6 +97,11 @@ export async function initCounterpartyTables(database: Database) {
   await database.execute(
     `CREATE INDEX IF NOT EXISTS idx_unassigned_accounts_company_name ON unassigned_accounts(company_id, name)`,
   );
+
+  await ensureColumn("vendors", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn("vendors", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn("unassigned_accounts", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn("unassigned_accounts", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
 
   const vendorCount = await database.select<Array<{ count: number }>>(`SELECT COUNT(*) AS count FROM vendors`);
   if (Number(vendorCount[0]?.count || 0) === 0) {

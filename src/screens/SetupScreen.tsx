@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createCompanyAccount } from "../db";
 import { useNavigate } from "react-router-dom";
+import TravelHisabLogo from "../TravelHisabLogo";
+import { PRODUCT_BYLINE, PRODUCT_HIGHLIGHTS, PRODUCT_NAME, PRODUCT_TAGLINE } from "../brand";
 
 const blankSetup = {
   companyName: "",
@@ -41,6 +43,11 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
   const [error, setError] = useState("");
 
   const setupPasswordChecks = useMemo(() => passwordChecks(setup.password), [setup.password]);
+
+  useEffect(() => {
+    document.documentElement.classList.add("auth-screen");
+    return () => document.documentElement.classList.remove("auth-screen");
+  }, []);
 
   const updateSetup = (key: keyof typeof setup, value: string) => {
     setError("");
@@ -87,161 +94,166 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
   };
 
   return (
-    <main className="setup auth-setup-v8 auth-setup-v8d">
-      <section className="hero">
-        <div>
-          <span className="eyebrow gold">CREATE ACCOUNT</span>
-          <h1>Create your company account and secure master access.</h1>
-          <p>
-            Start with the essential account details. Company branding, address, currencies and additional profile
-            information can be completed after sign in.
-          </p>
-          <div className="features">
-            <b>
-              01 <small>Unique Company Identity</small>
-            </b>
-            <b>
-              02 <small>Master Username or Email Sign In</small>
-            </b>
-            <b>
-              03 <small>Role-Based Team Access</small>
-            </b>
+    <main className="center auth-setup-page-compact">
+      <div className="auth-setup-shell">
+        <aside className="auth-setup-info">
+          <div className="auth-setup-info-brand">
+            <div className="mark product-logo-mark auth-setup-logo-mark">
+              <TravelHisabLogo size={48} />
+            </div>
+            <div>
+              <span className="eyebrow gold">{PRODUCT_NAME.toUpperCase()}</span>
+              <h2>{PRODUCT_TAGLINE}</h2>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <section className="panel signup-panel-v8b">
-        <div className="panel-head signup-head-v8b">
-          <div>
-            <span className="eyebrow blue">NEW COMPANY ACCOUNT</span>
-            <h2>Create Account</h2>
-            <p>A unique Company Code will be issued after your account is successfully created.</p>
+          <div className="auth-setup-info-copy">
+            <p className="auth-setup-info-intro">
+              Built for travel agencies to manage bookings, accounts and statements in one workspace.
+            </p>
+
+            <ul className="auth-setup-highlights">
+              {PRODUCT_HIGHLIGHTS.map((item, index) => (
+                <li key={item}>
+                  <span className="auth-setup-highlight-no">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="auth-setup-highlight-text">{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
 
-        {error && <div className="alert error">{error}</div>}
+          <p className="auth-setup-info-byline">{PRODUCT_BYLINE}</p>
+        </aside>
 
-        <form
-          className="form signup-form-v8b"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void finishSetup();
-          }}
-        >
-          <label>
-            Company Name *
-            <input
-              autoFocus
-              value={setup.companyName}
-              onChange={(e) => updateSetup("companyName", e.target.value)}
-              placeholder="e.g. ABC Travel & Tours"
-            />
-          </label>
+        <section className="auth-setup-form-panel">
+          <div className="auth-setup-form-head">
+            <h1>Create company account</h1>
+            <p className="muted">A unique Company Code is issued after registration.</p>
+          </div>
 
-          <label>
-            Master Username *
-            <input
-              value={setup.username}
-              onChange={(e) => updateSetup("username", e.target.value)}
-              placeholder="e.g. admin"
-              autoComplete="username"
-            />
-            <small className="field-help">This username will be used to sign in to the Master account.</small>
-          </label>
+          {error && <div className="alert error">{error}</div>}
 
-          <label>
-            Email Address *
-            <input
-              type="email"
-              value={setup.email}
-              onChange={(e) => updateSetup("email", e.target.value)}
-              placeholder="e.g. accounts@abctravel.com"
-              autoComplete="email"
-            />
-            <small className="field-help">You can also use this email address to sign in.</small>
-          </label>
-
-          <label>
-            DTS License # <small>(Optional)</small>
-            <input
-              value={setup.dtsLicense}
-              onChange={(e) => updateSetup("dtsLicense", e.target.value)}
-              placeholder="Enter DTS License #"
-            />
-          </label>
-
-          <label>
-            Phone / WhatsApp Number *
-            <input
-              value={setup.phone}
-              onChange={(e) => updateSetup("phone", e.target.value)}
-              placeholder="e.g. +92 300 1234567"
-              inputMode="tel"
-              autoComplete="tel"
-            />
-            <small className="field-help">Company will contact you on this number.</small>
-          </label>
-
-          <div className="two signup-password-grid-v8b">
-            <label>
-              Password *
-              <div className="password-input-wrap-v8b">
-                <input
-                  type={showSetupPassword ? "text" : "password"}
-                  value={setup.password}
-                  onChange={(e) => updateSetup("password", e.target.value)}
-                  placeholder="Create a strong password"
-                  autoComplete="new-password"
-                />
-                <button
-                  className="password-eye-v8b"
-                  type="button"
-                  onClick={() => setShowSetupPassword((v) => !v)}
-                  aria-label={showSetupPassword ? "Hide password" : "Show password"}
-                >
-                  {showSetupPassword ? "Hide" : "Show"}
-                </button>
-              </div>
+          <form
+            className="auth-setup-form-compact"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void finishSetup();
+            }}
+          >
+            <label className="auth-setup-field auth-setup-field-hero">
+              Company Name *
+              <input
+                autoFocus
+                value={setup.companyName}
+                onChange={(e) => updateSetup("companyName", e.target.value)}
+                placeholder="e.g. ABC Travel & Tours"
+              />
             </label>
-            <label>
-              Confirm Password *
-              <div className="password-input-wrap-v8b">
-                <input
-                  type={showSetupConfirmPassword ? "text" : "password"}
-                  value={setup.confirmPassword}
-                  onChange={(e) => updateSetup("confirmPassword", e.target.value)}
-                  placeholder="Repeat password"
-                  autoComplete="new-password"
-                />
-                <button
-                  className="password-eye-v8b"
-                  type="button"
-                  onClick={() => setShowSetupConfirmPassword((v) => !v)}
-                  aria-label={showSetupConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                >
-                  {showSetupConfirmPassword ? "Hide" : "Show"}
-                </button>
-              </div>
+
+            <label className="auth-setup-field auth-setup-field-hero">
+              Email Address *
+              <input
+                type="email"
+                value={setup.email}
+                onChange={(e) => updateSetup("email", e.target.value)}
+                placeholder="e.g. accounts@abctravel.com"
+                autoComplete="email"
+              />
             </label>
-          </div>
 
-          <div className="password-rules-v8b">
-            <span className={setupPasswordChecks.length ? "ok" : ""}>✓ Minimum 8 characters</span>
-            <span className={setupPasswordChecks.upper ? "ok" : ""}>✓ 1 capital letter</span>
-            <span className={setupPasswordChecks.lower ? "ok" : ""}>✓ 1 small letter</span>
-            <span className={setupPasswordChecks.number ? "ok" : ""}>✓ 1 number</span>
-            <span className={setupPasswordChecks.special ? "ok" : ""}>✓ 1 special character (! @ # $ % ^ & *)</span>
-          </div>
+            <label className="auth-setup-field auth-setup-field-medium">
+              Master Username *
+              <input
+                value={setup.username}
+                onChange={(e) => updateSetup("username", e.target.value)}
+                placeholder="e.g. admin"
+                autoComplete="username"
+              />
+            </label>
 
-          <button className="primary signup-submit-v8b" type="submit" disabled={busy}>
-            {busy ? "Creating Account..." : "Create an Account"}
-          </button>
+            <label className="auth-setup-field auth-setup-field-medium">
+              Phone / WhatsApp *
+              <input
+                value={setup.phone}
+                onChange={(e) => updateSetup("phone", e.target.value)}
+                placeholder="e.g. +92 300 1234567"
+                inputMode="tel"
+                autoComplete="tel"
+              />
+            </label>
 
-          <button className="signup-back-v8b" type="button" onClick={() => navigate("/login")}>
-            Back to Sign In
-          </button>
-        </form>
-      </section>
+            <label className="auth-setup-field auth-setup-field-small auth-setup-span-full">
+              DTS License # <small>(Optional)</small>
+              <input
+                value={setup.dtsLicense}
+                onChange={(e) => updateSetup("dtsLicense", e.target.value)}
+                placeholder="License #"
+              />
+            </label>
+
+            <div className="auth-setup-password-row">
+              <label className="auth-setup-field auth-setup-field-password">
+                Password *
+                <div className="password-input-wrap-v8b">
+                  <input
+                    type={showSetupPassword ? "text" : "password"}
+                    value={setup.password}
+                    onChange={(e) => updateSetup("password", e.target.value)}
+                    placeholder="Create password"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    className="password-eye-v8b"
+                    type="button"
+                    onClick={() => setShowSetupPassword((v) => !v)}
+                    aria-label={showSetupPassword ? "Hide password" : "Show password"}
+                  >
+                    {showSetupPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </label>
+
+              <label className="auth-setup-field auth-setup-field-password">
+                Confirm Password *
+                <div className="password-input-wrap-v8b">
+                  <input
+                    type={showSetupConfirmPassword ? "text" : "password"}
+                    value={setup.confirmPassword}
+                    onChange={(e) => updateSetup("confirmPassword", e.target.value)}
+                    placeholder="Repeat password"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    className="password-eye-v8b"
+                    type="button"
+                    onClick={() => setShowSetupConfirmPassword((v) => !v)}
+                    aria-label={showSetupConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  >
+                    {showSetupConfirmPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </label>
+            </div>
+
+            <div className="password-rules-v8b auth-setup-rules-compact auth-setup-span-full">
+              <span className={setupPasswordChecks.length ? "ok" : ""}>8+ chars</span>
+              <span className={setupPasswordChecks.upper ? "ok" : ""}>A-Z</span>
+              <span className={setupPasswordChecks.lower ? "ok" : ""}>a-z</span>
+              <span className={setupPasswordChecks.number ? "ok" : ""}>0-9</span>
+              <span className={setupPasswordChecks.special ? "ok" : ""}>!@#$</span>
+            </div>
+
+            <div className="auth-setup-actions auth-setup-span-full">
+              <button className="primary" type="submit" disabled={busy}>
+                {busy ? "Creating Account..." : "Create Account"}
+              </button>
+              <button className="signup-back-v8b" type="button" onClick={() => navigate("/login")}>
+                Back to Sign In
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
     </main>
   );
 }

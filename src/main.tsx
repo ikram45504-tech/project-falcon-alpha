@@ -2,6 +2,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { initializeDatabaseSafety } from "./DatabaseSafety";
 import { ThemeProvider } from "./ThemeContext";
+import { PRODUCT_NAME } from "./brand";
 
 function renderSafetyFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -27,7 +28,7 @@ function renderSafetyFailure(error: unknown) {
         }}
       >
         <strong style={{ display: "block", color: "#b42318", marginBottom: 8 }}>DATABASE SAFETY CHECK FAILED</strong>
-        <h1 style={{ margin: "0 0 12px", fontSize: 24 }}>Travel Accounting did not open the workspace.</h1>
+        <h1 style={{ margin: "0 0 12px", fontSize: 24 }}>{PRODUCT_NAME} did not open the workspace.</h1>
         <p style={{ margin: "0 0 10px", lineHeight: 1.55 }}>
           The app stopped before normal database initialization so existing accounting data is not exposed to an unsafe
           startup path.
@@ -40,6 +41,7 @@ function renderSafetyFailure(error: unknown) {
 
 async function bootstrap() {
   try {
+    document.title = PRODUCT_NAME;
     const report = await initializeDatabaseSafety();
     if (report.duplicatePaymentDocuments > 0) {
       console.warn(

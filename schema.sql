@@ -105,50 +105,6 @@ CREATE TABLE IF NOT EXISTS unassigned_accounts (
 CREATE INDEX IF NOT EXISTS idx_vendors_company_name ON vendors(company_id, name);
 CREATE INDEX IF NOT EXISTS idx_unassigned_accounts_company_name ON unassigned_accounts(company_id, name);
 
-CREATE TABLE IF NOT EXISTS accommodation_entries (
-    id TEXT PRIMARY KEY,
-    company_id TEXT NOT NULL,
-    party_id TEXT,
-    transaction_date TEXT NOT NULL,
-    ub_number TEXT NOT NULL DEFAULT '',
-    booking_party_name TEXT NOT NULL DEFAULT '',
-    city TEXT NOT NULL DEFAULT '',
-    hotel_name TEXT NOT NULL DEFAULT '',
-    check_in TEXT NOT NULL DEFAULT '',
-    check_out TEXT NOT NULL DEFAULT '',
-    nights INTEGER NOT NULL DEFAULT 0,
-    rate REAL NOT NULL DEFAULT 0,
-    bed_room_count INTEGER NOT NULL DEFAULT 0,
-    currency TEXT NOT NULL DEFAULT 'PKR',
-    roe REAL NOT NULL DEFAULT 0,
-    total_sar REAL NOT NULL DEFAULT 0,
-    total_pkr REAL NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'ACTIVE',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  );
-
-CREATE TABLE IF NOT EXISTS service_entries (
-    id TEXT PRIMARY KEY,
-    company_id TEXT NOT NULL,
-    party_id TEXT,
-    transaction_date TEXT NOT NULL,
-    ub_number TEXT NOT NULL DEFAULT '',
-    booking_party_name TEXT NOT NULL DEFAULT '',
-    service_type TEXT NOT NULL DEFAULT '',
-    rate REAL NOT NULL DEFAULT 0,
-    pax INTEGER NOT NULL DEFAULT 0,
-    spt REAL NOT NULL DEFAULT 0,
-    shr REAL NOT NULL DEFAULT 0,
-    currency TEXT NOT NULL DEFAULT 'PKR',
-    roe REAL NOT NULL DEFAULT 0,
-    total_sar REAL NOT NULL DEFAULT 0,
-    total_pkr REAL NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'ACTIVE',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  );
-
 CREATE TABLE IF NOT EXISTS payment_entries (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,
@@ -798,33 +754,6 @@ CREATE TABLE IF NOT EXISTS transport_operational_meta (
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
-
-CREATE TABLE IF NOT EXISTS booking_adjustments (
-      id TEXT PRIMARY KEY,
-      company_id TEXT NOT NULL,
-      service_type TEXT NOT NULL,
-      booking_id TEXT NOT NULL,
-      adjustment_type TEXT NOT NULL,
-      adjustment_date TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT '',
-      reason TEXT NOT NULL DEFAULT '',
-      reference TEXT NOT NULL DEFAULT '',
-      notes TEXT NOT NULL DEFAULT '',
-      previous_total_pkr REAL NOT NULL DEFAULT 0,
-      previous_base_pkr REAL NOT NULL DEFAULT 0,
-      revised_base_pkr REAL NOT NULL DEFAULT 0,
-      charge_pkr REAL NOT NULL DEFAULT 0,
-      credit_pkr REAL NOT NULL DEFAULT 0,
-      account_delta_pkr REAL NOT NULL DEFAULT 0,
-      effective_total_pkr REAL NOT NULL DEFAULT 0,
-      before_snapshot_json TEXT NOT NULL DEFAULT '',
-      after_snapshot_json TEXT NOT NULL DEFAULT '',
-      cancelled_lines_json TEXT NOT NULL DEFAULT '',
-      revision_no INTEGER NOT NULL DEFAULT 2,
-      lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
-      created_by_user_id TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL
-    );
 
 CREATE TABLE IF NOT EXISTS visa_operational_meta (
         booking_id TEXT PRIMARY KEY,
