@@ -103,7 +103,14 @@ export async function applyCloudOperation(
     const { error: deleteError } = await supabase.from(tableName).delete().eq(parentColumn, recordId);
     if (deleteError) throw new Error(deleteError.message);
     if (rows.length) {
-      const { error: insertError } = await supabase.from(tableName).insert(rows);
+      const deduped = [...rows]
+        .reverse()
+        .filter((row, index, list) => {
+          const id = String((row as { id?: string }).id || "");
+          return id ? list.findIndex((item) => String((item as { id?: string }).id || "") === id) === index : true;
+        })
+        .reverse();
+      const { error: insertError } = await supabase.from(tableName).upsert(deduped, { onConflict: "id" });
       if (insertError) throw new Error(insertError.message);
     }
     return;
@@ -113,7 +120,9 @@ export async function applyCloudOperation(
     const idColumn =
       tableName === "payment_v2_meta"
         ? "payment_id"
-        : tableName === "package_operational_meta" || tableName === "ticket_operational_meta"
+        : tableName === "package_operational_meta" ||
+            tableName === "ticket_operational_meta" ||
+            tableName === "hotel_operational_meta"
           ? "booking_id"
           : "id";
     const { error } = await supabase.from(tableName).delete().eq(idColumn, recordId);
@@ -125,7 +134,9 @@ export async function applyCloudOperation(
     const idColumn =
       tableName === "payment_v2_meta"
         ? "payment_id"
-        : tableName === "package_operational_meta" || tableName === "ticket_operational_meta"
+        : tableName === "package_operational_meta" ||
+            tableName === "ticket_operational_meta" ||
+            tableName === "hotel_operational_meta"
           ? "booking_id"
           : "id";
     const { error } = await supabase.from(tableName).update(payload).eq(idColumn, recordId);
@@ -137,7 +148,9 @@ export async function applyCloudOperation(
   const onConflict =
     tableName === "payment_v2_meta"
       ? "payment_id"
-      : tableName === "package_operational_meta" || tableName === "ticket_operational_meta"
+      : tableName === "package_operational_meta" ||
+          tableName === "ticket_operational_meta" ||
+          tableName === "hotel_operational_meta"
         ? "booking_id"
         : "id";
   const { error } = await supabase.from(tableName).upsert(payload, { onConflict });
@@ -275,6 +288,114 @@ export async function syncTicketOperationalBundle(
   });
 }
 
+export type HotelBookingSyncHeader = {
+  id: string;
+  company_id: string;
+  transaction_type: string;
+  counterparty_id: string;
+  transaction_date: string;
+  ub_number: string;
+  confirmation_voucher: string;
+  meal_plan: string;
+  guest_family_name: string;
+  guest_count: number;
+  customer_contact: string;
+  special_requests: string;
+  notes: string;
+  total_sar: number;
+  total_pkr: number;
+  unconverted_sar: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  created_by_user_id: string;
+  updated_by_user_id: string;
+};
+
+export type HotelBookingSyncLine = {
+  id: string;
+  booking_id: string;
+  city: string;
+  hotel_name: string;
+  check_in: string;
+  check_out: string;
+  nights: number;
+  room_type: string;
+  rate_per_night_sar: number;
+  quantity: number;
+  roe: number;
+  line_total_sar: number;
+  line_total_pkr: number;
+  sort_order: number;
+};
+
+/** Upsert hotel header + replace all commercial stay lines in the cloud. */
+export async function syncHotelBookingBundle(header: HotelBookingSyncHeader, lines: HotelBookingSyncLine[]) {
+  await queueSync("UPSERT", "hotel_bookings", header.id, header as unknown as Record<string, unknown>);
+  await queueSync("REPLACE_CHILDREN", "hotel_booking_lines", header.id, {
+    parent_column: "booking_id",
+    rows: lines,
+  });
+}
+
+export async function syncHotelBookingVoid(bookingId: string, updatedAt: string, updatedByUserId: string) {
+  await queueSync("UPDATE", "hotel_bookings", bookingId, {
+    status: "VOID",
+    updated_at: updatedAt,
+    updated_by_user_id: updatedByUserId,
+  });
+}
+
+export async function syncHotelGuestRefs(
+  bookingId: string,
+  _companyId: string,
+  rows: Array<{ company_id: string; booking_id: string; sort_order: number; guest_name: string }>,
+) {
+  await queueSync("REPLACE_CHILDREN", "hotel_commercial_guest_refs", bookingId, {
+    parent_column: "booking_id",
+    rows,
+  });
+}
+
+export async function syncHotelOperationalBundle(
+  bookingId: string,
+  companyId: string,
+  payload: {
+    customerContact: string;
+    specialRequests: string;
+    checkinInstructions: string;
+    notes: string;
+    createdAt: string;
+    updatedAt: string;
+    guestRefs: Record<string, unknown>[];
+    reservations: Record<string, unknown>[];
+    guests: Record<string, unknown>[];
+  },
+) {
+  await queueSync("UPSERT", "hotel_operational_meta", bookingId, {
+    booking_id: bookingId,
+    company_id: companyId,
+    customer_contact: payload.customerContact,
+    special_requests: payload.specialRequests,
+    checkin_instructions: payload.checkinInstructions,
+    notes: payload.notes,
+    created_at: payload.createdAt,
+    updated_at: payload.updatedAt,
+  });
+  await queueSync("REPLACE_CHILDREN", "hotel_commercial_guest_refs", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.guestRefs,
+  });
+  await queueSync("REPLACE_CHILDREN", "hotel_operational_reservations", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.reservations,
+  });
+  await queueSync("REPLACE_CHILDREN", "hotel_operational_guests", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.guests,
+  });
+}
+
 export async function syncPackageBookingVoid(bookingId: string, updatedAt: string, updatedByUserId: string) {
   await queueSync("UPDATE", "package_bookings", bookingId, {
     status: "VOID",
@@ -294,7 +415,11 @@ export async function syncPaymentVoid(paymentId: string, updatedAt: string, upda
 /** Clear all known child rows for a booking in the cloud (used by permanent delete). */
 export async function syncClearBookingChildren(bookingId: string, childTables: string[]) {
   for (const table of childTables) {
-    if (table === "package_operational_meta" || table === "ticket_operational_meta") {
+    if (
+      table === "package_operational_meta" ||
+      table === "ticket_operational_meta" ||
+      table === "hotel_operational_meta"
+    ) {
       await queueSync("DELETE", table, bookingId, {});
       continue;
     }
@@ -367,6 +492,31 @@ export async function syncPackageAdjustmentBundle(input: {
     rows: input.lines,
   });
   await queueSync("UPSERT", "package_booking_adjustments", String(input.adjustment.id), input.adjustment);
+}
+
+export async function syncHotelAdjustmentBundle(input: {
+  bookingId: string;
+  companyId: string;
+  totalSar: number;
+  totalPkr: number;
+  unconvertedSar: number;
+  updatedAt: string;
+  updatedByUserId: string;
+  lines: HotelBookingSyncLine[];
+  adjustment: Record<string, unknown>;
+}) {
+  await queueSync("UPDATE", "hotel_bookings", input.bookingId, {
+    total_sar: input.totalSar,
+    total_pkr: input.totalPkr,
+    unconverted_sar: input.unconvertedSar,
+    updated_at: input.updatedAt,
+    updated_by_user_id: input.updatedByUserId,
+  });
+  await queueSync("REPLACE_CHILDREN", "hotel_booking_lines", input.bookingId, {
+    parent_column: "booking_id",
+    rows: input.lines,
+  });
+  await queueSync("UPSERT", "hotel_booking_adjustments", String(input.adjustment.id), input.adjustment);
 }
 
 /**

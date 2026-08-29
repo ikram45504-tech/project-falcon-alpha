@@ -9,7 +9,7 @@ import type {
 } from "./db";
 import { createHotelBooking, getHotelBookings } from "./db";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
-import BookingLifecycleCenter from "./BookingLifecycleCenter";
+import HotelRegister from "./HotelRegister";
 import { useBookingFlowState } from "./useBookingFlowState";
 import { bookingDigitsFromUb } from "./bookingUb";
 import {
@@ -422,8 +422,7 @@ export default function HotelBookingFlowV3({
 
   if (mode === "REGISTER")
     return (
-      <BookingLifecycleCenter
-        service="HOTEL"
+      <HotelRegister
         companyId={companyId}
         transactionType={transactionType}
         userId={userId}

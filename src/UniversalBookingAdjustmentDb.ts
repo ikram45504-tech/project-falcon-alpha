@@ -8,10 +8,10 @@ const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
 let initializationPromise: Promise<void> | null = null;
 
-const bookingTables: Record<BookingServiceName, string> = {
-  PACKAGE: "package_bookings",
+export type UniversalBookingService = Exclude<BookingServiceName, "PACKAGE" | "HOTEL">;
+
+const bookingTables: Record<UniversalBookingService, string> = {
   TICKET: "ticket_bookings",
-  HOTEL: "hotel_bookings",
   VISA: "visa_bookings",
   TRANSPORT: "transport_bookings",
   MISC: "misc_bookings",
@@ -52,7 +52,7 @@ export type UniversalAdjustmentSummary = {
 };
 
 export type RecordUniversalAdjustmentInput = {
-  service: BookingServiceName;
+  service: UniversalBookingService;
   bookingId: string;
   adjustmentType: BookingAdjustmentKind;
   adjustmentDate: string;
@@ -178,7 +178,7 @@ function nextLifecycle(current: BookingLifecycleStatus, type: BookingAdjustmentK
 async function latestState(
   database: Database | null,
   companyId: string,
-  service: BookingServiceName,
+  service: UniversalBookingService,
   bookingId: string,
 ) {
   if (!isDesktopApp()) {
@@ -214,7 +214,7 @@ async function latestState(
 
 export async function getUniversalBookingAdjustmentHistory(
   companyId: string,
-  service: BookingServiceName,
+  service: UniversalBookingService,
   bookingId: string,
 ) {
   const isTauri = "__TAURI_INTERNALS__" in window;
@@ -242,7 +242,7 @@ export async function getUniversalBookingAdjustmentHistory(
   );
 }
 
-export async function getUniversalBookingAdjustmentSummaryMap(companyId: string, service: BookingServiceName) {
+export async function getUniversalBookingAdjustmentSummaryMap(companyId: string, service: UniversalBookingService) {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) {
     const { supabase } = await import("./supabaseClient");
@@ -313,7 +313,7 @@ export async function getUniversalBookingAdjustmentSummaryMap(companyId: string,
 function auditStatement(
   companyId: string,
   userId: string,
-  service: BookingServiceName,
+  service: UniversalBookingService,
   bookingId: string,
   details: string,
   now: string,

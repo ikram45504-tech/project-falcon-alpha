@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   BookingTransactionType,
-  HotelBooking,
-  HotelRoomType,
   TransportBooking,
   TransportType,
   TransportVehicleType,
@@ -11,13 +9,10 @@ import type {
   VisaType,
 } from "./db";
 import {
-  getHotelBookings,
   getTransportBookings,
   getVisaBookings,
-  updateHotelBooking,
   updateTransportBooking,
   updateVisaBooking,
-  voidHotelBooking,
   voidTransportBooking,
   voidVisaBooking,
   deleteBooking,
@@ -43,8 +38,8 @@ import UniversalBookingAdjustment, {
 } from "./UniversalBookingAdjustment";
 import "./BookingLifecycleCenter.css";
 
-type SupportedService = Exclude<BookingServiceName, "PACKAGE">;
-type RawBooking = TicketCommercialBooking | HotelBooking | VisaBooking | TransportBooking | MiscBooking;
+type SupportedService = Exclude<BookingServiceName, "PACKAGE" | "HOTEL">;
+type RawBooking = TicketCommercialBooking | VisaBooking | TransportBooking | MiscBooking;
 type Filter = "ALL" | BookingTransactionType;
 
 type Props = {
@@ -75,14 +70,6 @@ const flightOptions = [
   { value: "ONE_WAY", label: "One Way" },
   { value: "RETURN", label: "Return" },
   { value: "MULTI_CITY", label: "Multi-City" },
-];
-const roomOptions = [
-  { value: "SHARING", label: "Sharing" },
-  { value: "QUINT_SHARING", label: "Quint / Sharing" },
-  { value: "QUAD", label: "Quad" },
-  { value: "TRIPLE", label: "Triple" },
-  { value: "DOUBLE", label: "Double" },
-  { value: "SUITE_ROOM", label: "Suite Room" },
 ];
 const visaOptions = [
   { value: "ONLY_UMRAH_VISA", label: "Only Umrah Visa" },
@@ -138,18 +125,6 @@ function columnsFor(service: SupportedService): UniversalAdjustmentColumn[] {
       { key: "rate", label: "RATE PKR", type: "number", min: 0, step: 0.01 },
       { key: "qty", label: "QTY", type: "number", min: 1, step: 1 },
     ];
-  if (service === "HOTEL")
-    return [
-      { key: "city", label: "CITY" },
-      { key: "hotelName", label: "HOTEL" },
-      { key: "checkIn", label: "CHECK IN", type: "date" },
-      { key: "checkOut", label: "CHECK OUT", type: "date" },
-      { key: "nights", label: "NIGHTS", type: "number", min: 1, step: 1 },
-      { key: "roomType", label: "ROOM", type: "select", options: roomOptions },
-      { key: "qty", label: "ROOM/BED QTY", type: "number", min: 1, step: 1 },
-      { key: "rateSar", label: "RATE SAR", type: "number", min: 0, step: 0.01 },
-      { key: "roe", label: "ROE", type: "number", min: 0, step: 0.0001 },
-    ];
   if (service === "VISA")
     return [
       { key: "passengerType", label: "PAX TYPE", type: "select", options: paxOptions },
@@ -194,21 +169,6 @@ function createRowFor(service: SupportedService): UniversalAdjustmentRow {
         rate: "",
         qty: "1",
         eticketReference: "",
-      },
-    };
-  if (service === "HOTEL")
-    return {
-      id: id(),
-      values: {
-        city: "",
-        hotelName: "",
-        checkIn: "",
-        checkOut: "",
-        nights: "1",
-        roomType: "SHARING",
-        qty: "1",
-        rateSar: "",
-        roe: "",
       },
     };
   if (service === "VISA")
@@ -258,23 +218,6 @@ function rowsFor(service: SupportedService, booking: RawBooking): UniversalAdjus
         rate: String(line.rate_per_ticket || 0),
         qty: String(line.ticket_count || 1),
         eticketReference: line.eticket_reference || "",
-      },
-    }));
-  }
-  if (service === "HOTEL") {
-    const b = booking as HotelBooking;
-    return b.lines.map((line) => ({
-      id: line.id || id(),
-      values: {
-        city: line.city,
-        hotelName: line.hotel_name,
-        checkIn: line.check_in,
-        checkOut: line.check_out,
-        nights: String(line.nights || 1),
-        roomType: line.room_type,
-        qty: String(line.quantity || 1),
-        rateSar: String(line.rate_per_night_sar || 0),
-        roe: Number(line.roe || 0) > 0 ? String(line.roe) : "",
       },
     }));
   }
@@ -331,15 +274,6 @@ function rowsFor(service: SupportedService, booking: RawBooking): UniversalAdjus
 function calculateLine(service: SupportedService, row: UniversalAdjustmentRow) {
   if (service === "TICKET")
     return Math.max(0, num(inputValue(row, "rate"))) * Math.max(1, whole(inputValue(row, "qty") || "1"));
-  if (service === "HOTEL") {
-    const roe = Math.max(0, num(inputValue(row, "roe")));
-    return roe > 0
-      ? Math.max(0, num(inputValue(row, "rateSar"))) *
-          Math.max(1, whole(inputValue(row, "nights"))) *
-          Math.max(1, whole(inputValue(row, "qty"))) *
-          roe
-      : 0;
-  }
   if (service === "VISA") {
     const qty = Math.max(1, whole(inputValue(row, "qty")));
     const roe = Math.max(0, num(inputValue(row, "roe")));
@@ -360,7 +294,7 @@ function calculateLine(service: SupportedService, row: UniversalAdjustmentRow) {
 }
 
 function quantityFor(service: SupportedService, row: UniversalAdjustmentRow) {
-  if (service === "TICKET" || service === "HOTEL" || service === "VISA" || service === "MISC")
+  if (service === "TICKET" || service === "VISA" || service === "MISC")
     return Math.max(1, whole(inputValue(row, "qty") || "1"));
   return inputValue(row, "transportType") === "SHARING_BUS"
     ? Math.max(1, whole(inputValue(row, "paxCount") || "1"))
@@ -383,8 +317,6 @@ function withQuantity(
 function describeRow(service: SupportedService, row: UniversalAdjustmentRow, index: number) {
   if (service === "TICKET")
     return `${inputValue(row, "passengerName") || `Ticket ${index + 1}`} · ${inputValue(row, "airlineName")} · ${inputValue(row, "ticketRoute")}`;
-  if (service === "HOTEL")
-    return `${inputValue(row, "hotelName") || `Hotel ${index + 1}`} · ${inputValue(row, "city")} · ${inputValue(row, "checkIn")} → ${inputValue(row, "checkOut")}`;
   if (service === "VISA")
     return `${inputValue(row, "passengerName") || `Visa ${index + 1}`} · ${inputValue(row, "visaType").replace(/_/g, " ")}`;
   if (service === "TRANSPORT")
@@ -401,18 +333,6 @@ function normalizeBookings(service: SupportedService, bookings: RawBooking[]): B
         ...b,
         summary: `${first?.airline_name || b.airline_name || "Ticket"}${first?.ticket_route ? ` · ${first.ticket_route}` : ""} · ${b.lines.reduce((sum, line) => sum + Number(line.ticket_count || 0), 0)} ticket(s)`,
         totalSar: 0,
-        raw: b,
-      };
-    }
-    if (service === "HOTEL") {
-      const b = booking as HotelBooking;
-      return {
-        ...b,
-        summary:
-          b.lines
-            .map((line) => `${line.hotel_name} · ${line.nights}N · ${line.quantity} ${line.room_type}`)
-            .join(" | ") || "Hotel booking",
-        totalSar: Number(b.total_sar || 0),
         raw: b,
       };
     }
@@ -486,7 +406,6 @@ export default function BookingLifecycleCenter({
 
   async function rawBookings() {
     if (service === "TICKET") return getTicketCommercialBookings(companyId) as Promise<RawBooking[]>;
-    if (service === "HOTEL") return getHotelBookings(companyId) as Promise<RawBooking[]>;
     if (service === "VISA") return getVisaBookings(companyId) as Promise<RawBooking[]>;
     if (service === "TRANSPORT") return getTransportBookings(companyId) as Promise<RawBooking[]>;
     return getMiscBookings(companyId) as Promise<RawBooking[]>;
@@ -538,40 +457,6 @@ export default function BookingLifecycleCenter({
         userId,
       );
       const updated = (await getTicketCommercialBookings(companyId)).find((item) => item.id === b.id);
-      return Number(updated?.total_pkr || 0);
-    }
-    if (service === "HOTEL") {
-      const b = booking.raw as HotelBooking;
-      await updateHotelBooking(
-        companyId,
-        b.id,
-        {
-          transactionType: b.transaction_type,
-          counterpartyId: b.counterparty_id,
-          transactionDate: b.transaction_date,
-          ubNumber: b.ub_number,
-          confirmationVoucher: b.confirmation_voucher || "",
-          mealPlan: b.meal_plan || "",
-          guestFamilyName: b.guest_family_name || "",
-          guestCount: Number(b.guest_count || 0),
-          customerContact: b.customer_contact || "",
-          specialRequests: b.special_requests || "",
-          notes: b.notes || "",
-          lines: rows.map((row) => ({
-            city: inputValue(row, "city").trim(),
-            hotelName: inputValue(row, "hotelName").trim(),
-            checkIn: inputValue(row, "checkIn"),
-            checkOut: inputValue(row, "checkOut"),
-            nights: Math.max(1, whole(inputValue(row, "nights"))),
-            roomType: inputValue(row, "roomType") as HotelRoomType,
-            ratePerNightSar: Math.max(0, num(inputValue(row, "rateSar"))),
-            quantity: Math.max(1, whole(inputValue(row, "qty"))),
-            roe: num(inputValue(row, "roe")) > 0 ? num(inputValue(row, "roe")) : null,
-          })),
-        },
-        userId,
-      );
-      const updated = (await getHotelBookings(companyId)).find((item) => item.id === b.id);
       return Number(updated?.total_pkr || 0);
     }
     if (service === "VISA") {
@@ -691,7 +576,6 @@ export default function BookingLifecycleCenter({
     setError("");
     try {
       if (service === "TICKET") await voidTicketCommercialBooking(companyId, booking.id, userId);
-      else if (service === "HOTEL") await voidHotelBooking(companyId, booking.id, userId);
       else if (service === "VISA") await voidVisaBooking(companyId, booking.id, userId);
       else if (service === "TRANSPORT") await voidTransportBooking(companyId, booking.id, userId);
       else await voidMiscBooking(companyId, booking.id, userId);

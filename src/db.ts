@@ -842,7 +842,7 @@ async function createAuthTables(database: Database) {
     ON audit_logs(company_id, created_at DESC)`);
 }
 
-async function createAuditLog(
+export async function createAuditLog(
   companyId: string,
   userId: string,
   action: string,
@@ -978,6 +978,9 @@ async function initDatabaseOnce() {
 
   await database.execute(`CREATE INDEX IF NOT EXISTS idx_parties_company_type_name
     ON parties(company_id, account_type, name)`);
+
+  const { initCounterpartyTables } = await import("./CounterpartyDb");
+  await initCounterpartyTables(database);
 
   await database.execute(`CREATE TABLE IF NOT EXISTS accommodation_entries (
     id TEXT PRIMARY KEY,
@@ -2233,134 +2236,14 @@ export async function getAuditLogs(companyId: string, limit = 250) {
 }
 
 export async function getParties(companyId: string, search = "") {
-  const isTauri = "__TAURI_INTERNALS__" in window;
-  const clean = search.trim();
-
-  if (!isTauri) {
-    let query = supabase.from("parties").select("*").eq("company_id", companyId);
-    if (clean) {
-      query = query.or(
-        `name.ilike.%${clean}%,phone.ilike.%${clean}%,whatsapp.ilike.%${clean}%,address.ilike.%${clean}%`,
-      );
-    }
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-
-    return (data as Party[]).sort((a, b) => {
-      if (a.status === "ACTIVE" && b.status !== "ACTIVE") return -1;
-      if (a.status !== "ACTIVE" && b.status === "ACTIVE") return 1;
-      return a.name.localeCompare(b.name);
-    });
-  }
-
-  const database = await db();
-
-  if (!clean) {
-    return database.select<Party[]>(
-      `SELECT id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at
-       FROM parties
-       WHERE company_id = $1
-       ORDER BY CASE WHEN status='ACTIVE' THEN 0 ELSE 1 END, name COLLATE NOCASE`,
-      [companyId],
-    );
-  }
-
-  const term = `%${clean}%`;
-  return database.select<Party[]>(
-    `SELECT id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at
-     FROM parties
-     WHERE company_id = $1
-       AND (
-         name LIKE $2 COLLATE NOCASE OR
-         phone LIKE $2 OR
-         whatsapp LIKE $2 OR
-         address LIKE $2 COLLATE NOCASE
-       )
-     ORDER BY CASE WHEN status='ACTIVE' THEN 0 ELSE 1 END, name COLLATE NOCASE`,
-    [companyId, term],
-  );
-}
-
-function accountLabel(accountType: PartyInput["accountType"] | string) {
-  if (accountType === "VENDOR") return "Vendor";
-  if (accountType === "PARTY") return "Party";
-  return "Account";
-}
-
-async function assertUniqueAccountName(
-  companyId: string,
-  accountType: PartyInput["accountType"],
-  name: string,
-  excludeId = "",
-) {
-  const cleanName = name.trim();
-  const isTauri = "__TAURI_INTERNALS__" in window;
-
-  if (!isTauri) {
-    let query = supabase
-      .from("parties")
-      .select("id")
-      .eq("company_id", companyId)
-      .eq("account_type", accountType)
-      .ilike("name", cleanName)
-      .limit(1);
-    if (excludeId) query = query.neq("id", excludeId);
-    const { data: duplicate, error } = await query;
-    if (error) throw new Error(error.message);
-    if (duplicate && duplicate.length > 0) {
-      throw new Error(
-        `A ${accountLabel(accountType).toLowerCase()} named "${cleanName}" already exists. Party and Vendor can share the same name, but two ${accountLabel(accountType).toLowerCase()}s cannot.`,
-      );
-    }
-    return;
-  }
-
-  const database = await db();
-  const duplicate = await database.select<CountRow[]>(
-    `SELECT COUNT(*) AS count
-     FROM parties
-     WHERE company_id = $1
-       AND account_type = $2
-       AND name = $3 COLLATE NOCASE
-       AND ($4 = '' OR id <> $4)`,
-    [companyId, accountType, cleanName, excludeId],
-  );
-
-  if (Number(duplicate[0]?.count ?? 0) > 0) {
-    throw new Error(
-      `A ${accountLabel(accountType).toLowerCase()} named "${cleanName}" already exists. Party and Vendor can share the same name, but two ${accountLabel(accountType).toLowerCase()}s cannot.`,
-    );
-  }
+  const { getAllAccounts } = await import("./CounterpartyDb");
+  return getAllAccounts(companyId, search);
 }
 
 export async function createParty(companyId: string, input: PartyInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "edit_parties");
-  const database = await db();
-  const now = new Date().toISOString();
-
-  await assertUniqueAccountName(companyId, input.accountType, input.name);
-
-  const id = crypto.randomUUID();
-
-  await database.execute(
-    `INSERT INTO parties
-     (id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at,created_by_user_id,updated_by_user_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10,$11,$11)`,
-    [
-      id,
-      companyId,
-      input.name.trim(),
-      input.phone.trim(),
-      input.whatsapp.trim(),
-      input.address.trim(),
-      input.notes.trim(),
-      input.status,
-      input.accountType,
-      now,
-      actorUserId,
-    ],
-  );
-
+  const { createAccount } = await import("./CounterpartyDb");
+  const id = await createAccount(companyId, input, actorUserId);
   if (actorUserId) {
     await createAuditLog(
       companyId,
@@ -2371,52 +2254,13 @@ export async function createParty(companyId: string, input: PartyInput, actorUse
       `${input.accountType}: ${input.name.trim()}`,
     );
   }
-
-  // Queue to Supabase
-  await queueSync("INSERT", "parties", id, {
-    id,
-    company_id: companyId,
-    name: input.name.trim(),
-    phone: input.phone.trim(),
-    whatsapp: input.whatsapp.trim(),
-    address: input.address.trim(),
-    notes: input.notes.trim(),
-    status: input.status,
-    account_type: input.accountType,
-    created_at: now,
-    updated_at: now,
-    created_by_user_id: actorUserId,
-    updated_by_user_id: actorUserId,
-  });
-
   return id;
 }
 
 export async function updateParty(partyId: string, companyId: string, input: PartyInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "edit_parties");
-  const database = await db();
-
-  await assertUniqueAccountName(companyId, input.accountType, input.name, partyId);
-
-  await database.execute(
-    `UPDATE parties
-     SET name=$1, phone=$2, whatsapp=$3, address=$4, notes=$5,
-         status=$6, account_type=$7, updated_at=$8, updated_by_user_id=$9
-     WHERE id=$10 AND company_id=$11`,
-    [
-      input.name.trim(),
-      input.phone.trim(),
-      input.whatsapp.trim(),
-      input.address.trim(),
-      input.notes.trim(),
-      input.status,
-      input.accountType,
-      new Date().toISOString(),
-      actorUserId,
-      partyId,
-      companyId,
-    ],
-  );
+  const { updateAccount } = await import("./CounterpartyDb");
+  await updateAccount(partyId, companyId, input, actorUserId);
   if (actorUserId) {
     await createAuditLog(
       companyId,
@@ -2427,62 +2271,20 @@ export async function updateParty(partyId: string, companyId: string, input: Par
       `${input.accountType}: ${input.name.trim()}`,
     );
   }
-
-  // Queue to Supabase
-  await queueSync("UPDATE", "parties", partyId, {
-    name: input.name.trim(),
-    phone: input.phone.trim(),
-    whatsapp: input.whatsapp.trim(),
-    address: input.address.trim(),
-    notes: input.notes.trim(),
-    status: input.status,
-    account_type: input.accountType,
-    updated_at: new Date().toISOString(),
-    updated_by_user_id: actorUserId,
-  });
 }
 
 export async function getPartyById(companyId: string, partyId: string) {
-  const isTauri = "__TAURI_INTERNALS__" in window;
-  if (!isTauri) {
-    const { data, error } = await supabase
-      .from("parties")
-      .select("id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at")
-      .eq("company_id", companyId)
-      .eq("id", partyId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    return (data as Party | null) ?? null;
-  }
-
-  const database = await db();
-
-  const rows = await database.select<Party[]>(
-    `SELECT id,company_id,name,phone,whatsapp,address,notes,status,account_type,created_at,updated_at
-     FROM parties
-     WHERE company_id=$1 AND id=$2
-     LIMIT 1`,
-    [companyId, partyId],
-  );
-
-  return rows[0] ?? null;
+  const { getAccountById } = await import("./CounterpartyDb");
+  return getAccountById(companyId, partyId);
 }
 
 export async function deleteParty(partyId: string, companyId: string, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "edit_parties");
-  const isTauri = "__TAURI_INTERNALS__" in window;
-
-  if (isTauri) {
-    const database = await db();
-    await database.execute(`DELETE FROM parties WHERE id=$1 AND company_id=$2`, [partyId, companyId]);
-  }
-
+  const { deleteAccount } = await import("./CounterpartyDb");
+  await deleteAccount(partyId, companyId);
   if (actorUserId) {
     await createAuditLog(companyId, actorUserId, "ACCOUNT_DELETED", "PARTIES", partyId, `Party/Vendor Deleted`);
   }
-
-  // Always remove from Supabase so the other app can reconcile.
-  await queueSync("DELETE", "parties", partyId, {});
 }
 
 export async function deleteBooking(bookingId: string, companyId: string, actorUserId = "") {
@@ -2504,7 +2306,12 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "ticket_operational_passengers",
     "ticket_operational_flights",
     "booking_adjustments",
+    "hotel_booking_adjustments",
     "hotel_booking_lines",
+    "hotel_commercial_guest_refs",
+    "hotel_operational_reservations",
+    "hotel_operational_guests",
+    "hotel_operational_meta",
     "visa_booking_lines",
     "visa_passport_details",
     "visa_transport_fleet",
@@ -2535,7 +2342,13 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
   for (const table of bookingChildTables) {
     try {
       if (isTauri) {
-        if (table === "package_operational_meta" || table === "ticket_operational_meta") {
+        if (
+          table === "package_operational_meta" ||
+          table === "ticket_operational_meta" ||
+          table === "hotel_operational_meta"
+        ) {
+          await database.execute(`DELETE FROM ${table} WHERE booking_id=$1`, [bookingId]);
+        } else if (table === "hotel_commercial_guest_refs") {
           await database.execute(`DELETE FROM ${table} WHERE booking_id=$1`, [bookingId]);
         } else if (table.includes("bookings") && !table.includes("lines") && !table.includes("adjustments")) {
           // skip headers
@@ -2913,9 +2726,8 @@ function validatePayment(input: PaymentInput) {
 }
 
 async function fetchPartyNameMap(companyId: string) {
-  const { data, error } = await supabase.from("parties").select("id, name").eq("company_id", companyId);
-  if (error) throw new Error(error.message);
-  return new Map((data || []).map((row) => [String(row.id), String(row.name || "")]));
+  const { fetchCounterpartyNameMap } = await import("./CounterpartyDb");
+  return fetchCounterpartyNameMap(companyId);
 }
 
 async function fetchChildRowsByBookingIds(table: string, bookingIds: string[]) {
@@ -3148,29 +2960,8 @@ async function validatePackageCounterparty(
   transactionType: BookingTransactionType,
   counterpartyId: string,
 ) {
-  if (!counterpartyId) {
-    throw new Error(transactionType === "SALE" ? "Select a Party." : "Select a Vendor.");
-  }
-
-  const database = await db();
-  const rows = await database.select<Pick<Party, "id" | "account_type" | "status">[]>(
-    `SELECT id, account_type, status
-     FROM parties
-     WHERE id=$1 AND company_id=$2
-     LIMIT 1`,
-    [counterpartyId, companyId],
-  );
-
-  const account = rows[0];
-  const expected = transactionType === "SALE" ? "PARTY" : "VENDOR";
-
-  if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
-    throw new Error(
-      transactionType === "SALE"
-        ? "Sale bookings can only be saved against an active Party."
-        : "Purchase bookings can only be saved against an active Vendor.",
-    );
-  }
+  const { validateBookingCounterparty } = await import("./CounterpartyDb");
+  await validateBookingCounterparty(companyId, transactionType, counterpartyId);
 }
 
 async function validatePackageBooking(companyId: string, input: PackageBookingInput, editingBookingId?: string) {
@@ -3902,395 +3693,13 @@ export async function voidTicketBooking(companyId: string, bookingId: string, ac
     );
 }
 
-function normalizeHotelUb(value: string) {
-  return value.trim().replace(/\s+/g, " ").toUpperCase();
-}
-
-function hotelStayNights(checkIn: string, checkOut: string) {
-  if (!checkIn || !checkOut || checkOut <= checkIn) return 0;
-  const [iy, im, id] = checkIn.split("-").map(Number);
-  const [oy, om, od] = checkOut.split("-").map(Number);
-  const start = Date.UTC(iy, im - 1, id);
-  const end = Date.UTC(oy, om - 1, od);
-  return Math.max(0, Math.floor((end - start) / 86400000));
-}
-
-function calculateHotelLines(lines: HotelBookingLineInput[]) {
-  const allowedRoomTypes: HotelRoomType[] = ["SHARING", "QUINT_SHARING", "QUAD", "TRIPLE", "DOUBLE", "SUITE_ROOM"];
-  const calculated: Array<{
-    city: string;
-    hotelName: string;
-    checkIn: string;
-    checkOut: string;
-    nights: number;
-    roomType: HotelRoomType;
-    ratePerNightSar: number;
-    quantity: number;
-    roe: number;
-    lineTotalSar: number;
-    lineTotalPkr: number;
-    sortOrder: number;
-  }> = [];
-
-  lines.forEach((line, index) => {
-    const rowNo = index + 1;
-    const city = line.city.trim();
-    const hotelName = line.hotelName.trim();
-    const nights = hotelStayNights(line.checkIn, line.checkOut);
-    const quantity = Math.trunc(Number(line.quantity));
-    const ratePerNightSar = Number(line.ratePerNightSar);
-    const roe = line.roe == null ? 0 : Number(line.roe);
-
-    if (!city) throw new Error(`Hotel row ${rowNo}: City is required.`);
-    if (!hotelName) throw new Error(`Hotel row ${rowNo}: Hotel Name is required.`);
-    if (!line.checkIn) throw new Error(`Hotel row ${rowNo}: Check-In date is required.`);
-    if (!line.checkOut) throw new Error(`Hotel row ${rowNo}: Check-Out date is required.`);
-    if (line.checkOut <= line.checkIn) throw new Error(`Hotel row ${rowNo}: Check-Out must be after Check-In.`);
-    if (!Number.isFinite(nights) || nights < 1 || nights > 99)
-      throw new Error(`Hotel row ${rowNo}: No. of Nights must be between 1 and 99.`);
-    if (!allowedRoomTypes.includes(line.roomType)) throw new Error(`Hotel row ${rowNo}: select a Room Type.`);
-    if (!Number.isFinite(ratePerNightSar) || ratePerNightSar <= 0)
-      throw new Error(`Hotel row ${rowNo}: enter a valid Per Night SAR rate.`);
-    if (!Number.isFinite(quantity) || quantity < 1 || quantity > 99) {
-      throw new Error(
-        `Hotel row ${rowNo}: ${line.roomType === "SHARING" ? "No. of Beds" : "No. of Rooms"} must be between 1 and 99.`,
-      );
-    }
-    if (!Number.isFinite(roe) || roe < 0) throw new Error(`Hotel row ${rowNo}: enter a valid ROE or leave it blank.`);
-
-    const lineTotalSar = ratePerNightSar * nights * quantity;
-    const lineTotalPkr = roe > 0 ? lineTotalSar * roe : 0;
-
-    calculated.push({
-      city,
-      hotelName,
-      checkIn: line.checkIn,
-      checkOut: line.checkOut,
-      nights,
-      roomType: line.roomType,
-      ratePerNightSar,
-      quantity,
-      roe,
-      lineTotalSar,
-      lineTotalPkr,
-      sortOrder: index,
-    });
-  });
-
-  if (!calculated.length) throw new Error("Add at least one Hotel stay row.");
-
-  const totalSar = calculated.reduce((sum, line) => sum + line.lineTotalSar, 0);
-  const totalPkr = calculated.reduce((sum, line) => sum + line.lineTotalPkr, 0);
-  const unconvertedSar = calculated.filter((line) => line.roe <= 0).reduce((sum, line) => sum + line.lineTotalSar, 0);
-
-  return { calculated, totalSar, totalPkr, unconvertedSar };
-}
-
-async function validateUniqueHotelUb(
-  companyId: string,
-  transactionType: BookingTransactionType,
-  counterpartyId: string,
-  ubNumber: string,
-  editingBookingId = "",
-) {
-  const normalized = normalizeHotelUb(ubNumber);
-  const database = await db();
-  const rows = await database.select<
-    Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>
-  >(
-    `SELECT id,transaction_type,counterparty_id,ub_number
-     FROM hotel_bookings
-     WHERE company_id=$1`,
-    [companyId],
-  );
-
-  const duplicate = rows.find((row) => {
-    if (row.id === editingBookingId || normalizeHotelUb(row.ub_number) !== normalized) return false;
-    if (transactionType === "SALE") return row.transaction_type === "SALE";
-    return row.transaction_type === "PURCHASE" && row.counterparty_id === counterpartyId;
-  });
-
-  if (duplicate) {
-    if (transactionType === "SALE") {
-      throw new Error(
-        `UB # / Booking "${ubNumber.trim()}" already has a Hotel Sale booking. Edit the existing Hotel booking or use another UB #.`,
-      );
-    }
-    throw new Error(
-      `This Vendor already has a Hotel Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`,
-    );
-  }
-}
-
-async function validateHotelBooking(companyId: string, input: HotelBookingInput, editingBookingId = "") {
-  if (!["SALE", "PURCHASE"].includes(input.transactionType)) throw new Error("Select Sale or Purchase first.");
-  if (!input.transactionDate) throw new Error("Date of Booking is required.");
-  if (!input.ubNumber.trim()) throw new Error("UB # / Booking is required.");
-  const guestCount = Math.trunc(Number(input.guestCount || 0));
-  if (!Number.isFinite(guestCount) || guestCount < 0 || guestCount > 99)
-    throw new Error("No. of Guests must be between 1 and 99, or left blank.");
-  await validatePackageCounterparty(companyId, input.transactionType, input.counterpartyId);
-  await validateUniqueHotelUb(companyId, input.transactionType, input.counterpartyId, input.ubNumber, editingBookingId);
-  return calculateHotelLines(input.lines);
-}
-
-export async function getHotelBookings(companyId: string, search = "") {
-  const isTauri = "__TAURI_INTERNALS__" in window;
-  if (!isTauri) {
-    let query = supabase
-      .from("hotel_bookings")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false });
-
-    if (search.trim()) {
-      const term = `%${search.trim()}%`;
-      query = query.or(`ub_number.ilike.${term}`);
-    }
-
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    if (!data) return [];
-
-    const partyNames = await fetchPartyNameMap(companyId);
-    const lines = await fetchChildRowsByBookingIds(
-      "hotel_booking_lines",
-      data.map((row) => String(row.id)),
-    );
-    const linesByBooking = groupRowsByBookingId(lines);
-
-    return data.map((b: any) => ({
-      ...b,
-      counterparty_name: partyNames.get(String(b.counterparty_id)) || "",
-      lines: linesByBooking.get(String(b.id)) || [],
-    })) as HotelBooking[];
-  }
-
-  const database = await db();
-  const clean = search.trim();
-  const term = `%${clean}%`;
-
-  const headers = await database.select<Omit<HotelBooking, "lines">[]>(
-    `SELECT
-       b.id,b.company_id,b.transaction_type,b.counterparty_id,
-       COALESCE(p.name,'') AS counterparty_name,
-       b.transaction_date,b.ub_number,b.confirmation_voucher,b.meal_plan,b.guest_family_name,b.guest_count,
-       b.customer_contact,b.special_requests,b.notes,b.total_sar,b.total_pkr,b.unconverted_sar,
-       b.status,b.created_at,b.updated_at
-     FROM hotel_bookings b
-     LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
-     WHERE b.company_id=$1
-       AND (
-         $2='' OR
-         b.ub_number LIKE $3 COLLATE NOCASE OR
-         b.confirmation_voucher LIKE $3 COLLATE NOCASE OR
-         b.meal_plan LIKE $3 COLLATE NOCASE OR
-         b.guest_family_name LIKE $3 COLLATE NOCASE OR
-         b.customer_contact LIKE $3 COLLATE NOCASE OR
-         b.special_requests LIKE $3 COLLATE NOCASE OR
-         b.notes LIKE $3 COLLATE NOCASE OR
-         COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR
-         EXISTS (
-           SELECT 1 FROM hotel_booking_lines l
-           WHERE l.booking_id=b.id
-             AND (l.city LIKE $3 COLLATE NOCASE OR l.hotel_name LIKE $3 COLLATE NOCASE)
-         )
-       )
-     ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term],
-  );
-
-  const lines = await database.select<HotelBookingLine[]>(
-    `SELECT l.id,l.booking_id,l.city,l.hotel_name,l.check_in,l.check_out,l.nights,l.room_type,
-            l.rate_per_night_sar,l.quantity,l.roe,l.line_total_sar,l.line_total_pkr,l.sort_order
-     FROM hotel_booking_lines l
-     INNER JOIN hotel_bookings b ON b.id=l.booking_id
-     WHERE b.company_id=$1
-     ORDER BY l.sort_order ASC`,
-    [companyId],
-  );
-
-  const grouped = new Map<string, HotelBookingLine[]>();
-  for (const line of lines) {
-    const current = grouped.get(line.booking_id) || [];
-    current.push(line);
-    grouped.set(line.booking_id, current);
-  }
-
-  return headers.map((header) => ({ ...header, lines: grouped.get(header.id) || [] })) as HotelBooking[];
-}
-
-export async function createHotelBooking(companyId: string, input: HotelBookingInput, actorUserId = "") {
-  await requirePermission(companyId, actorUserId, "create_bookings");
-  const { calculated, totalSar, totalPkr, unconvertedSar } = await validateHotelBooking(companyId, input);
-  const database = await db();
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  await database.execute(
-    `INSERT INTO hotel_bookings
-     (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,
-      confirmation_voucher,meal_plan,guest_family_name,guest_count,customer_contact,special_requests,notes,
-      total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'ACTIVE',$17,$17,$18,$18)`,
-    [
-      id,
-      companyId,
-      input.transactionType,
-      input.counterpartyId,
-      input.transactionDate,
-      input.ubNumber.trim(),
-      input.confirmationVoucher.trim(),
-      input.mealPlan.trim(),
-      input.guestFamilyName.trim(),
-      Math.trunc(Number(input.guestCount || 0)),
-      input.customerContact.trim(),
-      input.specialRequests.trim(),
-      input.notes.trim(),
-      totalSar,
-      totalPkr,
-      unconvertedSar,
-      now,
-      actorUserId,
-    ],
-  );
-
-  for (const line of calculated) {
-    await database.execute(
-      `INSERT INTO hotel_booking_lines
-       (id,booking_id,city,hotel_name,check_in,check_out,nights,room_type,rate_per_night_sar,quantity,roe,line_total_sar,line_total_pkr,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [
-        crypto.randomUUID(),
-        id,
-        line.city,
-        line.hotelName,
-        line.checkIn,
-        line.checkOut,
-        line.nights,
-        line.roomType,
-        line.ratePerNightSar,
-        line.quantity,
-        line.roe,
-        line.lineTotalSar,
-        line.lineTotalPkr,
-        line.sortOrder,
-      ],
-    );
-  }
-
-  if (actorUserId)
-    await createAuditLog(
-      companyId,
-      actorUserId,
-      "BOOKING_CREATED",
-      "HOTEL",
-      id,
-      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${totalSar} / PKR ${totalPkr}`,
-    );
-  return id;
-}
-
-export async function updateHotelBooking(
-  companyId: string,
-  bookingId: string,
-  input: HotelBookingInput,
-  actorUserId = "",
-) {
-  await requirePermission(companyId, actorUserId, "edit_bookings");
-  const { calculated, totalSar, totalPkr, unconvertedSar } = await validateHotelBooking(companyId, input, bookingId);
-  const database = await db();
-  const now = new Date().toISOString();
-
-  await database.execute(
-    `UPDATE hotel_bookings
-     SET transaction_type=$1,counterparty_id=$2,transaction_date=$3,ub_number=$4,
-         confirmation_voucher=$5,meal_plan=$6,guest_family_name=$7,guest_count=$8,customer_contact=$9,
-         special_requests=$10,notes=$11,total_sar=$12,total_pkr=$13,unconverted_sar=$14,
-         updated_at=$15,updated_by_user_id=$16
-     WHERE id=$17 AND company_id=$18 AND status='ACTIVE'`,
-    [
-      input.transactionType,
-      input.counterpartyId,
-      input.transactionDate,
-      input.ubNumber.trim(),
-      input.confirmationVoucher.trim(),
-      input.mealPlan.trim(),
-      input.guestFamilyName.trim(),
-      Math.trunc(Number(input.guestCount || 0)),
-      input.customerContact.trim(),
-      input.specialRequests.trim(),
-      input.notes.trim(),
-      totalSar,
-      totalPkr,
-      unconvertedSar,
-      now,
-      actorUserId,
-      bookingId,
-      companyId,
-    ],
-  );
-
-  await database.execute(`DELETE FROM hotel_booking_lines WHERE booking_id=$1`, [bookingId]);
-  for (const line of calculated) {
-    await database.execute(
-      `INSERT INTO hotel_booking_lines
-       (id,booking_id,city,hotel_name,check_in,check_out,nights,room_type,rate_per_night_sar,quantity,roe,line_total_sar,line_total_pkr,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [
-        crypto.randomUUID(),
-        bookingId,
-        line.city,
-        line.hotelName,
-        line.checkIn,
-        line.checkOut,
-        line.nights,
-        line.roomType,
-        line.ratePerNightSar,
-        line.quantity,
-        line.roe,
-        line.lineTotalSar,
-        line.lineTotalPkr,
-        line.sortOrder,
-      ],
-    );
-  }
-
-  if (actorUserId)
-    await createAuditLog(
-      companyId,
-      actorUserId,
-      "BOOKING_UPDATED",
-      "HOTEL",
-      bookingId,
-      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${totalSar} / PKR ${totalPkr}`,
-    );
-}
-
-export async function voidHotelBooking(companyId: string, bookingId: string, actorUserId = "") {
-  await requirePermission(companyId, actorUserId, "void_bookings");
-  const database = await db();
-  const rows = await database.select<Array<{ ub_number: string }>>(
-    `SELECT ub_number FROM hotel_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId],
-  );
-  await database.execute(
-    `UPDATE hotel_bookings
-     SET status='VOID',updated_at=$1,updated_by_user_id=$2
-     WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-    [new Date().toISOString(), actorUserId, bookingId, companyId],
-  );
-  if (actorUserId)
-    await createAuditLog(
-      companyId,
-      actorUserId,
-      "BOOKING_VOIDED",
-      "HOTEL",
-      bookingId,
-      `Hotel booking ${rows[0]?.ub_number || bookingId} voided.`,
-    );
-}
+export {
+  getHotelBookings,
+  createHotelBooking,
+  updateHotelBooking,
+  voidHotelBooking,
+  calculateHotelLines,
+} from "./HotelFlowDb";
 
 // ===== PHASE 11B — VISA BOOKING ENGINE =====
 
@@ -5475,6 +4884,8 @@ export async function executePullSync(options?: { companyId?: string; fullResync
 
   const ROOT_TABLES = [
     "parties",
+    "vendors",
+    "unassigned_accounts",
     "payment_entries",
     "booking_adjustments",
     "accommodation_entries",
@@ -5511,6 +4922,7 @@ export async function executePullSync(options?: { companyId?: string; fullResync
       "hotel_operational_reservations",
       "hotel_operational_guests",
       "hotel_operational_meta",
+      "hotel_booking_adjustments",
     ],
     visa_bookings: [
       "visa_booking_lines",
@@ -5538,7 +4950,7 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     return set;
   }
 
-  // Ensure shared adjustment table exists before pull upserts (otherwise desktop stays on REV 1).
+  // Ensure adjustment tables exist before pull upserts.
   await database.execute(
     `CREATE TABLE IF NOT EXISTS booking_adjustments (
       id TEXT PRIMARY KEY,
@@ -5568,10 +4980,12 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     )`,
   );
   columnCache.delete("booking_adjustments");
+  const { initHotelAdjustmentDatabase } = await import("./HotelAdjustmentDb");
+  await initHotelAdjustmentDatabase();
+  columnCache.delete("hotel_booking_adjustments");
 
   const UNIVERSAL_ADJUSTMENT_PARENTS = new Set([
     "ticket_bookings",
-    "hotel_bookings",
     "visa_bookings",
     "transport_bookings",
     "misc_bookings",
@@ -5709,30 +5123,36 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     }
   }
 
-  // Reconcile deletes: remove local parties/vendors that no longer exist in cloud.
-  // Incremental pull never "sees" deleted rows, so this must run every sync.
-  try {
-    const { data: cloudPartyIds, error: cloudIdsError } = await supabase
-      .from("parties")
+  // Reconcile deletes: remove local accounts that no longer exist in cloud.
+  async function reconcileCounterpartyTable(table: "parties" | "vendors" | "unassigned_accounts") {
+    const { data: cloudIds, error: cloudIdsError } = await supabase
+      .from(table)
       .select("id")
       .eq("company_id", companyId)
       .limit(5000);
-
     if (cloudIdsError) {
-      console.error("Party delete reconcile failed:", cloudIdsError.message);
-    } else {
-      const cloudIds = new Set((cloudPartyIds || []).map((row) => String(row.id)));
-      const localRows = await database.select<Array<{ id: string }>>(`SELECT id FROM parties WHERE company_id = $1`, [
-        companyId,
-      ]);
-      for (const local of localRows) {
-        if (cloudIds.has(local.id)) continue;
-        await database.execute(`DELETE FROM parties WHERE id = $1 AND company_id = $2`, [local.id, companyId]);
-        partiesRemoved += 1;
-      }
+      console.error(`${table} delete reconcile failed:`, cloudIdsError.message);
+      return 0;
     }
+    const cloudIdSet = new Set((cloudIds || []).map((row) => String(row.id)));
+    const localRows = await database.select<Array<{ id: string }>>(`SELECT id FROM ${table} WHERE company_id = $1`, [
+      companyId,
+    ]);
+    let removed = 0;
+    for (const local of localRows) {
+      if (cloudIdSet.has(local.id)) continue;
+      await database.execute(`DELETE FROM ${table} WHERE id = $1 AND company_id = $2`, [local.id, companyId]);
+      removed += 1;
+    }
+    return removed;
+  }
+
+  try {
+    partiesRemoved += await reconcileCounterpartyTable("parties");
+    partiesRemoved += await reconcileCounterpartyTable("vendors");
+    partiesRemoved += await reconcileCounterpartyTable("unassigned_accounts");
   } catch (err) {
-    console.error("Party delete reconcile error:", err);
+    console.error("Counterparty delete reconcile error:", err);
   }
 
   // Reconcile deletes for booking headers removed in cloud (e.g. web test delete).

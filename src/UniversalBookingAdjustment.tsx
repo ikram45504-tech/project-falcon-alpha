@@ -4,13 +4,13 @@ import {
   bookingLifecycleConfigs,
   type BookingAdjustmentKind,
   type BookingLifecycleStatus,
-  type BookingServiceName,
 } from "./BookingLifecycle";
 import type { BookingTransactionType } from "./db";
 import {
   getUniversalBookingAdjustmentHistory,
   recordUniversalBookingAdjustment,
   type UniversalAdjustmentRecord,
+  type UniversalBookingService,
 } from "./UniversalBookingAdjustmentDb";
 import "./PackageBookingAdjustment.css";
 
@@ -41,7 +41,7 @@ export type UniversalAdjustmentBooking = {
 
 type Props = {
   companyId: string;
-  service: BookingServiceName;
+  service: UniversalBookingService;
   booking: UniversalAdjustmentBooking;
   userId?: string;
   canEdit?: boolean;
