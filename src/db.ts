@@ -2503,6 +2503,7 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "ticket_operational_meta",
     "ticket_operational_passengers",
     "ticket_operational_flights",
+    "booking_adjustments",
     "hotel_booking_lines",
     "visa_booking_lines",
     "visa_passport_details",
@@ -2534,7 +2535,7 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
   for (const table of bookingChildTables) {
     try {
       if (isTauri) {
-        if (table === "package_operational_meta") {
+        if (table === "package_operational_meta" || table === "ticket_operational_meta") {
           await database.execute(`DELETE FROM ${table} WHERE booking_id=$1`, [bookingId]);
         } else if (table.includes("bookings") && !table.includes("lines") && !table.includes("adjustments")) {
           // skip headers

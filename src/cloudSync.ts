@@ -111,7 +111,11 @@ export async function applyCloudOperation(
 
   if (operation === "DELETE") {
     const idColumn =
-      tableName === "payment_v2_meta" ? "payment_id" : tableName === "package_operational_meta" ? "booking_id" : "id";
+      tableName === "payment_v2_meta"
+        ? "payment_id"
+        : tableName === "package_operational_meta" || tableName === "ticket_operational_meta"
+          ? "booking_id"
+          : "id";
     const { error } = await supabase.from(tableName).delete().eq(idColumn, recordId);
     if (error) throw new Error(error.message);
     return;
@@ -119,7 +123,11 @@ export async function applyCloudOperation(
 
   if (operation === "UPDATE") {
     const idColumn =
-      tableName === "payment_v2_meta" ? "payment_id" : tableName === "package_operational_meta" ? "booking_id" : "id";
+      tableName === "payment_v2_meta"
+        ? "payment_id"
+        : tableName === "package_operational_meta" || tableName === "ticket_operational_meta"
+          ? "booking_id"
+          : "id";
     const { error } = await supabase.from(tableName).update(payload).eq(idColumn, recordId);
     if (error) throw new Error(error.message);
     return;
@@ -127,7 +135,11 @@ export async function applyCloudOperation(
 
   // INSERT and UPSERT both use upsert so desktop retries / web double-writes stay safe.
   const onConflict =
-    tableName === "payment_v2_meta" ? "payment_id" : tableName === "package_operational_meta" ? "booking_id" : "id";
+    tableName === "payment_v2_meta"
+      ? "payment_id"
+      : tableName === "package_operational_meta" || tableName === "ticket_operational_meta"
+        ? "booking_id"
+        : "id";
   const { error } = await supabase.from(tableName).upsert(payload, { onConflict });
   if (error && (error as { code?: string }).code !== "23505") {
     throw new Error(error.message);
@@ -227,6 +239,42 @@ export async function syncTicketBookingBundle(header: TicketBookingSyncHeader, l
   });
 }
 
+export async function syncTicketBookingVoid(bookingId: string, updatedAt: string, updatedByUserId: string) {
+  await queueSync("UPDATE", "ticket_bookings", bookingId, {
+    status: "VOID",
+    updated_at: updatedAt,
+    updated_by_user_id: updatedByUserId,
+  });
+}
+
+export async function syncTicketOperationalBundle(
+  bookingId: string,
+  companyId: string,
+  payload: {
+    notes: string;
+    createdAt: string;
+    updatedAt: string;
+    passengers: Record<string, unknown>[];
+    flights: Record<string, unknown>[];
+  },
+) {
+  await queueSync("UPSERT", "ticket_operational_meta", bookingId, {
+    booking_id: bookingId,
+    company_id: companyId,
+    notes: payload.notes,
+    created_at: payload.createdAt,
+    updated_at: payload.updatedAt,
+  });
+  await queueSync("REPLACE_CHILDREN", "ticket_operational_passengers", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.passengers,
+  });
+  await queueSync("REPLACE_CHILDREN", "ticket_operational_flights", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.flights,
+  });
+}
+
 export async function syncPackageBookingVoid(bookingId: string, updatedAt: string, updatedByUserId: string) {
   await queueSync("UPDATE", "package_bookings", bookingId, {
     status: "VOID",
@@ -246,7 +294,7 @@ export async function syncPaymentVoid(paymentId: string, updatedAt: string, upda
 /** Clear all known child rows for a booking in the cloud (used by permanent delete). */
 export async function syncClearBookingChildren(bookingId: string, childTables: string[]) {
   for (const table of childTables) {
-    if (table === "package_operational_meta") {
+    if (table === "package_operational_meta" || table === "ticket_operational_meta") {
       await queueSync("DELETE", table, bookingId, {});
       continue;
     }

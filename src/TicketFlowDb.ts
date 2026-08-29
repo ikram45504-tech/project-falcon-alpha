@@ -1,7 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { BookingTransactionType, TicketPassengerType } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
-import { isDesktopApp, syncTicketBookingBundle } from "./cloudSync";
+import { isDesktopApp, syncTicketBookingBundle, syncTicketBookingVoid, flushDesktopSyncQueue } from "./cloudSync";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -264,13 +264,13 @@ function calculateLines(lines: TicketCommercialLineInput[]) {
   return { calculated, totalPkr: calculated.reduce((sum, line) => sum + line.lineTotalPkr, 0) };
 }
 
-function lineStatements(bookingId: string, lines: CalculatedLine[]) {
-  return lines.map<AtomicSqlStatement>((line) => ({
+function lineStatements(bookingId: string, lines: CalculatedLine[], ids?: string[]) {
+  return lines.map<AtomicSqlStatement>((line, index) => ({
     sql: `INSERT INTO ticket_booking_lines
       (id,booking_id,passenger_type,passenger_name,airline_name,pnr,flight_type,ticket_route,eticket_reference,rate_per_ticket,ticket_count,qty_is_explicit,line_total_pkr,sort_order)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,$12,$13)`,
     params: [
-      crypto.randomUUID(),
+      ids?.[index] || crypto.randomUUID(),
       bookingId,
       line.passengerType,
       line.passengerName,
@@ -460,7 +460,11 @@ export async function createTicketCommercialBooking(companyId: string, input: Ti
           actorUserId,
         ],
       },
-      ...lineStatements(id, calculated),
+      ...lineStatements(
+        id,
+        calculated,
+        lineRows.map((row) => row.id),
+      ),
     ];
     const audit = auditStatement(
       companyId,
@@ -489,66 +493,167 @@ export async function updateTicketCommercialBooking(
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   const { calculated, totalPkr } = calculateLines(input.lines);
   const first = calculated[0];
-  const database = await db();
-  const rows = await database.select<Array<{ ub_number: string; status: string }>>(
-    `SELECT ub_number,status FROM ticket_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId],
-  );
-  if (!rows[0] || rows[0].status !== "ACTIVE") throw new Error("This Ticket booking is no longer active.");
   const now = new Date().toISOString();
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `UPDATE ticket_bookings SET transaction_date=$1,airline_name=$2,pnr=$3,sector=$4,total_pkr=$5,updated_at=$6,updated_by_user_id=$7 WHERE id=$8 AND company_id=$9 AND status='ACTIVE'`,
-      params: [
-        input.transactionDate,
-        first.airlineName,
-        first.pnr,
-        first.ticketRoute,
-        totalPkr,
-        now,
-        actorUserId,
+
+  let current: {
+    ub_number: string;
+    status: string;
+    created_at: string;
+    transaction_type: string;
+    counterparty_id: string;
+    airline_name?: string;
+    pnr?: string;
+    sector?: string;
+    departure_date?: string;
+    return_date?: string;
+    flight_no?: string;
+    departure_time?: string;
+    arrival_time?: string;
+    baggage?: string;
+    ticket_status?: string;
+    customer_contact?: string;
+    notes?: string;
+    created_by_user_id?: string;
+  } | null = null;
+
+  if (isDesktopApp()) {
+    const database = await db();
+    const rows = await database.select<NonNullable<typeof current>[]>(
+      `SELECT ub_number,status,created_at,transaction_type,counterparty_id,airline_name,pnr,sector,departure_date,return_date,flight_no,departure_time,arrival_time,baggage,ticket_status,customer_contact,notes,created_by_user_id
+       FROM ticket_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [bookingId, companyId],
+    );
+    current = rows[0] || null;
+  } else {
+    const { data, error } = await supabase
+      .from("ticket_bookings")
+      .select(
+        "ub_number,status,created_at,transaction_type,counterparty_id,airline_name,pnr,sector,departure_date,return_date,flight_no,departure_time,arrival_time,baggage,ticket_status,customer_contact,notes,created_by_user_id",
+      )
+      .eq("id", bookingId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    current = data;
+  }
+
+  if (!current || current.status !== "ACTIVE") throw new Error("This Ticket booking is no longer active.");
+
+  const lineRows = calculated.map((line) => ({
+    id: crypto.randomUUID(),
+    booking_id: bookingId,
+    passenger_type: line.passengerType,
+    passenger_name: line.passengerName,
+    airline_name: line.airlineName,
+    pnr: line.pnr,
+    flight_type: line.flightType,
+    ticket_route: line.ticketRoute,
+    eticket_reference: line.legacyEticketReference || "",
+    rate_per_ticket: line.ratePerTicket,
+    ticket_count: line.ticketCount,
+    qty_is_explicit: 1 as const,
+    line_total_pkr: line.lineTotalPkr,
+    sort_order: line.sortOrder,
+  }));
+
+  if (isDesktopApp()) {
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `UPDATE ticket_bookings SET transaction_date=$1,airline_name=$2,pnr=$3,sector=$4,total_pkr=$5,updated_at=$6,updated_by_user_id=$7 WHERE id=$8 AND company_id=$9 AND status='ACTIVE'`,
+        params: [
+          input.transactionDate,
+          first.airlineName,
+          first.pnr,
+          first.ticketRoute,
+          totalPkr,
+          now,
+          actorUserId,
+          bookingId,
+          companyId,
+        ],
+      },
+      { sql: `DELETE FROM ticket_booking_lines WHERE booking_id=$1`, params: [bookingId] },
+      ...lineStatements(
         bookingId,
-        companyId,
-      ],
+        calculated,
+        lineRows.map((row) => row.id),
+      ),
+    ];
+    const audit = auditStatement(
+      companyId,
+      actorUserId,
+      "BOOKING_UPDATED",
+      bookingId,
+      `${current.ub_number} Ticket commercial details updated - PKR ${totalPkr}`,
+      now,
+    );
+    if (audit) statements.push(audit);
+    await runAtomicTransaction(statements);
+  }
+
+  await syncTicketBookingBundle(
+    {
+      id: bookingId,
+      company_id: companyId,
+      transaction_type: current.transaction_type,
+      counterparty_id: current.counterparty_id,
+      transaction_date: input.transactionDate,
+      ub_number: current.ub_number,
+      airline_name: first.airlineName,
+      pnr: first.pnr,
+      sector: first.ticketRoute,
+      departure_date: current.departure_date || "",
+      return_date: current.return_date || "",
+      flight_no: current.flight_no || "",
+      departure_time: current.departure_time || "",
+      arrival_time: current.arrival_time || "",
+      baggage: current.baggage || "",
+      ticket_status: current.ticket_status || "",
+      customer_contact: current.customer_contact || "",
+      notes: current.notes || "",
+      total_pkr: totalPkr,
+      status: "ACTIVE",
+      created_at: current.created_at,
+      updated_at: now,
+      created_by_user_id: current.created_by_user_id || actorUserId,
+      updated_by_user_id: actorUserId,
     },
-    { sql: `DELETE FROM ticket_booking_lines WHERE booking_id=$1`, params: [bookingId] },
-    ...lineStatements(bookingId, calculated),
-  ];
-  const audit = auditStatement(
-    companyId,
-    actorUserId,
-    "BOOKING_UPDATED",
-    bookingId,
-    `${rows[0].ub_number} Ticket commercial details updated - PKR ${totalPkr}`,
-    now,
+    lineRows,
   );
-  if (audit) statements.push(audit);
-  await runAtomicTransaction(statements);
+
+  if (isDesktopApp()) await flushDesktopSyncQueue();
 }
 
 export async function voidTicketCommercialBooking(companyId: string, bookingId: string, actorUserId = "") {
   await ensureSchema();
   await requirePermission(companyId, actorUserId, "void_bookings");
-  const database = await db();
-  const rows = await database.select<Array<{ ub_number: string }>>(
-    `SELECT ub_number FROM ticket_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId],
-  );
   const now = new Date().toISOString();
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `UPDATE ticket_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-      params: [now, actorUserId, bookingId, companyId],
-    },
-  ];
-  const audit = auditStatement(
-    companyId,
-    actorUserId,
-    "BOOKING_VOIDED",
-    bookingId,
-    `Ticket booking ${rows[0]?.ub_number || bookingId} voided.`,
-    now,
-  );
-  if (audit) statements.push(audit);
-  await runAtomicTransaction(statements);
+
+  if (isDesktopApp()) {
+    const database = await db();
+    const rows = await database.select<Array<{ ub_number: string }>>(
+      `SELECT ub_number FROM ticket_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [bookingId, companyId],
+    );
+    const ubNumber = rows[0]?.ub_number || bookingId;
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `UPDATE ticket_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
+        params: [now, actorUserId, bookingId, companyId],
+      },
+    ];
+    const audit = auditStatement(
+      companyId,
+      actorUserId,
+      "BOOKING_VOIDED",
+      bookingId,
+      `Ticket booking ${ubNumber} voided.`,
+      now,
+    );
+    if (audit) statements.push(audit);
+    await runAtomicTransaction(statements);
+  }
+
+  await syncTicketBookingVoid(bookingId, now, actorUserId);
+  if (isDesktopApp()) await flushDesktopSyncQueue();
 }

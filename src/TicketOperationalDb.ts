@@ -1,6 +1,8 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { TicketPassengerType } from "./db";
 import { hasPermission, type UserRole } from "./permissions";
+import { flushDesktopSyncQueue, isDesktopApp, queueSync, syncTicketOperationalBundle } from "./cloudSync";
+import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -162,6 +164,65 @@ export async function getTicketOperationalDetails(
   bookingId: string,
 ): Promise<TicketOperationalDetails> {
   await ensureTables();
+
+  if (!isDesktopApp()) {
+    const [passengersRes, flightsRes, metaRes] = await Promise.all([
+      supabase
+        .from("ticket_operational_passengers")
+        .select("id,passenger_type,given_name,surname,passport_number,eticket_number,passport_expiry,sort_order")
+        .eq("company_id", companyId)
+        .eq("booking_id", bookingId)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("ticket_operational_flights")
+        .select(
+          "id,journey,flight_type,departure_date,airline_name,pnr,flight_no,from_airport,stopover_airport,to_airport,origin_departure,stopover_departure_date,stopover_departure_time,destination_arrival,sort_order",
+        )
+        .eq("company_id", companyId)
+        .eq("booking_id", bookingId)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("ticket_operational_meta")
+        .select("notes")
+        .eq("company_id", companyId)
+        .eq("booking_id", bookingId)
+        .maybeSingle(),
+    ]);
+    if (passengersRes.error) throw new Error(passengersRes.error.message);
+    if (flightsRes.error) throw new Error(flightsRes.error.message);
+    if (metaRes.error) throw new Error(metaRes.error.message);
+    return {
+      passengers: (passengersRes.data || []).map((row) => ({
+        id: row.id,
+        passengerType: row.passenger_type as TicketPassengerType,
+        givenName: row.given_name,
+        surname: row.surname,
+        passportNumber: row.passport_number,
+        eticketNumber: row.eticket_number,
+        passportExpiry: row.passport_expiry,
+        sortOrder: row.sort_order,
+      })),
+      flights: (flightsRes.data || []).map((row) => ({
+        id: row.id,
+        journey: row.journey as TicketJourney,
+        flightType: row.flight_type === "INDIRECT" ? "INDIRECT" : "DIRECT",
+        departureDate: row.departure_date,
+        airlineName: row.airline_name,
+        pnr: row.pnr,
+        flightNo: row.flight_no,
+        fromAirport: row.from_airport,
+        stopoverAirport: row.stopover_airport,
+        toAirport: row.to_airport,
+        originDeparture: row.origin_departure,
+        stopoverDepartureDate: row.stopover_departure_date,
+        stopoverDepartureTime: row.stopover_departure_time,
+        destinationArrival: row.destination_arrival,
+        sortOrder: row.sort_order,
+      })),
+      notes: metaRes.data?.notes || "",
+    };
+  }
+
   const database = await db();
   const passengers = await database.select<
     Array<{
@@ -244,63 +305,108 @@ export async function saveTicketOperationalDetails(
 ) {
   await requireEdit(companyId, userId);
   await ensureTables();
-  const database = await db();
   const now = new Date().toISOString();
-  await database.execute(`DELETE FROM ticket_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [
-    companyId,
-    bookingId,
-  ]);
-  await database.execute(`DELETE FROM ticket_operational_flights WHERE company_id=$1 AND booking_id=$2`, [
-    companyId,
-    bookingId,
-  ]);
-  for (const [index, passenger] of input.passengers.entries()) {
+
+  const passengers = input.passengers.map((passenger, index) => ({
+    id: crypto.randomUUID(),
+    company_id: companyId,
+    booking_id: bookingId,
+    passenger_type: passenger.passengerType,
+    given_name: passenger.givenName.trim(),
+    surname: passenger.surname.trim(),
+    passport_number: passenger.passportNumber.trim().toUpperCase(),
+    eticket_number: passenger.eticketNumber.trim().toUpperCase(),
+    passport_expiry: passenger.passportExpiry,
+    sort_order: index,
+  }));
+  const flights = input.flights.map((flight, index) => ({
+    id: crypto.randomUUID(),
+    company_id: companyId,
+    booking_id: bookingId,
+    journey: flight.journey,
+    flight_type: flight.flightType,
+    departure_date: flight.departureDate,
+    airline_name: flight.airlineName.trim(),
+    pnr: flight.pnr.trim().toUpperCase(),
+    flight_no: flight.flightNo.trim().toUpperCase(),
+    from_airport: flight.fromAirport.trim().toUpperCase(),
+    stopover_airport: flight.flightType === "INDIRECT" ? flight.stopoverAirport.trim().toUpperCase() : "",
+    to_airport: flight.toAirport.trim().toUpperCase(),
+    origin_departure: flight.originDeparture,
+    stopover_departure_date: flight.flightType === "INDIRECT" ? flight.stopoverDepartureDate : "",
+    stopover_departure_time: flight.flightType === "INDIRECT" ? flight.stopoverDepartureTime : "",
+    destination_arrival: flight.destinationArrival,
+    sort_order: index,
+  }));
+
+  if (isDesktopApp()) {
+    const database = await db();
+    await database.execute(`DELETE FROM ticket_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [
+      companyId,
+      bookingId,
+    ]);
+    await database.execute(`DELETE FROM ticket_operational_flights WHERE company_id=$1 AND booking_id=$2`, [
+      companyId,
+      bookingId,
+    ]);
+    for (const passenger of passengers) {
+      await database.execute(
+        `INSERT INTO ticket_operational_passengers (id,company_id,booking_id,passenger_type,given_name,surname,passport_number,eticket_number,passport_expiry,sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [
+          passenger.id,
+          passenger.company_id,
+          passenger.booking_id,
+          passenger.passenger_type,
+          passenger.given_name,
+          passenger.surname,
+          passenger.passport_number,
+          passenger.eticket_number,
+          passenger.passport_expiry,
+          passenger.sort_order,
+        ],
+      );
+    }
+    for (const flight of flights) {
+      await database.execute(
+        `INSERT INTO ticket_operational_flights (id,company_id,booking_id,journey,flight_type,departure_date,airline_name,pnr,flight_no,from_airport,stopover_airport,to_airport,origin_departure,stopover_departure_date,stopover_departure_time,destination_arrival,sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+        [
+          flight.id,
+          flight.company_id,
+          flight.booking_id,
+          flight.journey,
+          flight.flight_type,
+          flight.departure_date,
+          flight.airline_name,
+          flight.pnr,
+          flight.flight_no,
+          flight.from_airport,
+          flight.stopover_airport,
+          flight.to_airport,
+          flight.origin_departure,
+          flight.stopover_departure_date,
+          flight.stopover_departure_time,
+          flight.destination_arrival,
+          flight.sort_order,
+        ],
+      );
+    }
     await database.execute(
-      `INSERT INTO ticket_operational_passengers (id,company_id,booking_id,passenger_type,given_name,surname,passport_number,eticket_number,passport_expiry,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [
-        crypto.randomUUID(),
-        companyId,
-        bookingId,
-        passenger.passengerType,
-        passenger.givenName.trim(),
-        passenger.surname.trim(),
-        passenger.passportNumber.trim().toUpperCase(),
-        passenger.eticketNumber.trim().toUpperCase(),
-        passenger.passportExpiry,
-        index,
-      ],
+      `INSERT INTO ticket_operational_meta (booking_id,company_id,notes,created_at,updated_at) VALUES ($1,$2,$3,$4,$4)
+       ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,notes=excluded.notes,updated_at=excluded.updated_at`,
+      [bookingId, companyId, input.notes.trim(), now],
     );
+    await audit(companyId, userId, bookingId);
   }
-  for (const [index, flight] of input.flights.entries()) {
-    await database.execute(
-      `INSERT INTO ticket_operational_flights (id,company_id,booking_id,journey,flight_type,departure_date,airline_name,pnr,flight_no,from_airport,stopover_airport,to_airport,origin_departure,stopover_departure_date,stopover_departure_time,destination_arrival,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-      [
-        crypto.randomUUID(),
-        companyId,
-        bookingId,
-        flight.journey,
-        flight.flightType,
-        flight.departureDate,
-        flight.airlineName.trim(),
-        flight.pnr.trim().toUpperCase(),
-        flight.flightNo.trim().toUpperCase(),
-        flight.fromAirport.trim().toUpperCase(),
-        flight.flightType === "INDIRECT" ? flight.stopoverAirport.trim().toUpperCase() : "",
-        flight.toAirport.trim().toUpperCase(),
-        flight.originDeparture,
-        flight.flightType === "INDIRECT" ? flight.stopoverDepartureDate : "",
-        flight.flightType === "INDIRECT" ? flight.stopoverDepartureTime : "",
-        flight.destinationArrival,
-        index,
-      ],
-    );
-  }
-  await database.execute(
-    `INSERT INTO ticket_operational_meta (booking_id,company_id,notes,created_at,updated_at) VALUES ($1,$2,$3,$4,$4)
-     ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,notes=excluded.notes,updated_at=excluded.updated_at`,
-    [bookingId, companyId, input.notes.trim(), now],
-  );
-  await audit(companyId, userId, bookingId);
+
+  await syncTicketOperationalBundle(bookingId, companyId, {
+    notes: input.notes.trim(),
+    createdAt: now,
+    updatedAt: now,
+    passengers,
+    flights,
+  });
+  await queueSync("UPDATE", "ticket_bookings", bookingId, { updated_at: now });
+  if (isDesktopApp()) await flushDesktopSyncQueue();
 }

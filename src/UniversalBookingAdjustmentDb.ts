@@ -1,5 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
+import { flushDesktopSyncQueue, isDesktopApp, queueSync } from "./cloudSync";
 
 import type { BookingAdjustmentKind, BookingLifecycleStatus, BookingServiceName } from "./BookingLifecycle";
 
@@ -174,9 +175,32 @@ function nextLifecycle(current: BookingLifecycleStatus, type: BookingAdjustmentK
   return current === "AMENDED" ? "AMENDED" : "ACTIVE";
 }
 
-async function latestState(database: Database, companyId: string, service: BookingServiceName, bookingId: string) {
+async function latestState(
+  database: Database | null,
+  companyId: string,
+  service: BookingServiceName,
+  bookingId: string,
+) {
+  if (!isDesktopApp()) {
+    const { supabase } = await import("./supabaseClient");
+    const { data, error } = await supabase
+      .from("booking_adjustments")
+      .select("revision_no,lifecycle_status")
+      .eq("company_id", companyId)
+      .eq("service_type", service)
+      .eq("booking_id", bookingId)
+      .order("revision_no", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return {
+      revisionNo: data ? Number(data.revision_no) : 1,
+      lifecycleStatus: (data?.lifecycle_status || "ACTIVE") as BookingLifecycleStatus,
+    };
+  }
   const rows = await select<UniversalAdjustmentRecord[]>(
-    database,
+    database!,
     `SELECT * FROM booking_adjustments
      WHERE company_id=$1 AND service_type=$2 AND booking_id=$3
      ORDER BY revision_no DESC,created_at DESC LIMIT 1`,
@@ -310,17 +334,32 @@ export async function recordUniversalBookingAdjustment(
   if (!Number.isFinite(effectiveTotal) || effectiveTotal < 0)
     throw new Error("Effective booking value cannot be negative.");
 
-  const database = await db();
   const table = bookingTables[input.service];
-  const bookingRows = await select<Array<{ status: string; ub_number: string }>>(
-    database,
-    `SELECT status,ub_number FROM ${table} WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [input.bookingId, companyId],
-  );
-  const booking = bookingRows[0];
+  let booking: { status: string; ub_number: string } | null;
+
+  if (isDesktopApp()) {
+    const database = await db();
+    const bookingRows = await select<Array<{ status: string; ub_number: string }>>(
+      database,
+      `SELECT status,ub_number FROM ${table} WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [input.bookingId, companyId],
+    );
+    booking = bookingRows[0] || null;
+  } else {
+    const { supabase } = await import("./supabaseClient");
+    const { data, error } = await supabase
+      .from(table)
+      .select("status,ub_number")
+      .eq("id", input.bookingId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    booking = data;
+  }
+
   if (!booking || booking.status !== "ACTIVE") throw new Error("This booking is no longer active.");
 
-  const state = await latestState(database, companyId, input.service, input.bookingId);
+  const state = await latestState(isDesktopApp() ? await db() : null, companyId, input.service, input.bookingId);
   if (state.lifecycleStatus === "CANCELLED") throw new Error("A fully cancelled booking cannot be adjusted again.");
   const revisionNo = state.revisionNo + 1;
   const lifecycleStatus = nextLifecycle(state.lifecycleStatus, input.adjustmentType);
@@ -328,57 +367,95 @@ export async function recordUniversalBookingAdjustment(
   const now = new Date().toISOString();
   const adjustmentId = crypto.randomUUID();
 
-  const statements: AtomicSqlStatement[] = [
-    {
-      sql: `UPDATE ${table} SET total_pkr=$1,updated_at=$2,updated_by_user_id=$3
+  const adjustmentRow = {
+    id: adjustmentId,
+    company_id: companyId,
+    service_type: input.service,
+    booking_id: input.bookingId,
+    adjustment_type: input.adjustmentType,
+    adjustment_date: input.adjustmentDate,
+    category: input.category.trim(),
+    reason: input.reason.trim(),
+    reference: input.reference.trim(),
+    notes: input.notes.trim(),
+    previous_total_pkr: Number(input.previousTotalPkr || 0),
+    previous_base_pkr: Number(input.previousBasePkr || 0),
+    revised_base_pkr: Number(input.revisedBasePkr || 0),
+    charge_pkr: Math.max(0, Number(input.chargePkr || 0)),
+    credit_pkr: Math.max(0, Number(input.creditPkr || 0)),
+    account_delta_pkr: accountDelta,
+    effective_total_pkr: effectiveTotal,
+    before_snapshot_json: input.beforeSnapshotJson,
+    after_snapshot_json: input.afterSnapshotJson,
+    cancelled_lines_json: input.cancelledLinesJson,
+    revision_no: revisionNo,
+    lifecycle_status: lifecycleStatus,
+    created_by_user_id: actorUserId,
+    created_at: now,
+  };
+
+  if (isDesktopApp()) {
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `UPDATE ${table} SET total_pkr=$1,updated_at=$2,updated_by_user_id=$3
         WHERE id=$4 AND company_id=$5 AND status='ACTIVE'`,
-      params: [effectiveTotal, now, actorUserId, input.bookingId, companyId],
-    },
-    {
-      sql: `INSERT INTO booking_adjustments
+        params: [effectiveTotal, now, actorUserId, input.bookingId, companyId],
+      },
+      {
+        sql: `INSERT INTO booking_adjustments
         (id,company_id,service_type,booking_id,adjustment_type,adjustment_date,category,reason,reference,notes,
          previous_total_pkr,previous_base_pkr,revised_base_pkr,charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,
          before_snapshot_json,after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_by_user_id,created_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
-      params: [
-        adjustmentId,
-        companyId,
-        input.service,
-        input.bookingId,
-        input.adjustmentType,
-        input.adjustmentDate,
-        input.category.trim(),
-        input.reason.trim(),
-        input.reference.trim(),
-        input.notes.trim(),
-        Number(input.previousTotalPkr || 0),
-        Number(input.previousBasePkr || 0),
-        Number(input.revisedBasePkr || 0),
-        Math.max(0, Number(input.chargePkr || 0)),
-        Math.max(0, Number(input.creditPkr || 0)),
-        accountDelta,
-        effectiveTotal,
-        input.beforeSnapshotJson,
-        input.afterSnapshotJson,
-        input.cancelledLinesJson,
-        revisionNo,
-        lifecycleStatus,
-        actorUserId,
-        now,
-      ],
-    },
-  ];
+        params: [
+          adjustmentId,
+          companyId,
+          input.service,
+          input.bookingId,
+          input.adjustmentType,
+          input.adjustmentDate,
+          adjustmentRow.category,
+          adjustmentRow.reason,
+          adjustmentRow.reference,
+          adjustmentRow.notes,
+          adjustmentRow.previous_total_pkr,
+          adjustmentRow.previous_base_pkr,
+          adjustmentRow.revised_base_pkr,
+          adjustmentRow.charge_pkr,
+          adjustmentRow.credit_pkr,
+          accountDelta,
+          effectiveTotal,
+          input.beforeSnapshotJson,
+          input.afterSnapshotJson,
+          input.cancelledLinesJson,
+          revisionNo,
+          lifecycleStatus,
+          actorUserId,
+          now,
+        ],
+      },
+    ];
 
-  const audit = auditStatement(
-    companyId,
-    actorUserId,
-    input.service,
-    input.bookingId,
-    `${input.adjustmentType} ${booking.ub_number || input.bookingId} · PKR ${input.previousTotalPkr} → ${effectiveTotal}`,
-    now,
-  );
-  if (audit) statements.push(audit);
+    const audit = auditStatement(
+      companyId,
+      actorUserId,
+      input.service,
+      input.bookingId,
+      `${input.adjustmentType} ${booking.ub_number || input.bookingId} · PKR ${input.previousTotalPkr} → ${effectiveTotal}`,
+      now,
+    );
+    if (audit) statements.push(audit);
 
-  await runAtomicTransaction(statements);
+    await runAtomicTransaction(statements);
+  }
+
+  await queueSync("UPDATE", table, input.bookingId, {
+    total_pkr: effectiveTotal,
+    updated_at: now,
+    updated_by_user_id: actorUserId,
+  });
+  await queueSync("UPSERT", "booking_adjustments", adjustmentId, adjustmentRow);
+  if (isDesktopApp()) await flushDesktopSyncQueue();
+
   return { revisionNo, lifecycleStatus, accountDelta, effectiveTotal };
 }
