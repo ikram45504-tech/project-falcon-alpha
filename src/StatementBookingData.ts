@@ -7,7 +7,11 @@ import { getMiscBookings, type MiscBooking } from "./miscDb";
 import { getMiscOperationalDetails } from "./MiscOperationalDb";
 import { initPackageAdjustmentDatabase } from "./PackageAdjustmentDb";
 import { initHotelAdjustmentDatabase } from "./HotelAdjustmentDb";
-import { initUniversalBookingAdjustmentDatabase } from "./UniversalBookingAdjustmentDb";
+import { initTicketAdjustmentDatabase } from "./TicketAdjustmentDb";
+import { initVisaAdjustmentDatabase } from "./VisaAdjustmentDb";
+import { initTransportAdjustmentDatabase } from "./TransportAdjustmentDb";
+import { initMiscAdjustmentDatabase } from "./MiscAdjustmentDb";
+import { initLegacyBookingAdjustmentsTable } from "./SegmentAdjustmentRecord";
 import type { BookingAdjustmentKind, BookingLifecycleStatus, BookingServiceName } from "./BookingLifecycle";
 import { isDesktopApp } from "./cloudSync";
 
@@ -89,7 +93,11 @@ async function getStatementAdjustments(companyId: string) {
   await Promise.all([
     initPackageAdjustmentDatabase(),
     initHotelAdjustmentDatabase(),
-    initUniversalBookingAdjustmentDatabase(),
+    initTicketAdjustmentDatabase(),
+    initVisaAdjustmentDatabase(),
+    initTransportAdjustmentDatabase(),
+    initMiscAdjustmentDatabase(),
+    initLegacyBookingAdjustmentsTable(),
   ]);
   const database = await statementDb();
   return database.select<StatementAdjustmentRecord[]>(
@@ -107,13 +115,41 @@ async function getStatementAdjustments(companyId: string) {
        FROM hotel_booking_adjustments
       WHERE company_id=$1
       UNION ALL
+     SELECT id,company_id,'TICKET' AS service_type,booking_id,adjustment_type,adjustment_date,
+            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+       FROM ticket_booking_adjustments
+      WHERE company_id=$1
+      UNION ALL
+     SELECT id,company_id,'VISA' AS service_type,booking_id,adjustment_type,adjustment_date,
+            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+       FROM visa_booking_adjustments
+      WHERE company_id=$1
+      UNION ALL
+     SELECT id,company_id,'MISC' AS service_type,booking_id,adjustment_type,adjustment_date,
+            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+       FROM misc_booking_adjustments
+      WHERE company_id=$1
+      UNION ALL
+     SELECT id,company_id,'TRANSPORT' AS service_type,booking_id,adjustment_type,adjustment_date,
+            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+       FROM transport_booking_adjustments
+      WHERE company_id=$1
+      UNION ALL
      SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
             category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
             charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
             after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
        FROM booking_adjustments
       WHERE company_id=$1
-        AND service_type <> 'HOTEL'
+        AND service_type NOT IN ('HOTEL', 'TICKET', 'VISA', 'TRANSPORT', 'MISC')
       UNION ALL
      SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
             category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
@@ -123,6 +159,42 @@ async function getStatementAdjustments(companyId: string) {
       WHERE company_id=$1
         AND service_type = 'HOTEL'
         AND id NOT IN (SELECT id FROM hotel_booking_adjustments WHERE company_id=$1)
+      UNION ALL
+     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
+            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+       FROM booking_adjustments
+      WHERE company_id=$1
+        AND service_type = 'TICKET'
+        AND id NOT IN (SELECT id FROM ticket_booking_adjustments WHERE company_id=$1)
+      UNION ALL
+     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
+            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+       FROM booking_adjustments
+      WHERE company_id=$1
+        AND service_type = 'VISA'
+        AND id NOT IN (SELECT id FROM visa_booking_adjustments WHERE company_id=$1)
+      UNION ALL
+     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
+            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+       FROM booking_adjustments
+      WHERE company_id=$1
+        AND service_type = 'TRANSPORT'
+        AND id NOT IN (SELECT id FROM transport_booking_adjustments WHERE company_id=$1)
+      UNION ALL
+     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
+            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
+            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
+            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
+       FROM booking_adjustments
+      WHERE company_id=$1
+        AND service_type = 'MISC'
+        AND id NOT IN (SELECT id FROM misc_booking_adjustments WHERE company_id=$1)
       ORDER BY service_type,booking_id,revision_no,created_at`,
     [companyId],
   );

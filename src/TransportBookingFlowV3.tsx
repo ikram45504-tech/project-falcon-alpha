@@ -10,7 +10,7 @@ import type {
 } from "./db";
 import { createTransportBooking, getTransportBookings } from "./db";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
-import BookingLifecycleCenter from "./BookingLifecycleCenter";
+import TransportRegister from "./TransportRegister";
 import { bookingDigitsFromUb } from "./bookingUb";
 import {
   getTransportOperationalDetails,
@@ -370,8 +370,7 @@ export default function TransportBookingFlowV3({
 
   if (mode === "REGISTER")
     return (
-      <BookingLifecycleCenter
-        service="TRANSPORT"
+      <TransportRegister
         companyId={companyId}
         transactionType={transactionType}
         userId={userId}

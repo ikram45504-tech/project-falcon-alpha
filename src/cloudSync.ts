@@ -519,6 +519,131 @@ export async function syncHotelAdjustmentBundle(input: {
   await queueSync("UPSERT", "hotel_booking_adjustments", String(input.adjustment.id), input.adjustment);
 }
 
+export async function syncTicketAdjustmentBundle(input: {
+  bookingId: string;
+  companyId: string;
+  totalPkr: number;
+  updatedAt: string;
+  updatedByUserId: string;
+  transactionDate: string;
+  airlineName: string;
+  pnr: string;
+  sector: string;
+  lines: TicketBookingSyncLine[];
+  adjustment: Record<string, unknown>;
+}) {
+  await queueSync("UPDATE", "ticket_bookings", input.bookingId, {
+    transaction_date: input.transactionDate,
+    airline_name: input.airlineName,
+    pnr: input.pnr,
+    sector: input.sector,
+    total_pkr: input.totalPkr,
+    updated_at: input.updatedAt,
+    updated_by_user_id: input.updatedByUserId,
+  });
+  await queueSync("REPLACE_CHILDREN", "ticket_booking_lines", input.bookingId, {
+    parent_column: "booking_id",
+    rows: input.lines,
+  });
+  await queueSync("UPSERT", "ticket_booking_adjustments", String(input.adjustment.id), input.adjustment);
+}
+
+export async function syncVisaAdjustmentBundle(input: {
+  bookingId: string;
+  companyId: string;
+  privateVehicleType: string;
+  privateTransportTotalSar: number;
+  intercityBusRateSar: number;
+  intercityBusTotalSar: number;
+  applicablePrivatePax: number;
+  applicableFullBusPax: number;
+  visaTotalSar: number;
+  transportTotalSar: number;
+  totalSar: number;
+  totalPkr: number;
+  unconvertedSar: number;
+  updatedAt: string;
+  updatedByUserId: string;
+  lines: Record<string, unknown>[];
+  fleet: Record<string, unknown>[];
+  adjustment: Record<string, unknown>;
+}) {
+  await queueSync("UPDATE", "visa_bookings", input.bookingId, {
+    private_vehicle_type: input.privateVehicleType,
+    private_transport_total_sar: input.privateTransportTotalSar,
+    intercity_bus_rate_sar: input.intercityBusRateSar,
+    intercity_bus_total_sar: input.intercityBusTotalSar,
+    applicable_private_pax: input.applicablePrivatePax,
+    applicable_full_bus_pax: input.applicableFullBusPax,
+    visa_total_sar: input.visaTotalSar,
+    transport_total_sar: input.transportTotalSar,
+    total_sar: input.totalSar,
+    total_pkr: input.totalPkr,
+    unconverted_sar: input.unconvertedSar,
+    updated_at: input.updatedAt,
+    updated_by_user_id: input.updatedByUserId,
+  });
+  await queueSync("REPLACE_CHILDREN", "visa_booking_lines", input.bookingId, {
+    parent_column: "booking_id",
+    rows: input.lines,
+  });
+  await queueSync("REPLACE_CHILDREN", "visa_transport_fleet", input.bookingId, {
+    parent_column: "booking_id",
+    rows: input.fleet,
+  });
+  await queueSync("UPSERT", "visa_booking_adjustments", String(input.adjustment.id), input.adjustment);
+}
+
+export async function syncTransportAdjustmentBundle(input: {
+  bookingId: string;
+  companyId: string;
+  totalSar: number;
+  totalPkr: number;
+  unconvertedSar: number;
+  updatedAt: string;
+  updatedByUserId: string;
+  lines: Record<string, unknown>[];
+  adjustment: Record<string, unknown>;
+}) {
+  await queueSync("UPDATE", "transport_bookings", input.bookingId, {
+    total_sar: input.totalSar,
+    total_pkr: input.totalPkr,
+    unconverted_sar: input.unconvertedSar,
+    updated_at: input.updatedAt,
+    updated_by_user_id: input.updatedByUserId,
+  });
+  await queueSync("REPLACE_CHILDREN", "transport_booking_lines", input.bookingId, {
+    parent_column: "booking_id",
+    rows: input.lines,
+  });
+  await queueSync("UPSERT", "transport_booking_adjustments", String(input.adjustment.id), input.adjustment);
+}
+
+export async function syncMiscAdjustmentBundle(input: {
+  bookingId: string;
+  companyId: string;
+  totalSar: number;
+  totalPkr: number;
+  unconvertedSar: number;
+  updatedAt: string;
+  updatedByUserId: string;
+  lines: Record<string, unknown>[];
+  adjustment: Record<string, unknown>;
+}) {
+  await queueSync("UPDATE", "misc_bookings", input.bookingId, {
+    total_sar: input.totalSar,
+    total_pkr: input.totalPkr,
+    unconverted_sar: input.unconvertedSar,
+    updated_at: input.updatedAt,
+    updated_by_user_id: input.updatedByUserId,
+  });
+  await queueSync("REPLACE_CHILDREN", "misc_booking_lines", input.bookingId, {
+    parent_column: "booking_id",
+    rows: input.lines,
+  });
+  await queueSync("UPSERT", "misc_booking_adjustments", String(input.adjustment.id), input.adjustment);
+}
+
 /**
  * Desktop: immediately push PENDING/FAILED sync_queue jobs to Supabase.
  * Used after package adjustments so web sees the change without waiting for the 5s timer.

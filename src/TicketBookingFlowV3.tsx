@@ -4,7 +4,7 @@ import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
 import { bookingDigitsFromUb } from "./bookingUb";
 import { useBookingFlowState } from "./useBookingFlowState";
 import TicketOperationalDetails from "./TicketOperationalDetails";
-import BookingLifecycleCenter from "./BookingLifecycleCenter";
+import TicketRegister from "./TicketRegister";
 import {
   createTicketCommercialBooking,
   getTicketCommercialBookings,
@@ -230,8 +230,7 @@ export default function TicketBookingFlowV2({
 
   if (mode === "REGISTER")
     return (
-      <BookingLifecycleCenter
-        service="TICKET"
+      <TicketRegister
         companyId={companyId}
         transactionType={transactionType}
         userId={userId}

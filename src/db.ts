@@ -2302,6 +2302,7 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "package_movement_events",
     "package_booking_adjustments",
     "ticket_booking_lines",
+    "ticket_booking_adjustments",
     "ticket_operational_meta",
     "ticket_operational_passengers",
     "ticket_operational_flights",
@@ -2313,6 +2314,7 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "hotel_operational_guests",
     "hotel_operational_meta",
     "visa_booking_lines",
+    "visa_booking_adjustments",
     "visa_passport_details",
     "visa_transport_fleet",
     "visa_operational_meta",
@@ -2321,6 +2323,7 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "transport_operational_meta",
     "transport_operational_sectors",
     "misc_booking_lines",
+    "misc_booking_adjustments",
     "misc_booking_details",
     "misc_operational_meta",
     "misc_operational_services",
@@ -3723,7 +3726,7 @@ function visaVehicleCapacity(vehicle: VisaVehicleType) {
   return 47;
 }
 
-function calculateVisaBooking(input: VisaBookingInput) {
+export function calculateVisaBooking(input: VisaBookingInput) {
   const allowedPassengerTypes: VisaPassengerType[] = ["ADULT", "CHILD", "INFANT"];
   const allowedVisaTypes: VisaType[] = [
     "ONLY_UMRAH_VISA",
@@ -4247,7 +4250,7 @@ function normalizeTransportUb(value: string) {
   return value.trim().replace(/\s+/g, " ").toUpperCase();
 }
 
-function calculateTransportLines(lines: TransportBookingLineInput[]) {
+export function calculateTransportLines(lines: TransportBookingLineInput[]) {
   const allowedTypes: TransportType[] = ["SHARING_BUS", "PRIVATE_VEHICLE"];
   const privateVehicles: TransportVehicleType[] = [
     "CAR",
@@ -4912,6 +4915,7 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     ],
     ticket_bookings: [
       "ticket_booking_lines",
+      "ticket_booking_adjustments",
       "ticket_operational_meta",
       "ticket_operational_passengers",
       "ticket_operational_flights",
@@ -4930,10 +4934,17 @@ export async function executePullSync(options?: { companyId?: string; fullResync
       "visa_passport_details",
       "visa_operational_meta",
       "visa_operational_passengers",
+      "visa_booking_adjustments",
     ],
-    transport_bookings: ["transport_booking_lines", "transport_operational_sectors", "transport_operational_meta"],
+    transport_bookings: [
+      "transport_booking_lines",
+      "transport_operational_sectors",
+      "transport_operational_meta",
+      "transport_booking_adjustments",
+    ],
     misc_bookings: [
       "misc_booking_lines",
+      "misc_booking_adjustments",
       "misc_commercial_family_refs",
       "misc_operational_services",
       "misc_operational_meta",
@@ -4983,13 +4994,18 @@ export async function executePullSync(options?: { companyId?: string; fullResync
   const { initHotelAdjustmentDatabase } = await import("./HotelAdjustmentDb");
   await initHotelAdjustmentDatabase();
   columnCache.delete("hotel_booking_adjustments");
-
-  const UNIVERSAL_ADJUSTMENT_PARENTS = new Set([
-    "ticket_bookings",
-    "visa_bookings",
-    "transport_bookings",
-    "misc_bookings",
-  ]);
+  const { initTicketAdjustmentDatabase } = await import("./TicketAdjustmentDb");
+  await initTicketAdjustmentDatabase();
+  columnCache.delete("ticket_booking_adjustments");
+  const { initVisaAdjustmentDatabase } = await import("./VisaAdjustmentDb");
+  await initVisaAdjustmentDatabase();
+  columnCache.delete("visa_booking_adjustments");
+  const { initMiscAdjustmentDatabase } = await import("./MiscAdjustmentDb");
+  await initMiscAdjustmentDatabase();
+  columnCache.delete("misc_booking_adjustments");
+  const { initTransportAdjustmentDatabase } = await import("./TransportAdjustmentDb");
+  await initTransportAdjustmentDatabase();
+  columnCache.delete("transport_booking_adjustments");
 
   async function upsertCloudRow(table: string, row: Record<string, unknown>) {
     const allowed = await localColumns(table);
@@ -5098,22 +5114,6 @@ export async function executePullSync(options?: { companyId?: string; fullResync
 
             for (const childRow of childData || []) {
               await upsertCloudRow(childTable, childRow as Record<string, unknown>);
-            }
-          }
-
-          // Ticket/hotel/etc. adjustments live in shared booking_adjustments (not CHILD_TABLES).
-          if (UNIVERSAL_ADJUSTMENT_PARENTS.has(table)) {
-            const { data: adjData, error: adjError } = await supabase
-              .from("booking_adjustments")
-              .select("*")
-              .eq("booking_id", bookingId);
-            if (adjError) {
-              console.error(`Pull sync booking_adjustments failed for ${bookingId}:`, adjError.message);
-            } else {
-              await database.execute(`DELETE FROM booking_adjustments WHERE booking_id = $1`, [bookingId]);
-              for (const adjRow of adjData || []) {
-                await upsertCloudRow("booking_adjustments", adjRow as Record<string, unknown>);
-              }
             }
           }
         }

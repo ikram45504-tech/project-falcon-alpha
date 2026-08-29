@@ -11,7 +11,7 @@ import {
   type MiscBookingLineInput,
 } from "./miscDb";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
-import BookingLifecycleCenter from "./BookingLifecycleCenter";
+import MiscRegister from "./MiscRegister";
 import { bookingDigitsFromUb, normalizeBookingUb } from "./bookingUb";
 import {
   getMiscOperationalDetails,
@@ -318,8 +318,7 @@ export default function MiscBookingFlowV3({
 
   if (mode === "REGISTER")
     return (
-      <BookingLifecycleCenter
-        service="MISC"
+      <MiscRegister
         companyId={companyId}
         transactionType={transactionType}
         userId={userId}

@@ -226,7 +226,7 @@ async function validateUbAvailability(
   );
 }
 
-function calculateLines(lines: TicketCommercialLineInput[]) {
+export function calculateTicketCommercialLines(lines: TicketCommercialLineInput[]) {
   if (!lines.length) throw new Error("Add at least one Ticket row.");
   const allowedFlightTypes: TicketFareFlightType[] = ["ONE_WAY", "RETURN", "MULTI_CITY"];
   const calculated: CalculatedLine[] = lines.map((line, index) => {
@@ -391,7 +391,7 @@ export async function createTicketCommercialBooking(companyId: string, input: Ti
   validateUb(input.ubNumber);
   await validateCounterparty(companyId, input.transactionType, input.counterpartyId);
   await validateUbAvailability(companyId, input.transactionType, input.counterpartyId, input.ubNumber);
-  const { calculated, totalPkr } = calculateLines(input.lines);
+  const { calculated, totalPkr } = calculateTicketCommercialLines(input.lines);
   const first = calculated[0];
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -491,7 +491,7 @@ export async function updateTicketCommercialBooking(
   await ensureSchema();
   await requirePermission(companyId, actorUserId, "edit_bookings");
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
-  const { calculated, totalPkr } = calculateLines(input.lines);
+  const { calculated, totalPkr } = calculateTicketCommercialLines(input.lines);
   const first = calculated[0];
   const now = new Date().toISOString();
 

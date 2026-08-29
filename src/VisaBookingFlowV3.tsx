@@ -13,7 +13,7 @@ import type {
 } from "./db";
 import { createVisaBooking, getVisaBookings } from "./db";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
-import BookingLifecycleCenter from "./BookingLifecycleCenter";
+import VisaRegister from "./VisaRegister";
 import { bookingDigitsFromUb } from "./bookingUb";
 import { useBookingFlowState } from "./useBookingFlowState";
 import { passportValidityForTravel } from "./passportValidity";
@@ -480,8 +480,7 @@ export default function VisaBookingFlowV3({
 
   if (mode === "REGISTER")
     return (
-      <BookingLifecycleCenter
-        service="VISA"
+      <VisaRegister
         companyId={companyId}
         transactionType={transactionType}
         userId={userId}

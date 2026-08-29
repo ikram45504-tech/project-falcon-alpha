@@ -564,6 +564,134 @@ CREATE INDEX IF NOT EXISTS idx_hotel_booking_adjustments_lookup
 CREATE INDEX IF NOT EXISTS idx_hotel_booking_adjustments_date
   ON hotel_booking_adjustments(company_id, adjustment_date);
 
+CREATE TABLE IF NOT EXISTS ticket_booking_adjustments (
+      id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL,
+      booking_id TEXT NOT NULL,
+      adjustment_type TEXT NOT NULL,
+      adjustment_date TEXT NOT NULL,
+      requested_by TEXT NOT NULL DEFAULT 'INTERNAL',
+      category TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      reference TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      previous_total_pkr REAL NOT NULL DEFAULT 0,
+      previous_base_pkr REAL NOT NULL DEFAULT 0,
+      revised_base_pkr REAL NOT NULL DEFAULT 0,
+      charge_pkr REAL NOT NULL DEFAULT 0,
+      credit_pkr REAL NOT NULL DEFAULT 0,
+      account_delta_pkr REAL NOT NULL DEFAULT 0,
+      effective_total_pkr REAL NOT NULL DEFAULT 0,
+      before_snapshot_json TEXT NOT NULL DEFAULT '',
+      after_snapshot_json TEXT NOT NULL DEFAULT '',
+      cancelled_lines_json TEXT NOT NULL DEFAULT '',
+      revision_no INTEGER NOT NULL DEFAULT 2,
+      lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
+      created_by_user_id TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+
+CREATE INDEX IF NOT EXISTS idx_ticket_booking_adjustments_lookup
+  ON ticket_booking_adjustments(company_id, booking_id, revision_no);
+CREATE INDEX IF NOT EXISTS idx_ticket_booking_adjustments_date
+  ON ticket_booking_adjustments(company_id, adjustment_date);
+
+CREATE TABLE IF NOT EXISTS visa_booking_adjustments (
+      id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL,
+      booking_id TEXT NOT NULL,
+      adjustment_type TEXT NOT NULL,
+      adjustment_date TEXT NOT NULL,
+      requested_by TEXT NOT NULL DEFAULT 'INTERNAL',
+      category TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      reference TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      previous_total_pkr REAL NOT NULL DEFAULT 0,
+      previous_base_pkr REAL NOT NULL DEFAULT 0,
+      revised_base_pkr REAL NOT NULL DEFAULT 0,
+      charge_pkr REAL NOT NULL DEFAULT 0,
+      credit_pkr REAL NOT NULL DEFAULT 0,
+      account_delta_pkr REAL NOT NULL DEFAULT 0,
+      effective_total_pkr REAL NOT NULL DEFAULT 0,
+      before_snapshot_json TEXT NOT NULL DEFAULT '',
+      after_snapshot_json TEXT NOT NULL DEFAULT '',
+      cancelled_lines_json TEXT NOT NULL DEFAULT '',
+      revision_no INTEGER NOT NULL DEFAULT 2,
+      lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
+      created_by_user_id TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+
+CREATE INDEX IF NOT EXISTS idx_visa_booking_adjustments_lookup
+  ON visa_booking_adjustments(company_id, booking_id, revision_no);
+CREATE INDEX IF NOT EXISTS idx_visa_booking_adjustments_date
+  ON visa_booking_adjustments(company_id, adjustment_date);
+
+CREATE TABLE IF NOT EXISTS transport_booking_adjustments (
+      id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL,
+      booking_id TEXT NOT NULL,
+      adjustment_type TEXT NOT NULL,
+      adjustment_date TEXT NOT NULL,
+      requested_by TEXT NOT NULL DEFAULT 'INTERNAL',
+      category TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      reference TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      previous_total_pkr REAL NOT NULL DEFAULT 0,
+      previous_base_pkr REAL NOT NULL DEFAULT 0,
+      revised_base_pkr REAL NOT NULL DEFAULT 0,
+      charge_pkr REAL NOT NULL DEFAULT 0,
+      credit_pkr REAL NOT NULL DEFAULT 0,
+      account_delta_pkr REAL NOT NULL DEFAULT 0,
+      effective_total_pkr REAL NOT NULL DEFAULT 0,
+      before_snapshot_json TEXT NOT NULL DEFAULT '',
+      after_snapshot_json TEXT NOT NULL DEFAULT '',
+      cancelled_lines_json TEXT NOT NULL DEFAULT '',
+      revision_no INTEGER NOT NULL DEFAULT 2,
+      lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
+      created_by_user_id TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+
+CREATE INDEX IF NOT EXISTS idx_transport_booking_adjustments_lookup
+  ON transport_booking_adjustments(company_id, booking_id, revision_no);
+CREATE INDEX IF NOT EXISTS idx_transport_booking_adjustments_date
+  ON transport_booking_adjustments(company_id, adjustment_date);
+
+CREATE TABLE IF NOT EXISTS misc_booking_adjustments (
+      id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL,
+      booking_id TEXT NOT NULL,
+      adjustment_type TEXT NOT NULL,
+      adjustment_date TEXT NOT NULL,
+      requested_by TEXT NOT NULL DEFAULT 'INTERNAL',
+      category TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      reference TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      previous_total_pkr REAL NOT NULL DEFAULT 0,
+      previous_base_pkr REAL NOT NULL DEFAULT 0,
+      revised_base_pkr REAL NOT NULL DEFAULT 0,
+      charge_pkr REAL NOT NULL DEFAULT 0,
+      credit_pkr REAL NOT NULL DEFAULT 0,
+      account_delta_pkr REAL NOT NULL DEFAULT 0,
+      effective_total_pkr REAL NOT NULL DEFAULT 0,
+      before_snapshot_json TEXT NOT NULL DEFAULT '',
+      after_snapshot_json TEXT NOT NULL DEFAULT '',
+      cancelled_lines_json TEXT NOT NULL DEFAULT '',
+      revision_no INTEGER NOT NULL DEFAULT 2,
+      lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
+      created_by_user_id TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+
+CREATE INDEX IF NOT EXISTS idx_misc_booking_adjustments_lookup
+  ON misc_booking_adjustments(company_id, booking_id, revision_no);
+CREATE INDEX IF NOT EXISTS idx_misc_booking_adjustments_date
+  ON misc_booking_adjustments(company_id, adjustment_date);
+
 CREATE TABLE IF NOT EXISTS package_operational_meta (booking_id TEXT PRIMARY KEY,company_id TEXT NOT NULL,notes TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
 
 CREATE TABLE IF NOT EXISTS package_operational_passengers (id TEXT PRIMARY KEY,company_id TEXT NOT NULL,booking_id TEXT NOT NULL,passenger_type TEXT NOT NULL,given_name TEXT NOT NULL DEFAULT '',surname TEXT NOT NULL DEFAULT '',passport_number TEXT NOT NULL DEFAULT '',visa_number TEXT NOT NULL DEFAULT '',passport_expiry TEXT NOT NULL DEFAULT '',sort_order INTEGER NOT NULL DEFAULT 0);
