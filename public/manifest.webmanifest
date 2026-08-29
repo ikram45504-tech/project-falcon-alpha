@@ -1,0 +1,23 @@
+{
+  "name": "Travel Hisab",
+  "short_name": "Travel Hisab",
+  "description": "Travel Accounting and Booking Management by SMC Softwares",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#082751",
+  "theme_color": "#082751",
+  "icons": [
+    {
+      "src": "/travel-hisab-logo-square.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo/travel-hisab-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
