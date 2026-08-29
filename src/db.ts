@@ -1452,26 +1452,42 @@ export async function needsFirstSetup() {
   return Number(companies[0]?.count ?? 0) === 0;
 }
 
+let companyCodeRpcAvailable: boolean | null = null;
+
+function isMissingCompanyCodeRpcError(message: string) {
+  return /could not find the function|schema cache/i.test(message);
+}
+
 async function isCompanyCodeAvailable(candidate: string) {
+  if (companyCodeRpcAvailable === false) return true;
+
   const { data, error } = await supabase.rpc("is_company_code_available", {
     p_company_code: candidate,
   });
   if (error) {
-    throw new Error(`${error.message} Run migration_auth_login_fixes.sql in Supabase if this persists during signup.`);
+    if (isMissingCompanyCodeRpcError(error.message)) {
+      companyCodeRpcAvailable = false;
+      return true;
+    }
+    throw new Error(error.message);
   }
+
+  companyCodeRpcAvailable = true;
   return Boolean(data);
 }
 
-async function generateUniqueCompanyCode(companyName: string) {
+async function generateUniqueCompanyCode(companyName: string, exclude = new Set<string>()) {
   const prefixes = companyCodePrefixes(companyName);
 
   for (const prefix of prefixes) {
     const candidate = prefix.toUpperCase();
+    if (exclude.has(candidate)) continue;
     if (await isCompanyCodeAvailable(candidate)) return candidate;
   }
 
   for (let attempt = 0; attempt < 500; attempt += 1) {
     const candidate = randomLetters(3).toUpperCase();
+    if (exclude.has(candidate)) continue;
     if (await isCompanyCodeAvailable(candidate)) return candidate;
   }
 
@@ -1617,8 +1633,10 @@ export async function createCompanyAccount(input: CreateCompanyAccountInput) {
 
     let companyCode = "";
     let companyInserted = false;
+    const triedCodes = new Set<string>();
     for (let attempt = 0; attempt < 20; attempt += 1) {
-      companyCode = await generateUniqueCompanyCode(companyName);
+      companyCode = await generateUniqueCompanyCode(companyName, triedCodes);
+      triedCodes.add(companyCode);
       const { error: companyError } = await supabase.from("companies").insert({
         id: companyId,
         company_code: companyCode,
