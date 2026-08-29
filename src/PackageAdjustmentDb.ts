@@ -312,28 +312,28 @@ async function latestState(database: Database | null, companyId: string, booking
   if (!isDesktopApp()) {
     const { data, error } = await supabase
       .from("package_booking_adjustments")
-      .select("revision_no,lifecycle_status")
+      .select("revision_no,lifecycle_status,adjustment_type")
       .eq("company_id", companyId)
       .eq("booking_id", bookingId)
       .order("revision_no", { ascending: false })
-      .limit(1);
+      .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    const latest = data?.[0];
+    const commercial = (data || []).find((row) => row.adjustment_type !== "CORRECTION");
     return {
-      revisionNo: latest ? Number(latest.revision_no) : 1,
-      lifecycleStatus: (latest?.lifecycle_status || "ACTIVE") as PackageLifecycleStatus,
+      revisionNo: commercial ? Number(commercial.revision_no) : 1,
+      lifecycleStatus: (commercial?.lifecycle_status || "ACTIVE") as PackageLifecycleStatus,
     };
   }
   const rows = await select<PackageAdjustmentRecord[]>(
     database!,
     `SELECT * FROM package_booking_adjustments
-     WHERE company_id=$1 AND booking_id=$2 ORDER BY revision_no DESC,created_at DESC LIMIT 1`,
+     WHERE company_id=$1 AND booking_id=$2 ORDER BY revision_no DESC,created_at DESC`,
     [companyId, bookingId],
   );
-  const latest = rows[0];
+  const commercial = rows.find((row) => row.adjustment_type !== "CORRECTION");
   return {
-    revisionNo: latest ? Number(latest.revision_no) : 1,
-    lifecycleStatus: latest?.lifecycle_status || ("ACTIVE" as PackageLifecycleStatus),
+    revisionNo: commercial ? Number(commercial.revision_no) : 1,
+    lifecycleStatus: commercial?.lifecycle_status || ("ACTIVE" as PackageLifecycleStatus),
   };
 }
 
@@ -520,7 +520,8 @@ export async function savePackageCorrectionOrAmendment(
     throw new Error("This adjustment would make the booking value negative. Reduce the credit amount.");
   const delta = effectiveTotal - Number(booking.total_pkr || 0);
   const lifecycleStatus = nextLifecycle(state.lifecycleStatus, input.adjustmentType);
-  const revisionNo = state.revisionNo + 1;
+  // Correction = typo/data fix only — keep current commercial REV (not a chargeable revision).
+  const revisionNo = input.adjustmentType === "CORRECTION" ? state.revisionNo : state.revisionNo + 1;
 
   const adjustment: AdjustmentInsert = {
     adjustmentType: input.adjustmentType,
@@ -702,7 +703,7 @@ export async function getPackageAdjustmentSummaryMap(companyId: string) {
   if (!isDesktopApp()) {
     const { data, error } = await supabase
       .from("package_booking_adjustments")
-      .select("booking_id,revision_no,lifecycle_status")
+      .select("booking_id,revision_no,lifecycle_status,adjustment_type")
       .eq("company_id", companyId)
       .order("booking_id", { ascending: true })
       .order("revision_no", { ascending: true });
@@ -710,11 +711,12 @@ export async function getPackageAdjustmentSummaryMap(companyId: string) {
     const result: Record<string, PackageAdjustmentSummary> = {};
     for (const row of data || []) {
       const existing = result[row.booking_id];
+      const isCorrection = row.adjustment_type === "CORRECTION";
       result[row.booking_id] = {
         bookingId: row.booking_id,
-        revisionNo: Number(row.revision_no || 1),
+        revisionNo: isCorrection ? existing?.revisionNo || 1 : Number(row.revision_no || 1),
         adjustmentCount: (existing?.adjustmentCount || 0) + 1,
-        lifecycleStatus: row.lifecycle_status,
+        lifecycleStatus: isCorrection ? existing?.lifecycleStatus || "ACTIVE" : row.lifecycle_status,
       };
     }
     return result;
@@ -732,11 +734,14 @@ export async function getPackageAdjustmentSummaryMap(companyId: string) {
   const result: Record<string, PackageAdjustmentSummary> = {};
   for (const row of rows) {
     const existing = result[row.booking_id];
+    const isCorrection = row.adjustment_type === "CORRECTION";
     result[row.booking_id] = {
       bookingId: row.booking_id,
-      revisionNo: Number(row.revision_no || 1),
+      revisionNo: isCorrection ? existing?.revisionNo || 1 : Number(row.revision_no || 1),
       adjustmentCount: (existing?.adjustmentCount || 0) + 1,
-      lifecycleStatus: row.lifecycle_status,
+      lifecycleStatus: isCorrection
+        ? existing?.lifecycleStatus || ("ACTIVE" as PackageLifecycleStatus)
+        : row.lifecycle_status,
     };
   }
   return result;

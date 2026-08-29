@@ -249,8 +249,8 @@ export default function PackageBookingAdjustment({
       {
         type: "CORRECTION",
         title: "Correction",
-        text: "Fix an incorrect booking entry. No amendment fee is charged; only the correct booking value is restored.",
-        badge: "NO FEE",
+        text: "Fix staff typing / data mistakes only. No fee, not a chargeable revision, and does not appear on Statements.",
+        badge: "NO FEE · NOT A REVISION",
       },
       {
         type: "AMENDMENT",
@@ -761,8 +761,8 @@ export default function PackageBookingAdjustment({
                     )}
                     {adjustmentType === "CORRECTION" && (
                       <div className="adj-rule-note">
-                        <b>Correction:</b> no amendment fee is added. If you fix only text/data and the amounts stay the
-                        same, accounting impact will be Rs 0.
+                        <b>Correction:</b> typo/data fix only. No amendment fee. Kept in Booking History for audit, but
+                        it does not bump commercial REV and does not appear on desktop Statements.
                       </div>
                     )}
                     {adjustmentType === "AMENDMENT" && (

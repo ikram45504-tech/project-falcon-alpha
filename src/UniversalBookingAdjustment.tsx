@@ -291,8 +291,8 @@ export default function UniversalBookingAdjustment({
       {
         type: "CORRECTION",
         title: "Correction",
-        text: "Fix an incorrect original entry. No amendment fee is added; only the correct commercial value is restored.",
-        badge: "NO FEE",
+        text: "Fix staff typing / data mistakes only. No fee, not a chargeable revision, and does not appear on Statements.",
+        badge: "NO FEE · NOT A REVISION",
       },
       {
         type: "AMENDMENT",
@@ -738,8 +738,8 @@ export default function UniversalBookingAdjustment({
                     </div>
                     {adjustmentType === "CORRECTION" && (
                       <div className="adj-rule-note">
-                        <b>Correction:</b> no amendment fee is added. If only text/data changes and the amount stays the
-                        same, the accounting impact is Rs 0.
+                        <b>Correction:</b> typo/data fix only. No amendment fee. Kept in Booking History for audit, but
+                        it does not bump commercial REV and does not appear on desktop Statements.
                       </div>
                     )}
                     {adjustmentType === "AMENDMENT" && (

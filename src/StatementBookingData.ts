@@ -8,6 +8,7 @@ import { getMiscOperationalDetails } from "./MiscOperationalDb";
 import { initPackageAdjustmentDatabase } from "./PackageAdjustmentDb";
 import { initUniversalBookingAdjustmentDatabase } from "./UniversalBookingAdjustmentDb";
 import type { BookingAdjustmentKind, BookingLifecycleStatus, BookingServiceName } from "./BookingLifecycle";
+import { isDesktopApp } from "./cloudSync";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let statementDatabasePromise: Promise<Database> | null = null;
@@ -158,6 +159,12 @@ function groupAdjustments(rows: StatementAdjustmentRecord[]) {
   return map;
 }
 
+/** Desktop: typo Correction is audit-only — not a chargeable statement revision. Web statements left unchanged. */
+function statementVisibleAdjustments(rows: StatementAdjustmentRecord[]) {
+  if (!isDesktopApp()) return rows;
+  return rows.filter((row) => row.adjustment_type !== "CORRECTION");
+}
+
 function enrichBooking<
   T extends {
     id: string;
@@ -232,12 +239,21 @@ export async function getStatementBookingSections(
   const packageBookings = packages
     .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
-    .map((row) => enrichBooking("PACKAGE", row, adjustments[adjustmentKey("PACKAGE", row.id)] || [], 0));
+    .map((row) =>
+      enrichBooking(
+        "PACKAGE",
+        row,
+        statementVisibleAdjustments(adjustments[adjustmentKey("PACKAGE", row.id)] || []),
+        0,
+      ),
+    );
 
   const ticketBookings = tickets
     .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
-    .map((row) => enrichBooking("TICKET", row, adjustments[adjustmentKey("TICKET", row.id)] || [], 0));
+    .map((row) =>
+      enrichBooking("TICKET", row, statementVisibleAdjustments(adjustments[adjustmentKey("TICKET", row.id)] || []), 0),
+    );
 
   const matchedHotels = hotels.filter((row) => matchesAccount(row, counterpartyId, direction)).sort(byDate);
   const hotelBookings = await Promise.all(
@@ -247,7 +263,7 @@ export async function getStatementBookingSections(
         ...enrichBooking(
           "HOTEL",
           booking,
-          adjustments[adjustmentKey("HOTEL", booking.id)] || [],
+          statementVisibleAdjustments(adjustments[adjustmentKey("HOTEL", booking.id)] || []),
           Number(booking.unconverted_sar || 0),
         ),
         guestRefs: details.guestRefs,
@@ -259,7 +275,12 @@ export async function getStatementBookingSections(
     .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
     .map((row) =>
-      enrichBooking("VISA", row, adjustments[adjustmentKey("VISA", row.id)] || [], Number(row.unconverted_sar || 0)),
+      enrichBooking(
+        "VISA",
+        row,
+        statementVisibleAdjustments(adjustments[adjustmentKey("VISA", row.id)] || []),
+        Number(row.unconverted_sar || 0),
+      ),
     );
 
   const transportBookings = transports
@@ -269,7 +290,7 @@ export async function getStatementBookingSections(
       enrichBooking(
         "TRANSPORT",
         row,
-        adjustments[adjustmentKey("TRANSPORT", row.id)] || [],
+        statementVisibleAdjustments(adjustments[adjustmentKey("TRANSPORT", row.id)] || []),
         Number(row.unconverted_sar || 0),
       ),
     );
@@ -282,7 +303,7 @@ export async function getStatementBookingSections(
         ...enrichBooking(
           "MISC",
           booking,
-          adjustments[adjustmentKey("MISC", booking.id)] || [],
+          statementVisibleAdjustments(adjustments[adjustmentKey("MISC", booking.id)] || []),
           Number(booking.unconverted_sar || 0),
         ),
         familyHeads: details.familyHeads,

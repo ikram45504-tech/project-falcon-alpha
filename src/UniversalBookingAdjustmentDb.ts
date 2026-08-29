@@ -185,31 +185,30 @@ async function latestState(
     const { supabase } = await import("./supabaseClient");
     const { data, error } = await supabase
       .from("booking_adjustments")
-      .select("revision_no,lifecycle_status")
+      .select("revision_no,lifecycle_status,adjustment_type,created_at")
       .eq("company_id", companyId)
       .eq("service_type", service)
       .eq("booking_id", bookingId)
       .order("revision_no", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
+    const commercial = (data || []).find((row) => row.adjustment_type !== "CORRECTION");
     return {
-      revisionNo: data ? Number(data.revision_no) : 1,
-      lifecycleStatus: (data?.lifecycle_status || "ACTIVE") as BookingLifecycleStatus,
+      revisionNo: commercial ? Number(commercial.revision_no) : 1,
+      lifecycleStatus: (commercial?.lifecycle_status || "ACTIVE") as BookingLifecycleStatus,
     };
   }
   const rows = await select<UniversalAdjustmentRecord[]>(
     database!,
     `SELECT * FROM booking_adjustments
      WHERE company_id=$1 AND service_type=$2 AND booking_id=$3
-     ORDER BY revision_no DESC,created_at DESC LIMIT 1`,
+     ORDER BY revision_no DESC,created_at DESC`,
     [companyId, service, bookingId],
   );
-  const latest = rows[0];
+  const commercial = rows.find((row) => row.adjustment_type !== "CORRECTION");
   return {
-    revisionNo: latest ? Number(latest.revision_no) : 1,
-    lifecycleStatus: (latest?.lifecycle_status || "ACTIVE") as BookingLifecycleStatus,
+    revisionNo: commercial ? Number(commercial.revision_no) : 1,
+    lifecycleStatus: (commercial?.lifecycle_status || "ACTIVE") as BookingLifecycleStatus,
   };
 }
 
@@ -264,13 +263,16 @@ export async function getUniversalBookingAdjustmentSummaryMap(companyId: string,
 
     const out: Record<string, UniversalAdjustmentSummary> = {};
     for (const [bId, groupRows] of grouped.entries()) {
-      groupRows.sort((a, b) => Number(b.revision_no) - Number(a.revision_no)); // Descending
-      const latest = groupRows[0];
+      groupRows.sort(
+        (a, b) => Number(b.revision_no) - Number(a.revision_no) || b.created_at.localeCompare(a.created_at),
+      );
+      const commercial = groupRows.filter((row) => row.adjustment_type !== "CORRECTION");
+      const latestCommercial = commercial[0];
       out[bId] = {
-        bookingId: latest.booking_id,
-        revisionNo: Number(latest.revision_no || 1),
+        bookingId: bId,
+        revisionNo: latestCommercial ? Number(latestCommercial.revision_no || 1) : 1,
         adjustmentCount: groupRows.length,
-        lifecycleStatus: latest.lifecycle_status as BookingLifecycleStatus,
+        lifecycleStatus: (latestCommercial?.lifecycle_status || "ACTIVE") as BookingLifecycleStatus,
       };
     }
     return out;
@@ -278,28 +280,33 @@ export async function getUniversalBookingAdjustmentSummaryMap(companyId: string,
 
   await initUniversalBookingAdjustmentDatabase();
   const database = await db();
-  const rows = await select<Array<UniversalAdjustmentRecord & { adjustment_count: number }>>(
+  const rows = await select<UniversalAdjustmentRecord[]>(
     database,
-    `SELECT a.*, counts.adjustment_count
-     FROM booking_adjustments a
-     INNER JOIN (
-       SELECT booking_id,MAX(revision_no) AS max_revision,COUNT(*) AS adjustment_count
-       FROM booking_adjustments
-       WHERE company_id=$1 AND service_type=$2
-       GROUP BY booking_id
-     ) counts ON counts.booking_id=a.booking_id AND counts.max_revision=a.revision_no
-     WHERE a.company_id=$1 AND a.service_type=$2`,
+    `SELECT *
+     FROM booking_adjustments
+     WHERE company_id=$1 AND service_type=$2
+     ORDER BY booking_id ASC, revision_no ASC, created_at ASC`,
     [companyId, service],
   );
+  const grouped = new Map<string, UniversalAdjustmentRecord[]>();
+  for (const row of rows) {
+    const g = grouped.get(row.booking_id) || [];
+    g.push(row);
+    grouped.set(row.booking_id, g);
+  }
   const out: Record<string, UniversalAdjustmentSummary> = {};
-  rows.forEach((row) => {
-    out[row.booking_id] = {
-      bookingId: row.booking_id,
-      revisionNo: Number(row.revision_no || 1),
-      adjustmentCount: Number(row.adjustment_count || 0),
-      lifecycleStatus: row.lifecycle_status as BookingLifecycleStatus,
+  for (const [bId, groupRows] of grouped.entries()) {
+    const commercial = [...groupRows]
+      .filter((row) => row.adjustment_type !== "CORRECTION")
+      .sort((a, b) => Number(b.revision_no) - Number(a.revision_no) || b.created_at.localeCompare(a.created_at));
+    const latestCommercial = commercial[0];
+    out[bId] = {
+      bookingId: bId,
+      revisionNo: latestCommercial ? Number(latestCommercial.revision_no || 1) : 1,
+      adjustmentCount: groupRows.length,
+      lifecycleStatus: (latestCommercial?.lifecycle_status || "ACTIVE") as BookingLifecycleStatus,
     };
-  });
+  }
   return out;
 }
 
@@ -361,7 +368,8 @@ export async function recordUniversalBookingAdjustment(
 
   const state = await latestState(isDesktopApp() ? await db() : null, companyId, input.service, input.bookingId);
   if (state.lifecycleStatus === "CANCELLED") throw new Error("A fully cancelled booking cannot be adjusted again.");
-  const revisionNo = state.revisionNo + 1;
+  // Correction = typo/data fix only — keep current commercial REV (not a chargeable revision).
+  const revisionNo = input.adjustmentType === "CORRECTION" ? state.revisionNo : state.revisionNo + 1;
   const lifecycleStatus = nextLifecycle(state.lifecycleStatus, input.adjustmentType);
   const accountDelta = effectiveTotal - Number(input.previousTotalPkr || 0);
   const now = new Date().toISOString();
