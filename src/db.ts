@@ -5538,6 +5538,45 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     return set;
   }
 
+  // Ensure shared adjustment table exists before pull upserts (otherwise desktop stays on REV 1).
+  await database.execute(
+    `CREATE TABLE IF NOT EXISTS booking_adjustments (
+      id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL,
+      service_type TEXT NOT NULL,
+      booking_id TEXT NOT NULL,
+      adjustment_type TEXT NOT NULL,
+      adjustment_date TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      reference TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      previous_total_pkr REAL NOT NULL DEFAULT 0,
+      previous_base_pkr REAL NOT NULL DEFAULT 0,
+      revised_base_pkr REAL NOT NULL DEFAULT 0,
+      charge_pkr REAL NOT NULL DEFAULT 0,
+      credit_pkr REAL NOT NULL DEFAULT 0,
+      account_delta_pkr REAL NOT NULL DEFAULT 0,
+      effective_total_pkr REAL NOT NULL DEFAULT 0,
+      before_snapshot_json TEXT NOT NULL DEFAULT '',
+      after_snapshot_json TEXT NOT NULL DEFAULT '',
+      cancelled_lines_json TEXT NOT NULL DEFAULT '',
+      revision_no INTEGER NOT NULL DEFAULT 2,
+      lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
+      created_by_user_id TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )`,
+  );
+  columnCache.delete("booking_adjustments");
+
+  const UNIVERSAL_ADJUSTMENT_PARENTS = new Set([
+    "ticket_bookings",
+    "hotel_bookings",
+    "visa_bookings",
+    "transport_bookings",
+    "misc_bookings",
+  ]);
+
   async function upsertCloudRow(table: string, row: Record<string, unknown>) {
     const allowed = await localColumns(table);
     if (!allowed.size) {
@@ -5597,9 +5636,17 @@ export async function executePullSync(options?: { companyId?: string; fullResync
   for (const table of ROOT_TABLES) {
     let query = supabase.from(table).select("*").eq("company_id", companyId).limit(1000);
 
-    // Prefer updated_at, but also catch rows that only have created_at (or null updated_at).
+    // Only filter on columns that exist for this table. booking_adjustments has created_at only —
+    // including updated_at in .or() makes PostgREST reject the whole query and desktop never gets REV 2+.
     if (lastSync !== "2000-01-01T00:00:00.000Z") {
-      query = query.or(`updated_at.gt."${lastSync}",created_at.gt."${lastSync}"`);
+      const cols = await localColumns(table);
+      if (cols.has("updated_at") && cols.has("created_at")) {
+        query = query.or(`updated_at.gt."${lastSync}",created_at.gt."${lastSync}"`);
+      } else if (cols.has("updated_at")) {
+        query = query.gt("updated_at", lastSync);
+      } else if (cols.has("created_at")) {
+        query = query.gt("created_at", lastSync);
+      }
     }
 
     const { data, error } = await query.order("created_at", { ascending: true });
@@ -5637,6 +5684,22 @@ export async function executePullSync(options?: { companyId?: string; fullResync
 
             for (const childRow of childData || []) {
               await upsertCloudRow(childTable, childRow as Record<string, unknown>);
+            }
+          }
+
+          // Ticket/hotel/etc. adjustments live in shared booking_adjustments (not CHILD_TABLES).
+          if (UNIVERSAL_ADJUSTMENT_PARENTS.has(table)) {
+            const { data: adjData, error: adjError } = await supabase
+              .from("booking_adjustments")
+              .select("*")
+              .eq("booking_id", bookingId);
+            if (adjError) {
+              console.error(`Pull sync booking_adjustments failed for ${bookingId}:`, adjError.message);
+            } else {
+              await database.execute(`DELETE FROM booking_adjustments WHERE booking_id = $1`, [bookingId]);
+              for (const adjRow of adjData || []) {
+                await upsertCloudRow("booking_adjustments", adjRow as Record<string, unknown>);
+              }
             }
           }
         }
