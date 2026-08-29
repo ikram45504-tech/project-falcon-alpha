@@ -1,48 +1,13 @@
-import Database from "@tauri-apps/plugin-sql";
 import type { HotelBooking, PackageBooking, Party, TransportBooking, VisaBooking } from "./db";
 import { getHotelBookings, getPackageBookings, getTransportBookings, getVisaBookings } from "./db";
 import { getTicketCommercialBookings, type TicketCommercialBooking } from "./TicketFlowDb";
 import { getHotelOperationalDetails } from "./HotelOperationalDb";
 import { getMiscBookings, type MiscBooking } from "./miscDb";
 import { getMiscOperationalDetails } from "./MiscOperationalDb";
-import { initPackageAdjustmentDatabase } from "./PackageAdjustmentDb";
-import { initHotelAdjustmentDatabase } from "./HotelAdjustmentDb";
-import { initTicketAdjustmentDatabase } from "./TicketAdjustmentDb";
-import { initVisaAdjustmentDatabase } from "./VisaAdjustmentDb";
-import { initTransportAdjustmentDatabase } from "./TransportAdjustmentDb";
-import { initMiscAdjustmentDatabase } from "./MiscAdjustmentDb";
-import { initLegacyBookingAdjustmentsTable } from "./SegmentAdjustmentRecord";
-import type { BookingAdjustmentKind, BookingLifecycleStatus, BookingServiceName } from "./BookingLifecycle";
-import { isDesktopApp } from "./cloudSync";
+import { loadSegmentAdjustmentsForStatements, type StatementSegmentAdjustmentRow } from "./SegmentAdjustmentRecord";
+import type { BookingServiceName } from "./BookingLifecycle";
 
-const DB_PATH = "sqlite:travel-accounting.db";
-let statementDatabasePromise: Promise<Database> | null = null;
-
-export type StatementAdjustmentRecord = {
-  id: string;
-  company_id: string;
-  service_type: BookingServiceName;
-  booking_id: string;
-  adjustment_type: BookingAdjustmentKind;
-  adjustment_date: string;
-  category: string;
-  reason: string;
-  reference: string;
-  notes: string;
-  previous_total_pkr: number;
-  previous_base_pkr: number;
-  revised_base_pkr: number;
-  charge_pkr: number;
-  credit_pkr: number;
-  account_delta_pkr: number;
-  effective_total_pkr: number;
-  before_snapshot_json: string;
-  after_snapshot_json: string;
-  cancelled_lines_json: string;
-  revision_no: number;
-  lifecycle_status: BookingLifecycleStatus;
-  created_at: string;
-};
+export type StatementAdjustmentRecord = StatementSegmentAdjustmentRow;
 
 export type StatementBookingHeader = {
   transaction_date: string;
@@ -81,124 +46,6 @@ export type StatementBookingSections = {
   transportBookings: TransportStatementBooking[];
   miscBookings: MiscStatementBooking[];
 };
-
-async function statementDb() {
-  if (!statementDatabasePromise) statementDatabasePromise = Database.load(DB_PATH);
-  const database = await statementDatabasePromise;
-  await database.execute("PRAGMA busy_timeout = 5000");
-  return database;
-}
-
-async function getStatementAdjustments(companyId: string) {
-  await Promise.all([
-    initPackageAdjustmentDatabase(),
-    initHotelAdjustmentDatabase(),
-    initTicketAdjustmentDatabase(),
-    initVisaAdjustmentDatabase(),
-    initTransportAdjustmentDatabase(),
-    initMiscAdjustmentDatabase(),
-    initLegacyBookingAdjustmentsTable(),
-  ]);
-  const database = await statementDb();
-  return database.select<StatementAdjustmentRecord[]>(
-    `SELECT id,company_id,'PACKAGE' AS service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM package_booking_adjustments
-      WHERE company_id=$1
-      UNION ALL
-     SELECT id,company_id,'HOTEL' AS service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM hotel_booking_adjustments
-      WHERE company_id=$1
-      UNION ALL
-     SELECT id,company_id,'TICKET' AS service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM ticket_booking_adjustments
-      WHERE company_id=$1
-      UNION ALL
-     SELECT id,company_id,'VISA' AS service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM visa_booking_adjustments
-      WHERE company_id=$1
-      UNION ALL
-     SELECT id,company_id,'MISC' AS service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM misc_booking_adjustments
-      WHERE company_id=$1
-      UNION ALL
-     SELECT id,company_id,'TRANSPORT' AS service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM transport_booking_adjustments
-      WHERE company_id=$1
-      UNION ALL
-     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM booking_adjustments
-      WHERE company_id=$1
-        AND service_type NOT IN ('HOTEL', 'TICKET', 'VISA', 'TRANSPORT', 'MISC')
-      UNION ALL
-     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM booking_adjustments
-      WHERE company_id=$1
-        AND service_type = 'HOTEL'
-        AND id NOT IN (SELECT id FROM hotel_booking_adjustments WHERE company_id=$1)
-      UNION ALL
-     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM booking_adjustments
-      WHERE company_id=$1
-        AND service_type = 'TICKET'
-        AND id NOT IN (SELECT id FROM ticket_booking_adjustments WHERE company_id=$1)
-      UNION ALL
-     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM booking_adjustments
-      WHERE company_id=$1
-        AND service_type = 'VISA'
-        AND id NOT IN (SELECT id FROM visa_booking_adjustments WHERE company_id=$1)
-      UNION ALL
-     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM booking_adjustments
-      WHERE company_id=$1
-        AND service_type = 'TRANSPORT'
-        AND id NOT IN (SELECT id FROM transport_booking_adjustments WHERE company_id=$1)
-      UNION ALL
-     SELECT id,company_id,service_type,booking_id,adjustment_type,adjustment_date,
-            category,reason,reference,notes,previous_total_pkr,previous_base_pkr,revised_base_pkr,
-            charge_pkr,credit_pkr,account_delta_pkr,effective_total_pkr,before_snapshot_json,
-            after_snapshot_json,cancelled_lines_json,revision_no,lifecycle_status,created_at
-       FROM booking_adjustments
-      WHERE company_id=$1
-        AND service_type = 'MISC'
-        AND id NOT IN (SELECT id FROM misc_booking_adjustments WHERE company_id=$1)
-      ORDER BY service_type,booking_id,revision_no,created_at`,
-    [companyId],
-  );
-}
 
 function relevantDirection(accountType: Party["account_type"]) {
   if (accountType === "PARTY") return "SALE" as const;
@@ -253,9 +100,8 @@ function groupAdjustments(rows: StatementAdjustmentRecord[]) {
   return map;
 }
 
-/** Desktop: typo Correction is audit-only — not a chargeable statement revision. Web statements left unchanged. */
+/** Correction is audit-only — not a chargeable statement revision. */
 function statementVisibleAdjustments(rows: StatementAdjustmentRecord[]) {
-  if (!isDesktopApp()) return rows;
   return rows.filter((row) => row.adjustment_type !== "CORRECTION");
 }
 
@@ -326,7 +172,7 @@ export async function getStatementBookingSections(
     getVisaBookings(companyId, ""),
     getTransportBookings(companyId, ""),
     getMiscBookings(companyId, ""),
-    getStatementAdjustments(companyId),
+    loadSegmentAdjustmentsForStatements(companyId),
   ]);
   const adjustments = groupAdjustments(adjustmentRows);
 

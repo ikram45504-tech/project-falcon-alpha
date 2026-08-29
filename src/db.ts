@@ -93,87 +93,6 @@ export type PartyInput = {
   accountType: "PARTY" | "VENDOR" | "UNASSIGNED";
 };
 
-export type AccommodationEntry = {
-  id: string;
-  company_id: string;
-  party_id: string;
-  ledger_party_name: string;
-  transaction_date: string;
-  ub_number: string;
-  booking_party_name: string;
-  city: string;
-  hotel_name: string;
-  check_in: string;
-  check_out: string;
-  nights: number;
-  rate: number;
-  bed_room_count: number;
-  currency: "PKR" | "SAR";
-  roe: number;
-  total_sar: number;
-  total_pkr: number;
-  status: "ACTIVE" | "VOID";
-  created_at: string;
-  updated_at: string;
-};
-
-export type AccommodationInput = {
-  partyId: string;
-  transactionDate: string;
-  ubNumber: string;
-  bookingPartyName: string;
-  city: string;
-  hotelName: string;
-  checkIn: string;
-  checkOut: string;
-  nights: number;
-  rate: number;
-  bedRoomCount: number;
-  currency: "PKR" | "SAR";
-  roe: number;
-};
-
-export type ServiceEntry = {
-  id: string;
-  company_id: string;
-  party_id: string;
-  ledger_party_name: string;
-  transaction_date: string;
-  ub_number: string;
-  booking_party_name: string;
-  service_type: string;
-  rate: number;
-  pax: number;
-  spt: number;
-  shr: number;
-  currency: "PKR" | "SAR";
-  roe: number;
-  total_sar: number;
-  total_pkr: number;
-  status: "ACTIVE" | "VOID";
-  created_at: string;
-  updated_at: string;
-};
-
-export type ServiceInput = {
-  partyId: string;
-  transactionDate: string;
-  ubNumber: string;
-  bookingPartyName: string;
-  serviceType: string;
-  rate: number;
-  pax: number;
-  spt: number;
-  shr: number;
-  currency: "PKR" | "SAR";
-  roe: number;
-};
-
-export type PartyServiceTotal = {
-  party_id: string;
-  total_pkr: number;
-};
-
 export type PaymentEntry = {
   id: string;
   company_id: string;
@@ -211,11 +130,6 @@ export type PaymentInput = {
 export type PartyPaymentTotal = {
   party_id: string;
   paid_amount: number;
-};
-
-export type PartyAccommodationTotal = {
-  party_id: string;
-  total_pkr: number;
 };
 
 export type BookingTransactionType = "SALE" | "PURCHASE";
@@ -982,84 +896,6 @@ async function initDatabaseOnce() {
   const { initCounterpartyTables } = await import("./CounterpartyDb");
   await initCounterpartyTables(database);
 
-  await database.execute(`CREATE TABLE IF NOT EXISTS accommodation_entries (
-    id TEXT PRIMARY KEY,
-    company_id TEXT NOT NULL,
-    party_id TEXT,
-    transaction_date TEXT NOT NULL,
-    ub_number TEXT NOT NULL DEFAULT '',
-    booking_party_name TEXT NOT NULL DEFAULT '',
-    city TEXT NOT NULL DEFAULT '',
-    hotel_name TEXT NOT NULL DEFAULT '',
-    check_in TEXT NOT NULL DEFAULT '',
-    check_out TEXT NOT NULL DEFAULT '',
-    nights INTEGER NOT NULL DEFAULT 0,
-    rate REAL NOT NULL DEFAULT 0,
-    bed_room_count INTEGER NOT NULL DEFAULT 0,
-    currency TEXT NOT NULL DEFAULT 'PKR',
-    roe REAL NOT NULL DEFAULT 0,
-    total_sar REAL NOT NULL DEFAULT 0,
-    total_pkr REAL NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'ACTIVE',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`);
-
-  // Safe migration for Phase 1 / Phase 2 databases.
-  await ensureColumn("accommodation_entries", "ub_number", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("accommodation_entries", "booking_party_name", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("accommodation_entries", "city", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("accommodation_entries", "hotel_name", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("accommodation_entries", "check_in", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("accommodation_entries", "check_out", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("accommodation_entries", "nights", "INTEGER NOT NULL DEFAULT 0");
-  await ensureColumn("accommodation_entries", "rate", "REAL NOT NULL DEFAULT 0");
-  await ensureColumn("accommodation_entries", "bed_room_count", "INTEGER NOT NULL DEFAULT 0");
-  await ensureColumn("accommodation_entries", "currency", "TEXT NOT NULL DEFAULT 'PKR'");
-  await ensureColumn("accommodation_entries", "roe", "REAL NOT NULL DEFAULT 0");
-  await ensureColumn("accommodation_entries", "total_sar", "REAL NOT NULL DEFAULT 0");
-  await ensureColumn("accommodation_entries", "total_pkr", "REAL NOT NULL DEFAULT 0");
-
-  await database.execute(`CREATE INDEX IF NOT EXISTS idx_accommodation_company_party_date
-    ON accommodation_entries(company_id, party_id, transaction_date)`);
-
-  await database.execute(`CREATE TABLE IF NOT EXISTS service_entries (
-    id TEXT PRIMARY KEY,
-    company_id TEXT NOT NULL,
-    party_id TEXT,
-    transaction_date TEXT NOT NULL,
-    ub_number TEXT NOT NULL DEFAULT '',
-    booking_party_name TEXT NOT NULL DEFAULT '',
-    service_type TEXT NOT NULL DEFAULT '',
-    rate REAL NOT NULL DEFAULT 0,
-    pax INTEGER NOT NULL DEFAULT 0,
-    spt REAL NOT NULL DEFAULT 0,
-    shr REAL NOT NULL DEFAULT 0,
-    currency TEXT NOT NULL DEFAULT 'PKR',
-    roe REAL NOT NULL DEFAULT 0,
-    total_sar REAL NOT NULL DEFAULT 0,
-    total_pkr REAL NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'ACTIVE',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`);
-
-  // Safe migration for Phase 1 / Phase 2 / Phase 3 databases.
-  await ensureColumn("service_entries", "ub_number", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("service_entries", "booking_party_name", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("service_entries", "service_type", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("service_entries", "rate", "REAL NOT NULL DEFAULT 0");
-  await ensureColumn("service_entries", "pax", "INTEGER NOT NULL DEFAULT 0");
-  await ensureColumn("service_entries", "spt", "REAL NOT NULL DEFAULT 0");
-  await ensureColumn("service_entries", "shr", "REAL NOT NULL DEFAULT 0");
-  await ensureColumn("service_entries", "currency", "TEXT NOT NULL DEFAULT 'PKR'");
-  await ensureColumn("service_entries", "roe", "REAL NOT NULL DEFAULT 0");
-  await ensureColumn("service_entries", "total_sar", "REAL NOT NULL DEFAULT 0");
-  await ensureColumn("service_entries", "total_pkr", "REAL NOT NULL DEFAULT 0");
-
-  await database.execute(`CREATE INDEX IF NOT EXISTS idx_service_company_party_date
-    ON service_entries(company_id, party_id, transaction_date)`);
-
   await database.execute(`CREATE TABLE IF NOT EXISTS payment_entries (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,
@@ -1454,8 +1290,6 @@ async function initDatabaseOnce() {
   if (Number(cleanResetDone[0]?.count ?? 0) === 0) {
     await database.execute(`DELETE FROM package_booking_lines`);
     await database.execute(`DELETE FROM package_bookings`);
-    await database.execute(`DELETE FROM accommodation_entries`);
-    await database.execute(`DELETE FROM service_entries`);
     await database.execute(`DELETE FROM payment_entries`);
     await database.execute(`DELETE FROM parties`);
     await database.execute(`INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`, [
@@ -1467,10 +1301,6 @@ async function initDatabaseOnce() {
   // SaaS-ready ownership/audit fields. These stay hidden from normal entry screens.
   await ensureColumn("parties", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("parties", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("accommodation_entries", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("accommodation_entries", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("service_entries", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("service_entries", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("payment_entries", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("payment_entries", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("package_bookings", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
@@ -1490,8 +1320,6 @@ async function initDatabaseOnce() {
   if (Number(phase8AuthResetDone[0]?.count ?? 0) === 0) {
     await database.execute(`DELETE FROM package_booking_lines`);
     await database.execute(`DELETE FROM package_bookings`);
-    await database.execute(`DELETE FROM accommodation_entries`);
-    await database.execute(`DELETE FROM service_entries`);
     await database.execute(`DELETE FROM payment_entries`);
     await database.execute(`DELETE FROM parties`);
 
@@ -1530,8 +1358,6 @@ async function initDatabaseOnce() {
 
     // All business/accounting records.
     await database.execute(`DELETE FROM package_bookings`);
-    await database.execute(`DELETE FROM accommodation_entries`);
-    await database.execute(`DELETE FROM service_entries`);
     await database.execute(`DELETE FROM payment_entries`);
     await database.execute(`DELETE FROM parties`);
 
@@ -1563,8 +1389,6 @@ async function initDatabaseOnce() {
   if (Number(phase8DFreshStartDone[0]?.count ?? 0) === 0) {
     await database.execute(`DELETE FROM package_booking_lines`);
     await database.execute(`DELETE FROM package_bookings`);
-    await database.execute(`DELETE FROM accommodation_entries`);
-    await database.execute(`DELETE FROM service_entries`);
     await database.execute(`DELETE FROM payment_entries`);
     await database.execute(`DELETE FROM parties`);
 
@@ -1579,6 +1403,21 @@ async function initDatabaseOnce() {
 
     await database.execute(`INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`, [
       phase8DFreshStartKey,
+      new Date().toISOString(),
+    ]);
+  }
+
+  const legacyCleanupKey = "legacy_v3_drop_obsolete_tables_v1";
+  const legacyCleanupDone = await database.select<CountRow[]>(
+    `SELECT COUNT(*) AS count FROM app_migrations WHERE migration_key=$1`,
+    [legacyCleanupKey],
+  );
+  if (Number(legacyCleanupDone[0]?.count ?? 0) === 0) {
+    await database.execute(`DROP TABLE IF EXISTS booking_adjustments`);
+    await database.execute(`DROP TABLE IF EXISTS accommodation_entries`);
+    await database.execute(`DROP TABLE IF EXISTS service_entries`);
+    await database.execute(`INSERT INTO app_migrations (migration_key, applied_at) VALUES ($1,$2)`, [
+      legacyCleanupKey,
       new Date().toISOString(),
     ]);
   }
@@ -2306,7 +2145,6 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "ticket_operational_meta",
     "ticket_operational_passengers",
     "ticket_operational_flights",
-    "booking_adjustments",
     "hotel_booking_adjustments",
     "hotel_booking_lines",
     "hotel_commercial_guest_refs",
@@ -2320,6 +2158,7 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "visa_operational_meta",
     "visa_operational_passengers",
     "transport_booking_lines",
+    "transport_booking_adjustments",
     "transport_operational_meta",
     "transport_operational_sectors",
     "misc_booking_lines",
@@ -2374,337 +2213,6 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
       console.warn(`Could not delete from ${table}`, e);
     }
   }
-}
-
-function calculateAccommodation(input: AccommodationInput) {
-  const nights = Math.max(0, Math.trunc(Number(input.nights) || 0));
-  const beds = Math.max(0, Math.trunc(Number(input.bedRoomCount) || 0));
-  const rate = Math.max(0, Number(input.rate) || 0);
-  const base = rate * nights * beds;
-
-  if (input.currency === "SAR") {
-    const roe = Math.max(0, Number(input.roe) || 0);
-    return {
-      nights,
-      beds,
-      rate,
-      roe,
-      totalSar: base,
-      totalPkr: base * roe,
-    };
-  }
-
-  return {
-    nights,
-    beds,
-    rate,
-    roe: 0,
-    totalSar: 0,
-    totalPkr: base,
-  };
-}
-
-function validateAccommodation(input: AccommodationInput) {
-  if (!input.partyId) throw new Error("Select a Party / Vendor account.");
-  if (!input.transactionDate) throw new Error("Transaction date is required.");
-  if (!input.bookingPartyName.trim()) throw new Error("Party Name is required.");
-  if (!input.city.trim()) throw new Error("City is required.");
-  if (!input.hotelName.trim()) throw new Error("Hotel Name is required.");
-  if (!input.checkIn) throw new Error("Check-In date is required.");
-  if (!input.checkOut) throw new Error("Check-Out date is required.");
-  if ((Number(input.nights) || 0) <= 0) throw new Error("No. of Nights must be greater than zero.");
-  if ((Number(input.rate) || 0) <= 0) throw new Error("Rate must be greater than zero.");
-  if ((Number(input.bedRoomCount) || 0) <= 0) throw new Error("No. of Bed/Room must be greater than zero.");
-  if (input.currency === "SAR" && (Number(input.roe) || 0) <= 0) {
-    throw new Error("ROE is required for a SAR transaction.");
-  }
-}
-
-export async function getAccommodations(companyId: string, search = "", partyId = "") {
-  const database = await db();
-  const clean = search.trim();
-  const term = `%${clean}%`;
-
-  return database.select<AccommodationEntry[]>(
-    `SELECT
-       a.id, a.company_id, a.party_id,
-       COALESCE(p.name, '') AS ledger_party_name,
-       a.transaction_date, a.ub_number, a.booking_party_name,
-       a.city, a.hotel_name, a.check_in, a.check_out,
-       a.nights, a.rate, a.bed_room_count, a.currency,
-       a.roe, a.total_sar, a.total_pkr, a.status,
-       a.created_at, a.updated_at
-     FROM accommodation_entries a
-     LEFT JOIN parties p ON p.id = a.party_id AND p.company_id = a.company_id
-     WHERE a.company_id = $1
-       AND ($2 = '' OR a.party_id = $2)
-       AND (
-         $3 = '' OR
-         a.ub_number LIKE $4 COLLATE NOCASE OR
-         a.booking_party_name LIKE $4 COLLATE NOCASE OR
-         a.city LIKE $4 COLLATE NOCASE OR
-         a.hotel_name LIKE $4 COLLATE NOCASE OR
-         COALESCE(p.name, '') LIKE $4 COLLATE NOCASE
-       )
-     ORDER BY a.transaction_date DESC, a.created_at DESC`,
-    [companyId, partyId, clean, term],
-  );
-}
-
-export async function createAccommodation(companyId: string, input: AccommodationInput) {
-  validateAccommodation(input);
-  const database = await db();
-  const calculated = calculateAccommodation(input);
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  await database.execute(
-    `INSERT INTO accommodation_entries
-     (id, company_id, party_id, transaction_date, ub_number,
-      booking_party_name, city, hotel_name, check_in, check_out,
-      nights, rate, bed_room_count, currency, roe,
-      total_sar, total_pkr, status, created_at, updated_at)
-     VALUES
-     ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'ACTIVE',$18,$18)`,
-    [
-      id,
-      companyId,
-      input.partyId,
-      input.transactionDate,
-      input.ubNumber.trim(),
-      input.bookingPartyName.trim(),
-      input.city.trim(),
-      input.hotelName.trim(),
-      input.checkIn,
-      input.checkOut,
-      calculated.nights,
-      calculated.rate,
-      calculated.beds,
-      input.currency,
-      calculated.roe,
-      calculated.totalSar,
-      calculated.totalPkr,
-      now,
-    ],
-  );
-
-  return id;
-}
-
-export async function updateAccommodation(companyId: string, entryId: string, input: AccommodationInput) {
-  validateAccommodation(input);
-  const database = await db();
-  const calculated = calculateAccommodation(input);
-
-  await database.execute(
-    `UPDATE accommodation_entries
-     SET party_id=$1,
-         transaction_date=$2,
-         ub_number=$3,
-         booking_party_name=$4,
-         city=$5,
-         hotel_name=$6,
-         check_in=$7,
-         check_out=$8,
-         nights=$9,
-         rate=$10,
-         bed_room_count=$11,
-         currency=$12,
-         roe=$13,
-         total_sar=$14,
-         total_pkr=$15,
-         updated_at=$16
-     WHERE id=$17 AND company_id=$18 AND status='ACTIVE'`,
-    [
-      input.partyId,
-      input.transactionDate,
-      input.ubNumber.trim(),
-      input.bookingPartyName.trim(),
-      input.city.trim(),
-      input.hotelName.trim(),
-      input.checkIn,
-      input.checkOut,
-      calculated.nights,
-      calculated.rate,
-      calculated.beds,
-      input.currency,
-      calculated.roe,
-      calculated.totalSar,
-      calculated.totalPkr,
-      new Date().toISOString(),
-      entryId,
-      companyId,
-    ],
-  );
-}
-
-export async function voidAccommodation(companyId: string, entryId: string) {
-  const database = await db();
-
-  await database.execute(
-    `UPDATE accommodation_entries
-     SET status='VOID', updated_at=$1
-     WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
-    [new Date().toISOString(), entryId, companyId],
-  );
-}
-
-export async function getPartyAccommodationTotals(companyId: string) {
-  const database = await db();
-
-  return database.select<PartyAccommodationTotal[]>(
-    `SELECT party_id, COALESCE(SUM(total_pkr), 0) AS total_pkr
-     FROM accommodation_entries
-     WHERE company_id=$1 AND status='ACTIVE'
-     GROUP BY party_id`,
-    [companyId],
-  );
-}
-
-function calculateService(input: ServiceInput) {
-  const rate = Math.max(0, Number(input.rate) || 0);
-  const pax = Math.max(0, Math.trunc(Number(input.pax) || 0));
-  const spt = Math.max(0, Number(input.spt) || 0);
-  const shr = Math.max(0, Number(input.shr) || 0);
-  const base = (rate + shr) * pax + spt;
-
-  if (input.currency === "SAR") {
-    const roe = Math.max(0, Number(input.roe) || 0);
-    return { rate, pax, spt, shr, roe, totalSar: base, totalPkr: base * roe };
-  }
-
-  return { rate, pax, spt, shr, roe: 0, totalSar: 0, totalPkr: base };
-}
-
-function validateService(input: ServiceInput) {
-  if (!input.partyId) throw new Error("Select a Party / Vendor account.");
-  if (!input.transactionDate) throw new Error("Transaction date is required.");
-  if (!input.bookingPartyName.trim()) throw new Error("Party Name is required.");
-  if (!input.serviceType.trim()) throw new Error("Service Type is required.");
-  if ((Number(input.rate) || 0) <= 0) throw new Error("Rate must be greater than zero.");
-  if ((Number(input.pax) || 0) <= 0) throw new Error("No. of Pax must be greater than zero.");
-  if ((Number(input.spt) || 0) < 0) throw new Error("SPT cannot be negative.");
-  if ((Number(input.shr) || 0) < 0) throw new Error("SHR cannot be negative.");
-  if (input.currency === "SAR" && (Number(input.roe) || 0) <= 0) {
-    throw new Error("ROE is required for a SAR transaction.");
-  }
-}
-
-export async function getServices(companyId: string, search = "", partyId = "") {
-  const database = await db();
-  const clean = search.trim();
-  const term = `%${clean}%`;
-
-  return database.select<ServiceEntry[]>(
-    `SELECT
-       s.id, s.company_id, s.party_id,
-       COALESCE(p.name, '') AS ledger_party_name,
-       s.transaction_date, s.ub_number, s.booking_party_name,
-       s.service_type, s.rate, s.pax, s.spt, s.shr,
-       s.currency, s.roe, s.total_sar, s.total_pkr,
-       s.status, s.created_at, s.updated_at
-     FROM service_entries s
-     LEFT JOIN parties p ON p.id = s.party_id AND p.company_id = s.company_id
-     WHERE s.company_id = $1
-       AND ($2 = '' OR s.party_id = $2)
-       AND (
-         $3 = '' OR
-         s.ub_number LIKE $4 COLLATE NOCASE OR
-         s.booking_party_name LIKE $4 COLLATE NOCASE OR
-         s.service_type LIKE $4 COLLATE NOCASE OR
-         COALESCE(p.name, '') LIKE $4 COLLATE NOCASE
-       )
-     ORDER BY s.transaction_date DESC, s.created_at DESC`,
-    [companyId, partyId, clean, term],
-  );
-}
-
-export async function createService(companyId: string, input: ServiceInput) {
-  validateService(input);
-  const database = await db();
-  const calculated = calculateService(input);
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  await database.execute(
-    `INSERT INTO service_entries
-     (id, company_id, party_id, transaction_date, ub_number,
-      booking_party_name, service_type, rate, pax, spt, shr,
-      currency, roe, total_sar, total_pkr, status, created_at, updated_at)
-     VALUES
-     ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'ACTIVE',$16,$16)`,
-    [
-      id,
-      companyId,
-      input.partyId,
-      input.transactionDate,
-      input.ubNumber.trim(),
-      input.bookingPartyName.trim(),
-      input.serviceType.trim(),
-      calculated.rate,
-      calculated.pax,
-      calculated.spt,
-      calculated.shr,
-      input.currency,
-      calculated.roe,
-      calculated.totalSar,
-      calculated.totalPkr,
-      now,
-    ],
-  );
-  return id;
-}
-
-export async function updateService(companyId: string, entryId: string, input: ServiceInput) {
-  validateService(input);
-  const database = await db();
-  const calculated = calculateService(input);
-
-  await database.execute(
-    `UPDATE service_entries
-     SET party_id=$1, transaction_date=$2, ub_number=$3, booking_party_name=$4,
-         service_type=$5, rate=$6, pax=$7, spt=$8, shr=$9, currency=$10,
-         roe=$11, total_sar=$12, total_pkr=$13, updated_at=$14
-     WHERE id=$15 AND company_id=$16 AND status='ACTIVE'`,
-    [
-      input.partyId,
-      input.transactionDate,
-      input.ubNumber.trim(),
-      input.bookingPartyName.trim(),
-      input.serviceType.trim(),
-      calculated.rate,
-      calculated.pax,
-      calculated.spt,
-      calculated.shr,
-      input.currency,
-      calculated.roe,
-      calculated.totalSar,
-      calculated.totalPkr,
-      new Date().toISOString(),
-      entryId,
-      companyId,
-    ],
-  );
-}
-
-export async function voidService(companyId: string, entryId: string) {
-  const database = await db();
-  await database.execute(
-    `UPDATE service_entries SET status='VOID', updated_at=$1
-     WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
-    [new Date().toISOString(), entryId, companyId],
-  );
-}
-
-export async function getPartyServiceTotals(companyId: string) {
-  const database = await db();
-  return database.select<PartyServiceTotal[]>(
-    `SELECT party_id, COALESCE(SUM(total_pkr), 0) AS total_pkr
-     FROM service_entries
-     WHERE company_id=$1 AND status='ACTIVE'
-     GROUP BY party_id`,
-    [companyId],
-  );
 }
 
 function calculatePayment(input: PaymentInput) {
@@ -4596,58 +4104,57 @@ export async function dangerouslyEraseAllData(companyId: string) {
   const database = await db();
 
   const tables = [
-    "package_bookings",
     "package_booking_lines",
-    "package_booking_lines_v2",
+    "package_booking_adjustments",
     "package_operational_meta",
     "package_operational_passengers",
     "package_operational_hotels",
     "package_operational_flights",
     "package_operational_flight_stopovers",
     "package_movement_events",
-    "package_booking_adjustments",
+    "package_bookings",
 
-    "ticket_bookings",
     "ticket_booking_lines",
+    "ticket_booking_adjustments",
     "ticket_operational_meta",
     "ticket_operational_passengers",
     "ticket_operational_flights",
+    "ticket_bookings",
 
-    "hotel_bookings",
     "hotel_booking_lines",
+    "hotel_booking_adjustments",
     "hotel_commercial_guest_refs",
     "hotel_operational_reservations",
     "hotel_operational_guests",
     "hotel_operational_meta",
+    "hotel_bookings",
 
-    "visa_bookings",
     "visa_booking_lines",
+    "visa_booking_adjustments",
     "visa_transport_fleet",
     "visa_passport_details",
     "visa_operational_meta",
     "visa_operational_passengers",
+    "visa_bookings",
 
-    "transport_bookings",
     "transport_booking_lines",
+    "transport_booking_adjustments",
     "transport_operational_sectors",
     "transport_operational_meta",
+    "transport_bookings",
 
-    "misc_bookings",
     "misc_booking_lines",
+    "misc_booking_adjustments",
     "misc_commercial_family_refs",
     "misc_operational_services",
     "misc_operational_meta",
+    "misc_bookings",
 
-    "booking_adjustments",
-
-    "payments",
-    "payment_entries",
     "payment_v2_meta",
-
+    "payment_entries",
     "parties",
-    "accommodation_entries",
-    "service_entries",
-
+    "vendors",
+    "unassigned_accounts",
     "audit_logs",
     "remembered_sessions",
     "users",
@@ -4890,9 +4397,6 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     "vendors",
     "unassigned_accounts",
     "payment_entries",
-    "booking_adjustments",
-    "accommodation_entries",
-    "service_entries",
     "payment_v2_meta",
     "package_bookings",
     "ticket_bookings",
@@ -4961,36 +4465,7 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     return set;
   }
 
-  // Ensure adjustment tables exist before pull upserts.
-  await database.execute(
-    `CREATE TABLE IF NOT EXISTS booking_adjustments (
-      id TEXT PRIMARY KEY,
-      company_id TEXT NOT NULL,
-      service_type TEXT NOT NULL,
-      booking_id TEXT NOT NULL,
-      adjustment_type TEXT NOT NULL,
-      adjustment_date TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT '',
-      reason TEXT NOT NULL DEFAULT '',
-      reference TEXT NOT NULL DEFAULT '',
-      notes TEXT NOT NULL DEFAULT '',
-      previous_total_pkr REAL NOT NULL DEFAULT 0,
-      previous_base_pkr REAL NOT NULL DEFAULT 0,
-      revised_base_pkr REAL NOT NULL DEFAULT 0,
-      charge_pkr REAL NOT NULL DEFAULT 0,
-      credit_pkr REAL NOT NULL DEFAULT 0,
-      account_delta_pkr REAL NOT NULL DEFAULT 0,
-      effective_total_pkr REAL NOT NULL DEFAULT 0,
-      before_snapshot_json TEXT NOT NULL DEFAULT '',
-      after_snapshot_json TEXT NOT NULL DEFAULT '',
-      cancelled_lines_json TEXT NOT NULL DEFAULT '',
-      revision_no INTEGER NOT NULL DEFAULT 2,
-      lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE',
-      created_by_user_id TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL
-    )`,
-  );
-  columnCache.delete("booking_adjustments");
+  // Ensure segment adjustment tables exist before pull upserts.
   const { initHotelAdjustmentDatabase } = await import("./HotelAdjustmentDb");
   await initHotelAdjustmentDatabase();
   columnCache.delete("hotel_booking_adjustments");
@@ -5066,8 +4541,7 @@ export async function executePullSync(options?: { companyId?: string; fullResync
   for (const table of ROOT_TABLES) {
     let query = supabase.from(table).select("*").eq("company_id", companyId).limit(1000);
 
-    // Only filter on columns that exist for this table. booking_adjustments has created_at only —
-    // including updated_at in .or() makes PostgREST reject the whole query and desktop never gets REV 2+.
+    // Incremental pull uses updated_at/created_at when present on the root table.
     if (lastSync !== "2000-01-01T00:00:00.000Z") {
       const cols = await localColumns(table);
       if (cols.has("updated_at") && cols.has("created_at")) {
