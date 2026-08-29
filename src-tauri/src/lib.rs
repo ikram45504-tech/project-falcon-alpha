@@ -14,12 +14,19 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            if let Err(error) = database_safety::apply_pending_hard_reset(app.handle()) {
+                eprintln!("Pending desktop hard reset failed: {error}");
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             database_safety::execute_atomic_transaction,
             database_safety::initialize_database_safety,
             database_safety::ensure_payment_document_uniqueness,
             database_safety::create_database_backup,
+            database_safety::hard_reset_desktop_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

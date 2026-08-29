@@ -1452,32 +1452,34 @@ export async function needsFirstSetup() {
   return Number(companies[0]?.count ?? 0) === 0;
 }
 
+async function isCompanyCodeAvailable(candidate: string) {
+  const { data, error } = await supabase.rpc("is_company_code_available", {
+    p_company_code: candidate,
+  });
+  if (error) {
+    throw new Error(`${error.message} Run migration_auth_login_fixes.sql in Supabase if this persists during signup.`);
+  }
+  return Boolean(data);
+}
+
 async function generateUniqueCompanyCode(companyName: string) {
   const prefixes = companyCodePrefixes(companyName);
 
   for (const prefix of prefixes) {
     const candidate = prefix.toUpperCase();
-    const { count, error } = await supabase
-      .from("companies")
-      .select("*", { count: "exact", head: true })
-      .ilike("company_code", candidate);
-
-    if (error) throw new Error(error.message);
-    if (count === 0) return candidate;
+    if (await isCompanyCodeAvailable(candidate)) return candidate;
   }
 
   for (let attempt = 0; attempt < 500; attempt += 1) {
     const candidate = randomLetters(3).toUpperCase();
-    const { count, error } = await supabase
-      .from("companies")
-      .select("*", { count: "exact", head: true })
-      .ilike("company_code", candidate);
-
-    if (error) throw new Error(error.message);
-    if (count === 0) return candidate;
+    if (await isCompanyCodeAvailable(candidate)) return candidate;
   }
 
   throw new Error("Could not generate a unique 3-letter Company Code.");
+}
+
+function isDuplicateCompanyCodeError(message: string) {
+  return /companies_company_code_key|duplicate key.*company_code/i.test(message);
 }
 
 function validateOwnerUsername(value: string) {
@@ -1496,6 +1498,95 @@ function validateEmail(value: string) {
   return email;
 }
 
+function isExistingAuthUserError(message: string) {
+  return /already registered|already exists|user already/i.test(message);
+}
+
+const SETUP_IN_PROGRESS_KEY = "travelAccountingSetupInProgress";
+
+export function isCompanySetupInProgress() {
+  return sessionStorage.getItem(SETUP_IN_PROGRESS_KEY) === "1";
+}
+
+function setCompanySetupInProgress(active: boolean) {
+  if (active) sessionStorage.setItem(SETUP_IN_PROGRESS_KEY, "1");
+  else sessionStorage.removeItem(SETUP_IN_PROGRESS_KEY);
+}
+
+async function ensureAuthSession(email: string, password: string) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session) return;
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Account was created but could not start a sign-in session. Confirm your email if required, then sign in from the login screen.",
+    );
+  }
+}
+
+async function acquireAuthUserIdForSetup(
+  ownerEmail: string,
+  password: string,
+  metadata: Record<string, string>,
+): Promise<string> {
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: ownerEmail,
+    password,
+    options: { data: metadata },
+  });
+
+  if (!authError && authData.user?.id) {
+    return authData.user.id;
+  }
+
+  if (!authError || !isExistingAuthUserError(authError.message)) {
+    throw new Error(authError?.message || "Could not register cloud authentication.");
+  }
+
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email: ownerEmail,
+    password,
+  });
+  if (signInError || !signInData.user?.id) {
+    throw new Error(
+      "This email is already registered. Sign in with your existing password on the login screen, or use a different email.",
+    );
+  }
+
+  return signInData.user.id;
+}
+
+async function prepareAuthUserForFreshCompany(userId: string) {
+  const { data: existingUser, error } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!existingUser) return;
+
+  if (existingUser.company_id) {
+    const { data: existingCompany, error: companyError } = await supabase
+      .from("companies")
+      .select("company_code")
+      .eq("id", existingUser.company_id)
+      .maybeSingle();
+    if (companyError) throw new Error(companyError.message);
+    if (existingCompany?.company_code) {
+      throw new Error(
+        `An account already exists for this email. Sign in with Company Code ${existingCompany.company_code}.`,
+      );
+    }
+  }
+
+  const { error: deleteError } = await supabase.from("users").delete().eq("id", userId);
+  if (deleteError) throw new Error(deleteError.message);
+}
+
 export async function createCompanyAccount(input: CreateCompanyAccountInput) {
   const username = validateOwnerUsername(input.ownerUsername);
   const ownerEmail = validateEmail(input.ownerEmail);
@@ -1508,80 +1599,103 @@ export async function createCompanyAccount(input: CreateCompanyAccountInput) {
   if (!ownerPhone) throw new Error("Phone / WhatsApp Number is required.");
   validateStrongPassword(input.password);
 
-  const companyCode = await generateUniqueCompanyCode(companyName);
   const now = new Date().toISOString();
 
-  // 1. Sign up Master User in Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: ownerEmail,
-    password: input.password,
-    options: {
-      data: {
-        username,
-        full_name: username,
-        phone: ownerPhone,
-        role: "OWNER",
-        company_code: companyCode,
-        company_name: companyName,
-      },
-    },
-  });
-
-  if (authError || !authData.user) {
-    throw new Error(authError?.message || "Could not register cloud authentication.");
-  }
-  const userId = authData.user.id;
-  const companyId = crypto.randomUUID();
-
+  setCompanySetupInProgress(true);
   try {
-    // 2. Insert Company Profile
-    const { error: companyError } = await supabase.from("companies").insert({
-      id: companyId,
-      company_code: companyCode,
-      name: companyName,
-      dts_license: dtsLicense,
-      phone: ownerPhone,
-      whatsapp: ownerPhone,
-      email: ownerEmail,
-      base_currency: "PKR",
-      foreign_currency: "SAR",
-      status: "ACTIVE",
-      created_at: now,
-      updated_at: now,
-    });
-    if (companyError) throw new Error(companyError.message);
-
-    // 3. Insert Master User Profile
-    const { error: userError } = await supabase.from("users").insert({
-      id: userId,
-      company_id: companyId,
+    const userId = await acquireAuthUserIdForSetup(ownerEmail, input.password, {
+      username,
       full_name: username,
-      username: username,
-      email: ownerEmail,
       phone: ownerPhone,
-      phone_normalized: normalizePhone(ownerPhone),
-      password_hash: "SUPABASE_AUTH",
-      password_salt: "SUPABASE_AUTH",
-      password_iterations: 0,
       role: "OWNER",
-      status: "ACTIVE",
-      created_at: now,
-      updated_at: now,
-      last_login_at: "",
-    });
-    if (userError) throw new Error(userError.message);
-
-    // 4. Update Auth metadata to securely link the correct Company ID
-    await supabase.auth.updateUser({
-      data: { company_id: companyId },
+      company_name: companyName,
     });
 
-    return { companyId, companyCode, userId, username, email: ownerEmail, accountStatus: "ACTIVE" as const };
-  } catch (error) {
-    // Attempt rollback if insert failed
-    await supabase.from("users").delete().eq("id", userId);
-    await supabase.from("companies").delete().eq("id", companyId);
-    throw error;
+    await ensureAuthSession(ownerEmail, input.password);
+    await prepareAuthUserForFreshCompany(userId);
+    const companyId = crypto.randomUUID();
+
+    let companyCode = "";
+    let companyInserted = false;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      companyCode = await generateUniqueCompanyCode(companyName);
+      const { error: companyError } = await supabase.from("companies").insert({
+        id: companyId,
+        company_code: companyCode,
+        name: companyName,
+        dts_license: dtsLicense,
+        phone: ownerPhone,
+        whatsapp: ownerPhone,
+        email: ownerEmail,
+        base_currency: "PKR",
+        foreign_currency: "SAR",
+        status: "ACTIVE",
+        created_at: now,
+        updated_at: now,
+      });
+      if (!companyError) {
+        companyInserted = true;
+        break;
+      }
+      if (!isDuplicateCompanyCodeError(companyError.message)) {
+        throw new Error(companyError.message);
+      }
+    }
+    if (!companyInserted || !companyCode) {
+      throw new Error("Could not allocate a unique Company Code. Please try again.");
+    }
+
+    try {
+      // Insert Master User Profile
+      const { error: userError } = await supabase.from("users").insert({
+        id: userId,
+        company_id: companyId,
+        full_name: username,
+        username: username,
+        email: ownerEmail,
+        phone: ownerPhone,
+        phone_normalized: normalizePhone(ownerPhone),
+        password_hash: "SUPABASE_AUTH",
+        password_salt: "SUPABASE_AUTH",
+        password_iterations: 0,
+        role: "OWNER",
+        status: "ACTIVE",
+        created_at: now,
+        updated_at: now,
+        last_login_at: "",
+      });
+      if (userError) throw new Error(userError.message);
+
+      await ensureAuthSession(ownerEmail, input.password);
+
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          company_id: companyId,
+          company_code: companyCode,
+          company_name: companyName,
+          username,
+          full_name: username,
+          phone: ownerPhone,
+          role: "OWNER",
+        },
+      });
+      if (metadataError) throw new Error(metadataError.message);
+
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) throw new Error(refreshError.message);
+
+      // Force a clean sign-in so JWT + login screen stay in sync after signup.
+      await supabase.auth.signOut({ scope: "local" });
+
+      return { companyId, companyCode, userId, username, email: ownerEmail, accountStatus: "ACTIVE" as const };
+    } catch (error) {
+      // Attempt rollback if insert failed
+      await supabase.from("users").delete().eq("id", userId);
+      await supabase.from("companies").delete().eq("id", companyId);
+      throw error;
+    }
+  } finally {
+    setCompanySetupInProgress(false);
   }
 }
 

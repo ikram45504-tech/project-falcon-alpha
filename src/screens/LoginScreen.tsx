@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import TravelHisabLogo from "../TravelHisabLogo";
 import { COMPANY_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "../brand";
+import { resolveLoginEmail } from "../loginAuth";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -13,7 +14,7 @@ export default function LoginScreen({
   setAccountCreatedNotice: (n: any) => void;
 }) {
   const navigate = useNavigate();
-  const { error: globalAuthError } = useAuth();
+  const { error: globalAuthError, setError: setGlobalAuthError } = useAuth();
 
   const [loginCompanyCode, setLoginCompanyCode] = useState(
     () => localStorage.getItem("travelAccountingLastCompanyCode") || accountCreatedNotice?.companyCode || "",
@@ -32,10 +33,12 @@ export default function LoginScreen({
 
   useEffect(() => {
     if (accountCreatedNotice) {
+      setGlobalAuthError("");
+      setError("");
       setLoginCompanyCode(accountCreatedNotice.companyCode);
       setLoginName(accountCreatedNotice.username);
     }
-  }, [accountCreatedNotice]);
+  }, [accountCreatedNotice, setGlobalAuthError]);
 
   useEffect(() => {
     if (globalAuthError) {
@@ -57,19 +60,11 @@ export default function LoginScreen({
     setBusy(true);
     setError("");
     try {
-      let emailToUse = loginName.trim();
-
-      if (!emailToUse.includes("@")) {
-        const { data: resolvedEmail, error: rpcError } = await supabase.rpc("get_user_email", {
-          p_company_code: loginCompanyCode.trim(),
-          p_username: loginName.trim(),
-        });
-
-        if (rpcError || !resolvedEmail) {
-          throw new Error("Company Code or Username is incorrect.");
-        }
-        emailToUse = resolvedEmail;
+      if (!loginPassword) {
+        throw new Error("Enter your password.");
       }
+
+      const emailToUse = await resolveLoginEmail(loginCompanyCode, loginName);
 
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: emailToUse,

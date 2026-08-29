@@ -6,6 +6,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
 
 const DATABASE_FILE: &str = "travel-accounting.db";
+const PENDING_HARD_RESET_MARKER: &str = "pending-hard-reset";
 const SAFETY_MIGRATION: &str = "database_safety_pack_v1";
 const RETIRED_DESTRUCTIVE_MIGRATIONS: [&str; 4] = [
     "phase_7b_clean_test_accounting_data_v1",
@@ -275,6 +276,59 @@ pub async fn ensure_payment_document_uniqueness(
         payment_document_unique_index: unique,
         duplicate_payment_documents: duplicate_groups,
     })
+}
+
+fn pending_hard_reset_marker_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let directory = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| format!("Could not resolve the app config directory: {error}"))?;
+    std::fs::create_dir_all(&directory)
+        .map_err(|error| format!("Could not create the app config directory: {error}"))?;
+    Ok(directory.join(PENDING_HARD_RESET_MARKER))
+}
+
+fn remove_local_database_files(db_path: &Path) -> Result<(), String> {
+    if db_path.exists() {
+        std::fs::remove_file(db_path).map_err(|error| {
+            format!("Could not delete the local database file: {error}")
+        })?;
+    }
+    if let Some(parent) = db_path.parent() {
+        let backup_dir = parent.join("backups");
+        if backup_dir.exists() {
+            std::fs::remove_dir_all(&backup_dir).map_err(|error| {
+                format!("Could not delete local database backups: {error}")
+            })?;
+        }
+    }
+    Ok(())
+}
+
+/// Runs before the frontend opens SQLite so a locked database file can be wiped safely.
+pub fn apply_pending_hard_reset(app: &AppHandle) -> Result<(), String> {
+    let marker = pending_hard_reset_marker_path(app)?;
+    if !marker.exists() {
+        return Ok(());
+    }
+
+    let db_path = app_database_path(app)?;
+    remove_local_database_files(&db_path)?;
+    if marker.exists() {
+        std::fs::remove_file(&marker)
+            .map_err(|error| format!("Could not clear the hard reset marker: {error}"))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn hard_reset_desktop_app(app: AppHandle) -> Result<(), String> {
+    let marker = pending_hard_reset_marker_path(&app)?;
+    std::fs::write(&marker, "1").map_err(|error| {
+        format!("Could not schedule a desktop hard reset: {error}")
+    })?;
+    app.restart();
+    Ok(())
 }
 
 #[tauri::command]

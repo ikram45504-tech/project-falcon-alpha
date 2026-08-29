@@ -1,6 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
-import { Company, UserSession, initDatabase, startBackgroundSync, setBackgroundSyncCompanyId, syncCloudSessionToLocal } from "./db";
+import {
+  Company,
+  UserSession,
+  initDatabase,
+  startBackgroundSync,
+  setBackgroundSyncCompanyId,
+  syncCloudSessionToLocal,
+  isCompanySetupInProgress,
+} from "./db";
+import { clearAuthStorage } from "./desktopReset";
 
 type AuthContextType = {
   isInitialized: boolean;
@@ -14,6 +23,71 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+type SupabaseAuthUser = {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+};
+
+async function resolveAuthUser(): Promise<SupabaseAuthUser | null> {
+  await supabase.auth.refreshSession();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) return null;
+  return user as SupabaseAuthUser;
+}
+
+async function resolveCompanyId(user: SupabaseAuthUser) {
+  const metadata = user.user_metadata || {};
+  let companyId = String(metadata.company_id || "").trim();
+  let role = String(metadata.role || "VIEW_ONLY");
+  let fullName = String(metadata.full_name || "");
+  let username = String(metadata.username || "");
+  let phone = String(metadata.phone || "");
+  let companyCode = String(metadata.company_code || "");
+  let companyName = String(metadata.company_name || "");
+
+  if (!companyId) {
+    const { data: userRow, error: userError } = await supabase
+      .from("users")
+      .select("company_id, role, full_name, username, phone")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!userError && userRow?.company_id) {
+      companyId = String(userRow.company_id);
+      role = String(userRow.role || role);
+      fullName = String(userRow.full_name || fullName);
+      username = String(userRow.username || username);
+      phone = String(userRow.phone || phone);
+    }
+  }
+
+  if (companyId && (!companyCode || !companyName)) {
+    const { data: companyRow } = await supabase
+      .from("companies")
+      .select("company_code, name")
+      .eq("id", companyId)
+      .maybeSingle();
+    if (companyRow) {
+      companyCode = String(companyRow.company_code || companyCode);
+      companyName = String(companyRow.name || companyName);
+    }
+  }
+
+  return {
+    companyId,
+    role,
+    fullName,
+    username,
+    phone,
+    companyCode,
+    companyName,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
@@ -22,55 +96,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    let authSubscription: any = null;
+    let authSubscription: { unsubscribe: () => void } | null = null;
 
-    async function loadSupabaseSession(supabaseUser: any) {
-      if (!supabaseUser) {
+    async function loadSupabaseSession(initialUser: SupabaseAuthUser | null | undefined) {
+      if (!initialUser) {
         if (mounted) {
           setSession(null);
           setCompany(null);
+          setError("");
           setIsInitialized(true);
         }
         return;
       }
 
       try {
-        const metadata = supabaseUser.user_metadata || {};
-        const companyId = metadata.company_id || "";
-        const role = metadata.role || "VIEW_ONLY";
+        const user = (await resolveAuthUser()) || initialUser;
+        const profile = await resolveCompanyId(user);
+
+        if (!profile.companyId) {
+          if (isCompanySetupInProgress()) {
+            if (mounted) {
+              setSession(null);
+              setCompany(null);
+              setError("");
+              setIsInitialized(true);
+            }
+            return;
+          }
+
+          await supabase.auth.signOut({ scope: "local" });
+          clearAuthStorage();
+          if (mounted) {
+            setSession(null);
+            setCompany(null);
+            setError("");
+            setIsInitialized(true);
+          }
+          return;
+        }
 
         const newSession: UserSession = {
-          userId: supabaseUser.id,
-          companyId,
-          companyCode: metadata.company_code || "",
-          companyName: metadata.company_name || "",
-          fullName: metadata.full_name || "",
-          username: metadata.username || "",
-          email: supabaseUser.email || "",
-          phone: metadata.phone || "",
-          role,
+          userId: user.id,
+          companyId: profile.companyId,
+          companyCode: profile.companyCode,
+          companyName: profile.companyName,
+          fullName: profile.fullName,
+          username: profile.username,
+          email: user.email || "",
+          phone: profile.phone,
+          role: profile.role,
         };
 
         const { data: companyData, error: companyError } = await supabase
           .from("companies")
           .select("*")
-          .eq("id", companyId)
+          .eq("id", profile.companyId)
           .single();
 
         if (companyError || !companyData) {
-          throw new Error("Could not load company profile from cloud database.");
+          await supabase.auth.signOut({ scope: "local" });
+          clearAuthStorage();
+          throw new Error(
+            companyError?.message ||
+              "Could not load company profile from cloud database. Sign in with your Company Code, or create a new company.",
+          );
         }
 
         if (mounted) {
           await syncCloudSessionToLocal(companyData as Company, newSession);
-          setBackgroundSyncCompanyId(companyId);
+          setBackgroundSyncCompanyId(profile.companyId);
           setSession(newSession);
           setCompany(companyData as Company);
+          setError("");
           setIsInitialized(true);
         }
       } catch (err) {
         if (mounted) {
           setError(err instanceof Error ? err.message : String(err));
+          setSession(null);
+          setCompany(null);
           setIsInitialized(true);
         }
       }
@@ -78,18 +182,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function initialize() {
       try {
-        await initDatabase(); // Keep local DB running for unmigrated modules
-        await startBackgroundSync(); // Start offline-first sync engine
+        await initDatabase();
+        await startBackgroundSync();
 
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession();
-        await loadSupabaseSession(currentSession?.user);
+        await loadSupabaseSession(currentSession?.user as SupabaseAuthUser | undefined);
 
         const {
           data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-          loadSupabaseSession(currentSession?.user);
+          void loadSupabaseSession(currentSession?.user as SupabaseAuthUser | undefined);
         });
         authSubscription = subscription;
       } catch (e) {
@@ -104,9 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
-      if (authSubscription) {
-        authSubscription.unsubscribe();
-      }
+      authSubscription?.unsubscribe();
     };
   }, []);
 
@@ -117,12 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await supabase.auth.signOut();
-
-    // Clear legacy tokens if any
-    localStorage.removeItem("travelAccountingRememberToken");
-    localStorage.removeItem("travelAccountingLastCompanyCode");
-    localStorage.removeItem("travelAccountingLastIdentifier");
-
+    clearAuthStorage();
     setBackgroundSyncCompanyId("");
     setSession(null);
     setCompany(null);

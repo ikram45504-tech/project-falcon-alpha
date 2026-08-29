@@ -1,3 +1,4 @@
+-- Resolve auth email from company code + username OR email (case-insensitive).
 CREATE OR REPLACE FUNCTION get_user_email(p_company_code TEXT, p_username TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
