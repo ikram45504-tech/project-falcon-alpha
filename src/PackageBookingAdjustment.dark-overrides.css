@@ -1,28 +1,28 @@
-/* AUTO-GENERATED THEME OVERRIDES FOR PackageBookingAdjustment.css */
+﻿/* AUTO-GENERATED THEME OVERRIDES FOR PackageBookingAdjustment.css */
 
 :root[data-theme="midnight"] .adj-shell {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-toolbar {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-toolbar-actions button {
   border-color: rgba(56, 189, 248, 0.15) !important;
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 :root[data-theme="midnight"] .adj-identity-strip > div,
 :root[data-theme="midnight"] .adj-history-summary > div {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-choice {
   border-color: rgba(56, 189, 248, 0.15) !important;
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 :root[data-theme="midnight"] .adj-choice > span {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-choice strong {
@@ -30,18 +30,18 @@
 }
 :root[data-theme="midnight"] .adj-choice.partial_cancellation > span,
 :root[data-theme="midnight"] .adj-choice.full_cancellation > span {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-choice.correction > span {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-back-choice {
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-section {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-form-grid label,
@@ -55,29 +55,29 @@
 :root[data-theme="midnight"] .adj-lines-table select,
 :root[data-theme="midnight"] .adj-charge-grid input {
   border-color: rgba(56, 189, 248, 0.15) !important;
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 :root[data-theme="midnight"] .adj-add-row-actions button {
   border-color: rgba(56, 189, 248, 0.15) !important;
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 :root[data-theme="midnight"] .adj-lines-table-wrap {
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-lines-table th {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-lines-table td {
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-lines-table .adj-remove {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-credit-preview {
   border-color: rgba(56, 189, 248, 0.15) !important;
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 :root[data-theme="midnight"] .adj-credit-preview small {
   color: var(--text-main) !important;
@@ -90,24 +90,24 @@
 }
 :root[data-theme="midnight"] .adj-accounting-preview > div {
   border-color: rgba(56, 189, 248, 0.15) !important;
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 :root[data-theme="midnight"] .adj-accounting-preview .increase {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-accounting-preview .increase b {
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-accounting-preview .decrease {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-accounting-preview .decrease b {
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-accounting-preview .effective {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-accounting-preview .effective strong {
@@ -115,46 +115,46 @@
 }
 :root[data-theme="midnight"] .adj-financial-breakdown > div {
   border-color: rgba(56, 189, 248, 0.15) !important;
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 :root[data-theme="midnight"] .adj-financial-breakdown .increase {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-financial-breakdown .increase b {
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-financial-breakdown .decrease {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-financial-breakdown .decrease b {
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-financial-breakdown .neutral {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 :root[data-theme="midnight"] .adj-financial-breakdown .effective {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-financial-breakdown .effective strong {
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-rule-note {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-savebar {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-history-item {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .adj-history-item > span {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-history-item p {
@@ -164,24 +164,24 @@
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-history-numbers span {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-empty-history {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .package14-lifecycle.cancelled {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .package14-lifecycle.partially-cancelled {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .package14-lifecycle.amended {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .package14-adjustment-action {
@@ -193,28 +193,28 @@
 }
 
 :root[data-theme="ocean"] .adj-shell {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-toolbar {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-toolbar-actions button {
   border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
 :root[data-theme="ocean"] .adj-identity-strip > div,
 :root[data-theme="ocean"] .adj-history-summary > div {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-choice {
   border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
 :root[data-theme="ocean"] .adj-choice > span {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-choice strong {
@@ -222,18 +222,18 @@
 }
 :root[data-theme="ocean"] .adj-choice.partial_cancellation > span,
 :root[data-theme="ocean"] .adj-choice.full_cancellation > span {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-choice.correction > span {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-back-choice {
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-section {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-form-grid label,
@@ -247,29 +247,29 @@
 :root[data-theme="ocean"] .adj-lines-table select,
 :root[data-theme="ocean"] .adj-charge-grid input {
   border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
 :root[data-theme="ocean"] .adj-add-row-actions button {
   border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
 :root[data-theme="ocean"] .adj-lines-table-wrap {
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-lines-table th {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-lines-table td {
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-lines-table .adj-remove {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-credit-preview {
   border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
 :root[data-theme="ocean"] .adj-credit-preview small {
   color: var(--text-main) !important;
@@ -282,24 +282,24 @@
 }
 :root[data-theme="ocean"] .adj-accounting-preview > div {
   border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
 :root[data-theme="ocean"] .adj-accounting-preview .increase {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-accounting-preview .increase b {
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-accounting-preview .decrease {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-accounting-preview .decrease b {
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-accounting-preview .effective {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-accounting-preview .effective strong {
@@ -307,46 +307,46 @@
 }
 :root[data-theme="ocean"] .adj-financial-breakdown > div {
   border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
 :root[data-theme="ocean"] .adj-financial-breakdown .increase {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-financial-breakdown .increase b {
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-financial-breakdown .decrease {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-financial-breakdown .decrease b {
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-financial-breakdown .neutral {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
 :root[data-theme="ocean"] .adj-financial-breakdown .effective {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-financial-breakdown .effective strong {
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-rule-note {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-savebar {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-history-item {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .adj-history-item > span {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-history-item p {
@@ -356,24 +356,24 @@
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-history-numbers span {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-empty-history {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .package14-lifecycle.cancelled {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .package14-lifecycle.partially-cancelled {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .package14-lifecycle.amended {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .package14-adjustment-action {

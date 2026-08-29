@@ -1,7 +1,5 @@
 @import "./PackageBookingAdjustment.dark-overrides.css";
 
-@import "./PackageBookingAdjustment.dark-overrides.css";
-
 .adj-backdrop {
   z-index: 1400;
   align-items: flex-start;
@@ -596,4 +594,36 @@
   .adj-savebar button {
     width: 100%;
   }
+}
+
+/* Opaque modal surfaces for ocean / dark (midnight) — keep readable over register */
+:root[data-theme="midnight"] .adj-shell,
+:root[data-theme="midnight"] .adj-toolbar,
+:root[data-theme="midnight"] .adj-choice,
+:root[data-theme="midnight"] .adj-section,
+:root[data-theme="midnight"] .adj-history-item,
+:root[data-theme="midnight"] .adj-identity-strip > div,
+:root[data-theme="midnight"] .adj-history-summary > div,
+:root[data-theme="midnight"] .adj-empty-history,
+:root[data-theme="midnight"] .adj-savebar {
+  background: #1e293b !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+:root[data-theme="ocean"] .adj-shell {
+  background: #f8fafc !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+:root[data-theme="ocean"] .adj-toolbar,
+:root[data-theme="ocean"] .adj-choice,
+:root[data-theme="ocean"] .adj-section,
+:root[data-theme="ocean"] .adj-history-item,
+:root[data-theme="ocean"] .adj-identity-strip > div,
+:root[data-theme="ocean"] .adj-history-summary > div,
+:root[data-theme="ocean"] .adj-empty-history,
+:root[data-theme="ocean"] .adj-savebar {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }

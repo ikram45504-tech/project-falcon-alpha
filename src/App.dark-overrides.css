@@ -1,4 +1,4 @@
-/* AUTO-GENERATED THEME OVERRIDES FOR App.css */
+﻿/* AUTO-GENERATED THEME OVERRIDES FOR App.css */
 
 :root[data-theme="midnight"] :root {
   border-color: rgba(56, 189, 248, 0.15) !important;
@@ -187,7 +187,7 @@
   background: rgba(30, 41, 59, 0.4) !important;
 }
 :root[data-theme="midnight"] .modal-card {
-  background: rgba(30, 41, 59, 0.6) !important;
+  background: #1e293b !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5) !important;
@@ -2266,7 +2266,7 @@
   background: rgba(255, 255, 255, 0.4) !important;
 }
 :root[data-theme="ocean"] .modal-card {
-  background: rgba(255, 255, 255, 0.7) !important;
+  background: #ffffff !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.15) !important;

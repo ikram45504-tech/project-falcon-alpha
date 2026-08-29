@@ -4,40 +4,40 @@
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .lifecycle-status.amended {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .lifecycle-status.partially-cancelled {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .lifecycle-status.cancelled,
 :root[data-theme="midnight"] .lifecycle-status.void {
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .adj-add-row-actions > button {
   border-color: rgba(56, 189, 248, 0.15) !important;
-  background: rgba(30, 41, 59, 0.4) !important;
+  background: #1e293b !important;
 }
 
 :root[data-theme="ocean"] .lifecycle-summary {
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .lifecycle-status.amended {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .lifecycle-status.partially-cancelled {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .lifecycle-status.cancelled,
 :root[data-theme="ocean"] .lifecycle-status.void {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .adj-add-row-actions > button {
   border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ffffff !important;
 }
