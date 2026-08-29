@@ -10,6 +10,14 @@ import {
   isCompanySetupInProgress,
 } from "./db";
 import { clearAuthStorage } from "./desktopReset";
+import { UserRole } from "./permissions";
+
+const USER_ROLES: UserRole[] = ["OWNER", "ADMIN", "ACCOUNTS", "DATA_ENTRY", "VIEW_ONLY"];
+
+function normalizeUserRole(value: string): UserRole {
+  const upper = value.trim().toUpperCase();
+  return USER_ROLES.includes(upper as UserRole) ? (upper as UserRole) : "VIEW_ONLY";
+}
 
 type AuthContextType = {
   isInitialized: boolean;
@@ -42,7 +50,7 @@ async function resolveAuthUser(): Promise<SupabaseAuthUser | null> {
 async function resolveCompanyId(user: SupabaseAuthUser) {
   const metadata = user.user_metadata || {};
   let companyId = String(metadata.company_id || "").trim();
-  let role = String(metadata.role || "VIEW_ONLY");
+  let role = normalizeUserRole(String(metadata.role || "VIEW_ONLY"));
   let fullName = String(metadata.full_name || "");
   let username = String(metadata.username || "");
   let phone = String(metadata.phone || "");
@@ -58,7 +66,7 @@ async function resolveCompanyId(user: SupabaseAuthUser) {
 
     if (!userError && userRow?.company_id) {
       companyId = String(userRow.company_id);
-      role = String(userRow.role || role);
+      role = normalizeUserRole(String(userRow.role || role));
       fullName = String(userRow.full_name || fullName);
       username = String(userRow.username || username);
       phone = String(userRow.phone || phone);
