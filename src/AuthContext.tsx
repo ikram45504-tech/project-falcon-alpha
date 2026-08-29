@@ -159,15 +159,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from("companies")
           .select("*")
           .eq("id", profile.companyId)
-          .single();
+          .maybeSingle();
 
-        if (companyError || !companyData) {
+        if (companyError) {
+          throw new Error(companyError.message);
+        }
+
+        if (!companyData) {
+          if (isCompanySetupInProgress()) {
+            if (mounted) {
+              setSession(null);
+              setCompany(null);
+              setError("");
+              setIsInitialized(true);
+            }
+            return;
+          }
+
           await supabase.auth.signOut({ scope: "local" });
           clearAuthStorage();
-          throw new Error(
-            companyError?.message ||
-              "Could not load company profile from cloud database. Sign in with your Company Code, or create a new company.",
-          );
+          if (mounted) {
+            setSession(null);
+            setCompany(null);
+            setError("");
+            setIsInitialized(true);
+          }
+          return;
         }
 
         if (mounted) {

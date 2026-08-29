@@ -32,6 +32,11 @@ export default function LoginScreen({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    setGlobalAuthError("");
+    setError("");
+  }, [setGlobalAuthError]);
+
+  useEffect(() => {
     if (accountCreatedNotice) {
       setGlobalAuthError("");
       setError("");
@@ -84,6 +89,8 @@ export default function LoginScreen({
       }
 
       setAccountCreatedNotice(null);
+      setGlobalAuthError("");
+      setError("");
       navigate("/");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
