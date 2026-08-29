@@ -561,233 +561,239 @@ export default function UniversalBookingAdjustment({
           </div>
         </div>
         {error && <div className="alert error adj-alert">{error}</div>}
-        {view === "HISTORY" ? (
-          renderHistory()
-        ) : (
-          <>
-            <div className="adj-identity-strip">
-              <div>
-                <small>UB</small>
-                <b>{booking.ub_number}</b>
-              </div>
-              <div>
-                <small>ACCOUNT</small>
-                <b>{booking.counterparty_name || "—"}</b>
-              </div>
-              <div>
-                <small>BOOKING DATE</small>
-                <b>{booking.transaction_date}</b>
-              </div>
-              <div>
-                <small>TRANSACTION</small>
-                <b>{booking.transaction_type}</b>
-              </div>
-              <div>
-                <small>CURRENT VALUE</small>
-                <b>{money(booking.total_pkr)}</b>
-              </div>
-            </div>
-            {!adjustmentType ? (
-              <>
-                <div className="adj-intro">
-                  <h3>What do you want to do?</h3>
-                  <p>
-                    Correction, Amendment and Cancellation all stay linked to the genuine UB. Refunds remain separate
-                    cash/bank movements in Payments.
-                  </p>
+        <div className="adj-body">
+          {view === "HISTORY" ? (
+            renderHistory()
+          ) : (
+            <>
+              <div className="adj-identity-strip">
+                <div>
+                  <small>UB</small>
+                  <b>{booking.ub_number}</b>
                 </div>
-                {renderSelection()}
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="adj-back-choice"
-                  onClick={() => {
-                    setAdjustmentType("");
-                    setError("");
-                  }}
-                >
-                  ← Change Adjustment Type
-                </button>
-                <section className="adj-section">
-                  <div className="adj-section-title">
-                    <span>01</span>
-                    <div>
-                      <b>{kindLabel(adjustmentType).toUpperCase()} DETAILS</b>
-                      <small>The genuine UB and Party/Vendor account remain locked.</small>
-                    </div>
+                <div>
+                  <small>ACCOUNT</small>
+                  <b>{booking.counterparty_name || "—"}</b>
+                </div>
+                <div>
+                  <small>BOOKING DATE</small>
+                  <b>{booking.transaction_date}</b>
+                </div>
+                <div>
+                  <small>TRANSACTION</small>
+                  <b>{booking.transaction_type}</b>
+                </div>
+                <div>
+                  <small>CURRENT VALUE</small>
+                  <b>{money(booking.total_pkr)}</b>
+                </div>
+              </div>
+              {!adjustmentType ? (
+                <>
+                  <div className="adj-intro">
+                    <h3>What do you want to do?</h3>
+                    <p>
+                      Correction, Amendment and Cancellation all stay linked to the genuine UB. Refunds remain separate
+                      cash/bank movements in Payments.
+                    </p>
                   </div>
-                  <div className="adj-form-grid">
-                    <label>
-                      {isCancellation ? "Cancellation Date" : "Adjustment Date"} *
-                      <input type="date" value={adjustmentDate} onChange={(e) => setAdjustmentDate(e.target.value)} />
-                    </label>
-                    {adjustmentType === "AMENDMENT" && (
-                      <label>
-                        Change Type *
-                        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-                          <option value="">Select change type</option>
-                          {config.amendmentTypes.map((item) => (
-                            <option key={item} value={item}>
-                              {item}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                    <label className="wide">
-                      Reason / Remarks *
-                      <textarea
-                        rows={2}
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        placeholder={
-                          adjustmentType === "CORRECTION"
-                            ? "What was entered incorrectly?"
-                            : isCancellation
-                              ? "Why is this booking being cancelled?"
-                              : "What genuine post-booking change is being made?"
-                        }
-                      />
-                    </label>
-                  </div>
-                </section>
-
-                <section className="adj-section">
-                  <div className="adj-section-title">
-                    <span>02</span>
-                    <div>
-                      <b>{isCancellation ? "CANCELLATION & ACCOUNTING" : `REVISED ${service} BOOKING & ACCOUNTING`}</b>
-                      <small>Review the commercial effect before saving. No payment or refund is created here.</small>
-                    </div>
-                  </div>
-                  {isCancellation ? renderCancellationRows() : renderRows()}
-                  {adjustmentType === "AMENDMENT" && (
-                    <div className="adj-charge-grid">
-                      <label>
-                        {accountTerms.chargeLabel} (PKR)
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={charge}
-                          onChange={(e) => setCharge(e.target.value)}
-                          placeholder="0"
-                        />
-                        <small>{accountTerms.chargeHelp}</small>
-                      </label>
-                      <label>
-                        {accountTerms.creditLabel} (PKR)
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={credit}
-                          onChange={(e) => setCredit(e.target.value)}
-                          placeholder="0"
-                        />
-                        <small>{accountTerms.creditHelp}</small>
-                      </label>
-                    </div>
-                  )}
-                  {isCancellation && (
-                    <div className="adj-charge-grid">
-                      <label>
-                        {booking.transaction_type === "SALE"
-                          ? "Cancellation Charge Retained / Charged"
-                          : "Supplier Cancellation Charge / Cost"}{" "}
-                        (PKR)
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={charge}
-                          onChange={(e) => setCharge(e.target.value)}
-                          placeholder="0"
-                        />
-                        <small>Amount that remains commercially chargeable despite the cancellation.</small>
-                      </label>
-                      <div className="adj-credit-preview">
-                        <small>NET ACCOUNT CREDIT</small>
-                        <b>{money(cancellationCreditPreview)}</b>
-                        <span>This is not a cash refund. Actual money returned is recorded later in Payments.</span>
+                  {renderSelection()}
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="adj-back-choice"
+                    onClick={() => {
+                      setAdjustmentType("");
+                      setError("");
+                    }}
+                  >
+                    ← Change Adjustment Type
+                  </button>
+                  <section className="adj-section">
+                    <div className="adj-section-title">
+                      <span>01</span>
+                      <div>
+                        <b>{kindLabel(adjustmentType).toUpperCase()} DETAILS</b>
+                        <small>The genuine UB and Party/Vendor account remain locked.</small>
                       </div>
                     </div>
-                  )}
-                  <div className="adj-accounting-preview">
-                    <div>
-                      <small>CURRENT EFFECTIVE VALUE</small>
-                      <b>{money(booking.total_pkr)}</b>
+                    <div className="adj-form-grid">
+                      <label>
+                        {isCancellation ? "Cancellation Date" : "Adjustment Date"} *
+                        <input type="date" value={adjustmentDate} onChange={(e) => setAdjustmentDate(e.target.value)} />
+                      </label>
+                      {adjustmentType === "AMENDMENT" && (
+                        <label>
+                          Change Type *
+                          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                            <option value="">Select change type</option>
+                            {config.amendmentTypes.map((item) => (
+                              <option key={item} value={item}>
+                                {item}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                      <label className="wide">
+                        Reason / Remarks *
+                        <textarea
+                          rows={2}
+                          value={reason}
+                          onChange={(e) => setReason(e.target.value)}
+                          placeholder={
+                            adjustmentType === "CORRECTION"
+                              ? "What was entered incorrectly?"
+                              : isCancellation
+                                ? "Why is this booking being cancelled?"
+                                : "What genuine post-booking change is being made?"
+                          }
+                        />
+                      </label>
                     </div>
-                    <div>
-                      <small>{isCancellation ? "CANCELLED VALUE" : "REVISED BASE"}</small>
-                      <b>{money(isCancellation ? cancelledValuePreview : revisedBasePreview)}</b>
-                    </div>
-                    <div className={previewDelta > 0 ? "increase" : previewDelta < 0 ? "decrease" : "neutral"}>
-                      <small>{accountTerms.accountImpact.toUpperCase()} IMPACT</small>
-                      <b>{signedMoney(previewDelta)}</b>
-                    </div>
-                    <div className="effective">
-                      <small>NEW EFFECTIVE BOOKING VALUE</small>
-                      <strong>{money(previewTotal)}</strong>
-                    </div>
-                  </div>
-                  {adjustmentType === "CORRECTION" && (
-                    <div className="adj-rule-note">
-                      <b>Correction:</b> no amendment fee is added. If only text/data changes and the amount stays the
-                      same, the accounting impact is Rs 0.
-                    </div>
-                  )}
-                  {adjustmentType === "AMENDMENT" && (
-                    <div className="adj-rule-note">
-                      <b>Amendment:</b> revised commercial rows plus any additional charge/cost or credit/deduction
-                      determine the account impact.
-                    </div>
-                  )}
-                </section>
+                  </section>
 
-                <section className="adj-section">
-                  <div className="adj-section-title">
-                    <span>03</span>
-                    <div>
-                      <b>SUPPORTING INFORMATION</b>
-                      <small>
-                        Reference and notes support the audit trail and do not independently change accounting.
-                      </small>
+                  <section className="adj-section">
+                    <div className="adj-section-title">
+                      <span>02</span>
+                      <div>
+                        <b>
+                          {isCancellation ? "CANCELLATION & ACCOUNTING" : `REVISED ${service} BOOKING & ACCOUNTING`}
+                        </b>
+                        <small>Review the commercial effect before saving. No payment or refund is created here.</small>
+                      </div>
                     </div>
-                  </div>
-                  <div className="adj-form-grid">
-                    <label>
-                      Reference
-                      <input
-                        value={reference}
-                        onChange={(e) => setReference(e.target.value)}
-                        placeholder="Airline / hotel / supplier / internal reference"
-                      />
-                    </label>
-                    <label className="wide">
-                      Supporting / Internal Notes
-                      <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-                    </label>
-                  </div>
-                </section>
-                <div className="adj-savebar">
-                  <div>
-                    <small>FINAL PREVIEW</small>
-                    <b>
-                      {accountTerms.accountImpact}: {signedMoney(previewDelta)}
-                    </b>
-                    <span>Current value after save: {money(previewTotal)}</span>
-                  </div>
-                  <button type="button" className="primary" disabled={busy || !canEdit} onClick={() => void save()}>
-                    {busy ? "Saving Adjustment..." : `Save ${kindLabel(adjustmentType)}`}
-                  </button>
-                </div>
-              </>
-            )}
-          </>
-        )}
+                    {isCancellation ? renderCancellationRows() : renderRows()}
+                    {adjustmentType === "AMENDMENT" && (
+                      <div className="adj-charge-grid">
+                        <label>
+                          {accountTerms.chargeLabel} (PKR)
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={charge}
+                            onChange={(e) => setCharge(e.target.value)}
+                            placeholder="0"
+                          />
+                          <small>{accountTerms.chargeHelp}</small>
+                        </label>
+                        <label>
+                          {accountTerms.creditLabel} (PKR)
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={credit}
+                            onChange={(e) => setCredit(e.target.value)}
+                            placeholder="0"
+                          />
+                          <small>{accountTerms.creditHelp}</small>
+                        </label>
+                      </div>
+                    )}
+                    {isCancellation && (
+                      <div className="adj-charge-grid">
+                        <label>
+                          {booking.transaction_type === "SALE"
+                            ? "Cancellation Charge Retained / Charged"
+                            : "Supplier Cancellation Charge / Cost"}{" "}
+                          (PKR)
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={charge}
+                            onChange={(e) => setCharge(e.target.value)}
+                            placeholder="0"
+                          />
+                          <small>Amount that remains commercially chargeable despite the cancellation.</small>
+                        </label>
+                        <div className="adj-credit-preview">
+                          <small>NET ACCOUNT CREDIT</small>
+                          <b>{money(cancellationCreditPreview)}</b>
+                          <span>This is not a cash refund. Actual money returned is recorded later in Payments.</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="adj-accounting-preview">
+                      <div>
+                        <small>CURRENT EFFECTIVE VALUE</small>
+                        <b>{money(booking.total_pkr)}</b>
+                      </div>
+                      <div>
+                        <small>{isCancellation ? "CANCELLED VALUE" : "REVISED BASE"}</small>
+                        <b>{money(isCancellation ? cancelledValuePreview : revisedBasePreview)}</b>
+                      </div>
+                      <div className={previewDelta > 0 ? "increase" : previewDelta < 0 ? "decrease" : "neutral"}>
+                        <small>{accountTerms.accountImpact.toUpperCase()} IMPACT</small>
+                        <b>{signedMoney(previewDelta)}</b>
+                      </div>
+                      <div className="effective">
+                        <small>NEW EFFECTIVE BOOKING VALUE</small>
+                        <strong>{money(previewTotal)}</strong>
+                      </div>
+                    </div>
+                    {adjustmentType === "CORRECTION" && (
+                      <div className="adj-rule-note">
+                        <b>Correction:</b> no amendment fee is added. If only text/data changes and the amount stays the
+                        same, the accounting impact is Rs 0.
+                      </div>
+                    )}
+                    {adjustmentType === "AMENDMENT" && (
+                      <div className="adj-rule-note">
+                        <b>Amendment:</b> revised commercial rows plus any additional charge/cost or credit/deduction
+                        determine the account impact.
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="adj-section">
+                    <div className="adj-section-title">
+                      <span>03</span>
+                      <div>
+                        <b>SUPPORTING INFORMATION</b>
+                        <small>
+                          Reference and notes support the audit trail and do not independently change accounting.
+                        </small>
+                      </div>
+                    </div>
+                    <div className="adj-form-grid">
+                      <label>
+                        Reference
+                        <input
+                          value={reference}
+                          onChange={(e) => setReference(e.target.value)}
+                          placeholder="Airline / hotel / supplier / internal reference"
+                        />
+                      </label>
+                      <label className="wide">
+                        Supporting / Internal Notes
+                        <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                      </label>
+                    </div>
+                  </section>
+                </>
+              )}
+            </>
+          )}
+        </div>
+        {view === "ADJUSTMENT" && adjustmentType ? (
+          <div className="adj-savebar">
+            <div>
+              <small>FINAL PREVIEW</small>
+              <b>
+                {accountTerms.accountImpact}: {signedMoney(previewDelta)}
+              </b>
+              <span>Current value after save: {money(previewTotal)}</span>
+            </div>
+            <button type="button" className="primary" disabled={busy || !canEdit} onClick={() => void save()}>
+              {busy ? "Saving Adjustment..." : `Save ${kindLabel(adjustmentType)}`}
+            </button>
+          </div>
+        ) : null}
       </section>
     </div>
   );
