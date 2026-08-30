@@ -5,6 +5,8 @@ import { useAuth } from "../AuthContext";
 import TravelHisabLogo from "../TravelHisabLogo";
 import { COMPANY_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "../brand";
 import { resolveLoginEmail } from "../loginAuth";
+import { isOfflineOnlyBuild } from "../appMode";
+import { getCompanyById, loginUser, OFFLINE_SESSION_STORAGE_KEY } from "../db";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -14,7 +16,7 @@ export default function LoginScreen({
   setAccountCreatedNotice: (n: any) => void;
 }) {
   const navigate = useNavigate();
-  const { error: globalAuthError, setError: setGlobalAuthError } = useAuth();
+  const { error: globalAuthError, setError: setGlobalAuthError, setSessionData } = useAuth();
 
   const [loginCompanyCode, setLoginCompanyCode] = useState(
     () => localStorage.getItem("travelAccountingLastCompanyCode") || accountCreatedNotice?.companyCode || "",
@@ -69,15 +71,31 @@ export default function LoginScreen({
         throw new Error("Enter your password.");
       }
 
-      const emailToUse = await resolveLoginEmail(loginCompanyCode, loginName);
+      if (isOfflineOnlyBuild()) {
+        const session = await loginUser(loginCompanyCode, loginName, loginPassword);
+        if (!session) {
+          throw new Error("Company Code, Username/Email or Password is incorrect.");
+        }
+        const company = await getCompanyById(session.companyId);
+        if (!company) {
+          throw new Error("Company workspace could not be loaded.");
+        }
+        sessionStorage.setItem(
+          OFFLINE_SESSION_STORAGE_KEY,
+          JSON.stringify({ userId: session.userId, companyId: session.companyId }),
+        );
+        setSessionData(session, company);
+      } else {
+        const emailToUse = await resolveLoginEmail(loginCompanyCode, loginName);
 
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
-        password: loginPassword,
-      });
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: emailToUse,
+          password: loginPassword,
+        });
 
-      if (authError || !data.user) {
-        throw new Error(authError?.message || "Invalid credentials.");
+        if (authError || !data.user) {
+          throw new Error(authError?.message || "Invalid credentials.");
+        }
       }
 
       if (rememberCredentials) {
@@ -124,7 +142,11 @@ export default function LoginScreen({
         </div>
         <span className="eyebrow blue">{PRODUCT_NAME.toUpperCase()}</span>
         <h1>Sign in to your company</h1>
-        <p className="muted auth-login-lead">{PRODUCT_TAGLINE}. Use your Company Code with Username or Email.</p>
+        <p className="muted auth-login-lead">
+          {isOfflineOnlyBuild()
+            ? "Offline edition — all data stays on this computer. No cloud login required."
+            : `${PRODUCT_TAGLINE}. Use your Company Code with Username or Email.`}
+        </p>
 
         {message && <div className="alert success">{message}</div>}
         {error && <div className="alert error">{error}</div>}

@@ -8,6 +8,7 @@ import { ROLE_LABELS, hasPermission } from "./permissions";
 import { useEffect } from "react";
 import TravelHisabLogo from "./TravelHisabLogo";
 import { PRODUCT_NAME } from "./brand";
+import { isOfflineOnlyBuild, productNameForBuild } from "./appMode";
 
 // Screens
 import LoginScreen from "./screens/LoginScreen";
@@ -41,8 +42,12 @@ function AppLayout() {
 
     // 1. Online/Offline window title
     const updateTitle = async () => {
-      const status = navigator.onLine ? "Connected (Online)" : "Offline Mode";
-      const newTitle = `${PRODUCT_NAME} - ${status}`;
+      const status = isOfflineOnlyBuild()
+        ? "Offline Edition"
+        : navigator.onLine
+          ? "Connected (Online)"
+          : "Offline Mode";
+      const newTitle = `${productNameForBuild()} - ${status}`;
       document.title = newTitle;
 
       try {
@@ -57,7 +62,14 @@ function AppLayout() {
     window.addEventListener("online", updateTitle);
     window.addEventListener("offline", updateTitle);
 
-    // 2. Auto-Updater Check
+    // 2. Auto-Updater Check (cloud-sync desktop builds only)
+    if (isOfflineOnlyBuild()) {
+      return () => {
+        window.removeEventListener("online", updateTitle);
+        window.removeEventListener("offline", updateTitle);
+      };
+    }
+
     if (!isTauri) return;
 
     let active = true;

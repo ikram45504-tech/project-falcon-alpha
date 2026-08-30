@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { isOfflineOnlyBuild } from "./appMode";
 import {
   Company,
   UserSession,
@@ -8,6 +9,8 @@ import {
   setBackgroundSyncCompanyId,
   syncCloudSessionToLocal,
   isCompanySetupInProgress,
+  restoreLocalSession,
+  OFFLINE_SESSION_STORAGE_KEY,
 } from "./db";
 import { clearAuthStorage } from "./desktopReset";
 import { UserRole } from "./permissions";
@@ -205,7 +208,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    async function initializeOffline() {
+      try {
+        await initDatabase();
+        const raw = sessionStorage.getItem(OFFLINE_SESSION_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { userId?: string; companyId?: string };
+          if (parsed.userId && parsed.companyId) {
+            const restored = await restoreLocalSession(parsed.userId, parsed.companyId);
+            if (restored && mounted) {
+              setSession(restored.session);
+              setCompany(restored.company);
+            } else {
+              sessionStorage.removeItem(OFFLINE_SESSION_STORAGE_KEY);
+            }
+          }
+        }
+        if (mounted) {
+          setError("");
+          setIsInitialized(true);
+        }
+      } catch (e) {
+        if (mounted) {
+          setError(`Workspace could not start: ${e instanceof Error ? e.message : String(e)}`);
+          setIsInitialized(true);
+        }
+      }
+    }
+
     async function initialize() {
+      if (isOfflineOnlyBuild()) {
+        await initializeOffline();
+        return;
+      }
+
       try {
         await initDatabase();
         await startBackgroundSync();
@@ -243,6 +279,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (isOfflineOnlyBuild()) {
+      sessionStorage.removeItem(OFFLINE_SESSION_STORAGE_KEY);
+      clearAuthStorage();
+      setBackgroundSyncCompanyId("");
+      setSession(null);
+      setCompany(null);
+      setError("");
+      return;
+    }
+
     await supabase.auth.signOut();
     clearAuthStorage();
     setBackgroundSyncCompanyId("");

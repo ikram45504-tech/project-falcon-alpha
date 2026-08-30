@@ -24,23 +24,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Install dependencies (Ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri App
+      - name: Build Tauri App (Cloud Sync)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -50,8 +44,46 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: app-v__VERSION__
-          releaseName: 'Travel Accounting App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseName: "Travel Accounting App v__VERSION__"
+          releaseBody: |
+            ## Travel Hisab (Cloud Sync)
+            Desktop app with local SQLite + Supabase sync when online. Auto-update enabled.
+
+            ## Travel Hisab Offline
+            Same booking features with **no cloud login, sync, or auto-update**. Data stays on this computer.
+            Download the installer whose name includes **Offline**.
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
+
+      - name: Build Tauri App (Offline Only)
+        run: npm run tauri build -- --config src-tauri/tauri.offline.conf.json
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Upload offline installers to release
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="app-v${VERSION}"
+          shopt -s nullglob globstar
+          assets=()
+          for pattern in \
+            "src-tauri/target/release/bundle/nsis/*Offline*.exe" \
+            "src-tauri/target/release/bundle/nsis/*Offline*.msi" \
+            "src-tauri/target/release/bundle/dmg/*Offline*.dmg" \
+            "src-tauri/target/release/bundle/macos/*Offline*.tar.gz" \
+            "src-tauri/target/release/bundle/macos/*Offline*.app.tar.gz"
+          do
+            for file in $pattern; do
+              assets+=("$file")
+            done
+          done
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "No offline bundle files found"
+            exit 1
+          fi
+          gh release upload "$TAG" "${assets[@]}" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

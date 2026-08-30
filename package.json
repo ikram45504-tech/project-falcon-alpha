@@ -1,14 +1,18 @@
 {
   "name": "travel-accounting",
   "private": true,
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:offline": "vite --mode offline",
     "build": "tsc && vite build",
+    "build:offline": "tsc && vite build --mode offline",
     "preview": "vite preview",
     "test": "vitest",
     "tauri": "tauri",
+    "tauri:offline": "tauri dev --config src-tauri/tauri.offline.conf.json",
+    "tauri:build:offline": "tauri build --config src-tauri/tauri.offline.conf.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "prepare": "husky"

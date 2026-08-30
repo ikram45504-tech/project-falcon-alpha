@@ -1,4 +1,5 @@
 ﻿import Database from "@tauri-apps/plugin-sql";
+import { isCloudSyncEnabled } from "./appMode";
 import { supabase } from "./supabaseClient";
 import { createPasswordRecord, verifyPassword } from "./security";
 import { hasPermission, Permission, UserRole } from "./permissions";
@@ -1717,6 +1718,94 @@ export async function createCompanyAccount(input: CreateCompanyAccountInput) {
     setCompanySetupInProgress(false);
   }
 }
+
+async function isLocalCompanyCodeAvailable(candidate: string) {
+  const database = await db();
+  const rows = await database.select<Array<{ id: string }>>(
+    `SELECT id FROM companies WHERE company_code=$1 COLLATE NOCASE LIMIT 1`,
+    [candidate.toUpperCase()],
+  );
+  return rows.length === 0;
+}
+
+async function generateUniqueLocalCompanyCode(companyName: string) {
+  const tried = new Set<string>();
+  const prefixes = companyCodePrefixes(companyName);
+  for (const prefix of prefixes) {
+    const candidate = prefix.toUpperCase();
+    if (tried.has(candidate)) continue;
+    tried.add(candidate);
+    if (await isLocalCompanyCodeAvailable(candidate)) return candidate;
+  }
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    const candidate = randomLetters(3).toUpperCase();
+    if (tried.has(candidate)) continue;
+    tried.add(candidate);
+    if (await isLocalCompanyCodeAvailable(candidate)) return candidate;
+  }
+  throw new Error("Could not generate a unique 3-letter Company Code.");
+}
+
+/** Offline desktop build: create company + owner entirely in local SQLite (no Supabase). */
+export async function createOfflineCompanyAccount(input: CreateCompanyAccountInput) {
+  const username = validateOwnerUsername(input.ownerUsername);
+  const ownerEmail = validateEmail(input.ownerEmail);
+  const ownerPhone = input.ownerPhone.trim();
+  const companyName = input.companyName.trim();
+  const dtsLicense = input.dtsLicense.trim();
+
+  if (!companyName) throw new Error("Company Name is required.");
+  if (!ownerEmail) throw new Error("Email Address is required.");
+  if (!ownerPhone) throw new Error("Phone / WhatsApp Number is required.");
+  validateStrongPassword(input.password);
+
+  const database = await db();
+  const now = new Date().toISOString();
+  const companyId = crypto.randomUUID();
+  const userId = crypto.randomUUID();
+  const companyCode = await generateUniqueLocalCompanyCode(companyName);
+  const passwordRecord = await createPasswordRecord(input.password);
+
+  await database.execute(
+    `INSERT INTO companies
+     (id, company_code, name, dts_license, address, phone, whatsapp, email, base_currency, foreign_currency, status, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, '', $5, $5, $6, 'PKR', 'SAR', 'ACTIVE', $7, $7)`,
+    [companyId, companyCode, companyName, dtsLicense, ownerPhone, ownerEmail, now],
+  );
+
+  await database.execute(
+    `INSERT INTO users
+     (id, company_id, full_name, username, email, phone, phone_normalized, password_hash, password_salt, password_iterations, role, status, created_at, updated_at, last_login_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'OWNER', 'ACTIVE', $11, $11, '')`,
+    [
+      userId,
+      companyId,
+      username,
+      username,
+      ownerEmail,
+      ownerPhone,
+      normalizePhone(ownerPhone),
+      passwordRecord.hash,
+      passwordRecord.salt,
+      passwordRecord.iterations,
+      now,
+    ],
+  );
+
+  await createAuditLog(companyId, userId, "CREATE", "COMPANY", companyId, `Offline company ${companyName} created.`);
+
+  return { companyId, companyCode, userId, username, email: ownerEmail, accountStatus: "ACTIVE" as const };
+}
+
+export async function restoreLocalSession(userId: string, companyId: string) {
+  const session = await sessionForUser(companyId, userId);
+  if (!session) return null;
+  const company = await getCompanyById(companyId);
+  if (!company) return null;
+  return { session, company };
+}
+
+export const OFFLINE_SESSION_STORAGE_KEY = "travelHisabOfflineSession";
 
 // Backward-compatible wrapper for older setup code.
 export async function createInitialSetup(input: InitialSetupInput) {
@@ -3487,7 +3576,7 @@ export function setBackgroundSyncCompanyId(companyId: string) {
  * Retries FAILED jobs as well so a transient error does not permanently stall amendments.
  */
 export async function processSyncQueue() {
-  if (!navigator.onLine) return;
+  if (!isCloudSyncEnabled() || !navigator.onLine) return;
 
   try {
     const database = await db();
@@ -3528,7 +3617,7 @@ function notifySyncComplete(detail: { companyId: string; partiesPulled: number; 
 }
 
 async function runSyncPass(source: "interval" | "focus" | "online" | "manual", fullResync = false) {
-  if (!navigator.onLine) return null;
+  if (!isCloudSyncEnabled() || !navigator.onLine) return null;
   if (syncPassInFlight) return null;
   syncPassInFlight = true;
   try {
@@ -3604,6 +3693,7 @@ async function pushLocalPackageAdjustmentRepair(companyId: string) {
  * Runs every few seconds, and also when the window is focused or comes back online.
  */
 export async function startBackgroundSync(companyId = "") {
+  if (!isCloudSyncEnabled()) return;
   if (companyId) backgroundCompanyId = companyId.trim();
   if (isSyncRunning) return;
   isSyncRunning = true;
@@ -3636,7 +3726,7 @@ export async function runManualSyncAndRefresh(companyId: string) {
  */
 export async function executePullSync(options?: { companyId?: string; fullResync?: boolean }) {
   const isTauri = "__TAURI_INTERNALS__" in window;
-  if (!isTauri || !navigator.onLine) return; // Only runs on Desktop when online
+  if (!isTauri || !isCloudSyncEnabled() || !navigator.onLine) return;
 
   const database = await db();
 

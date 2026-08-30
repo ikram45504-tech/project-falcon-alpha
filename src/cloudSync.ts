@@ -1,4 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
+import { isCloudSyncEnabled } from "./appMode";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -212,6 +213,8 @@ export async function queueSync(
     await applyCloudOperation(operation, tableName, recordId, payload);
     return;
   }
+
+  if (!isCloudSyncEnabled()) return;
 
   const database = await Database.load(DB_PATH);
   const id = crypto.randomUUID();
@@ -933,7 +936,7 @@ export async function syncMiscAdjustmentBundle(input: {
  * Used after package adjustments so web sees the change without waiting for the 5s timer.
  */
 export async function flushDesktopSyncQueue() {
-  if (!isDesktopApp() || !navigator.onLine) return;
+  if (!isCloudSyncEnabled() || !navigator.onLine) return;
 
   const database = await Database.load(DB_PATH);
   await database.execute(`UPDATE sync_queue SET status = 'PENDING' WHERE status = 'FAILED'`);

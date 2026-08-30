@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { createCompanyAccount } from "../db";
+import { createCompanyAccount, createOfflineCompanyAccount } from "../db";
+import { isOfflineOnlyBuild } from "../appMode";
 import { useNavigate } from "react-router-dom";
 import TravelHisabLogo from "../TravelHisabLogo";
 import { PRODUCT_BYLINE, PRODUCT_HIGHLIGHTS, PRODUCT_NAME, PRODUCT_TAGLINE } from "../brand";
@@ -68,14 +69,23 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
     setBusy(true);
     setError("");
     try {
-      const created = await createCompanyAccount({
-        companyName: setup.companyName.trim(),
-        ownerUsername: setup.username.trim(),
-        ownerEmail: setup.email.trim(),
-        ownerPhone: setup.phone.trim(),
-        dtsLicense: setup.dtsLicense.trim(),
-        password: setup.password,
-      });
+      const created = isOfflineOnlyBuild()
+        ? await createOfflineCompanyAccount({
+            companyName: setup.companyName.trim(),
+            ownerUsername: setup.username.trim(),
+            ownerEmail: setup.email.trim(),
+            ownerPhone: setup.phone.trim(),
+            dtsLicense: setup.dtsLicense.trim(),
+            password: setup.password,
+          })
+        : await createCompanyAccount({
+            companyName: setup.companyName.trim(),
+            ownerUsername: setup.username.trim(),
+            ownerEmail: setup.email.trim(),
+            ownerPhone: setup.phone.trim(),
+            dtsLicense: setup.dtsLicense.trim(),
+            password: setup.password,
+          });
 
       onAccountCreated({
         companyName: setup.companyName.trim(),
