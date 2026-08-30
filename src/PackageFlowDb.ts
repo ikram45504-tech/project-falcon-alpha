@@ -1,7 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { BookingTransactionType, PackageBookingLineInput, PackageBooking, PackageBookingLine } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
-import { isDesktopApp, queueSync, syncPackageBookingBundle } from "./cloudSync";
+import { isDesktopApp, queueSync, syncPackageBookingBundle, syncPackageBookingVoid } from "./cloudSync";
 
 import { supabase } from "./supabaseClient";
 
@@ -63,7 +63,7 @@ function validateNewUb(value: string) {
   }
 }
 
-import { requirePermission } from "./db";
+import { createAuditLog, requirePermission } from "./db";
 function auditStatement(
   companyId: string,
   userId: string,
@@ -176,26 +176,161 @@ function buildPackageLinePayloads(bookingId: string, calculated: CalculatedLine[
   }));
 }
 
-export async function getPackageBookings(companyId: string) {
+async function fetchPartyNameMap(companyId: string) {
+  const { fetchCounterpartyNameMap } = await import("./CounterpartyDb");
+  return fetchCounterpartyNameMap(companyId);
+}
+
+async function fetchChildRowsByBookingIds(table: string, bookingIds: string[]) {
+  if (!bookingIds.length) return [] as Record<string, unknown>[];
+  const { data, error } = await supabase.from(table).select("*").in("booking_id", bookingIds);
+  if (error) throw new Error(error.message);
+  return (data || []) as Record<string, unknown>[];
+}
+
+function groupRowsByBookingId(rows: Record<string, unknown>[]) {
+  const grouped = new Map<string, Record<string, unknown>[]>();
+  for (const row of rows) {
+    const bookingId = String(row.booking_id || "");
+    const current = grouped.get(bookingId) || [];
+    current.push(row);
+    grouped.set(bookingId, current);
+  }
+  return grouped;
+}
+
+export async function getPackageBookings(companyId: string, search = "") {
   const isTauri = "__TAURI_INTERNALS__" in window;
+  const clean = search.trim();
+
   if (!isTauri) {
-    const { data } = await supabase
+    let query = supabase
       .from("package_bookings")
       .select("*")
       .eq("company_id", companyId)
+      .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
-    return (data || []) as PackageBooking[];
+
+    if (clean) {
+      query = query.or(
+        `ub_number.ilike.%${clean}%,package_description.ilike.%${clean}%,customer_contact.ilike.%${clean}%,notes.ilike.%${clean}%`,
+      );
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const headers = data || [];
+    const partyNames = await fetchPartyNameMap(companyId);
+    const lines = await fetchChildRowsByBookingIds(
+      "package_booking_lines",
+      headers.map((row) => String(row.id)),
+    );
+    const linesByBooking = groupRowsByBookingId(lines);
+
+    return headers.map((row: Record<string, unknown>) => ({
+      ...row,
+      counterparty_name: partyNames.get(String(row.counterparty_id)) || "",
+      lines: (linesByBooking.get(String(row.id)) || [])
+        .slice()
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)),
+    })) as PackageBooking[];
   }
 
   const database = await db();
-  const rows = await database.select<PackageBooking[]>(
-    `SELECT id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at,updated_at
-     FROM package_bookings
-     WHERE company_id=$1
-     ORDER BY created_at DESC`,
+  const term = `%${clean}%`;
+
+  const headers = await database.select<Omit<PackageBooking, "lines">[]>(
+    `SELECT
+       b.id, b.company_id, b.transaction_type, b.counterparty_id,
+       COALESCE(p.name, '') AS counterparty_name,
+       b.transaction_date, b.ub_number, b.package_description,
+       b.departure_date, b.return_date, b.no_of_days, b.ziarat_included,
+       b.customer_contact, b.notes, b.total_pkr,
+       b.status, b.created_at, b.updated_at
+     FROM package_bookings b
+     LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+     WHERE b.company_id=$1
+       AND (
+         $2='' OR
+         b.ub_number LIKE $3 COLLATE NOCASE OR
+         b.package_description LIKE $3 COLLATE NOCASE OR
+         b.customer_contact LIKE $3 COLLATE NOCASE OR
+         b.notes LIKE $3 COLLATE NOCASE OR
+         COALESCE(p.name, '') LIKE $3 COLLATE NOCASE OR
+         EXISTS (
+           SELECT 1 FROM package_booking_lines l
+           WHERE l.booking_id=b.id AND (l.package_type LIKE $3 COLLATE NOCASE OR l.passenger_name LIKE $3 COLLATE NOCASE)
+         )
+       )
+     ORDER BY b.transaction_date DESC, b.created_at DESC`,
+    [companyId, clean, term],
+  );
+
+  const lines = await database.select<PackageBookingLine[]>(
+    `SELECT l.id, l.booking_id, l.passenger_type, l.passenger_name, l.package_type,
+            l.rate_per_person, l.person_count, l.qty_is_explicit, l.line_total_pkr, l.sort_order
+     FROM package_booking_lines l
+     INNER JOIN package_bookings b ON b.id=l.booking_id
+     WHERE b.company_id=$1
+     ORDER BY l.sort_order ASC`,
     [companyId],
   );
-  return rows;
+
+  const grouped = new Map<string, PackageBookingLine[]>();
+  for (const line of lines) {
+    const current = grouped.get(line.booking_id) || [];
+    current.push(line);
+    grouped.set(line.booking_id, current);
+  }
+
+  return headers.map((header) => ({
+    ...header,
+    lines: grouped.get(header.id) || [],
+  })) as PackageBooking[];
+}
+
+export async function voidPackageBooking(companyId: string, bookingId: string, actorUserId = "") {
+  await requirePermission(companyId, actorUserId, "void_bookings");
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  const now = new Date().toISOString();
+  let ubNumber: string;
+
+  if (!isTauri) {
+    const { data } = await supabase
+      .from("package_bookings")
+      .select("ub_number")
+      .eq("id", bookingId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    ubNumber = data?.ub_number || bookingId;
+  } else {
+    const database = await db();
+    const rows = await database.select<Array<{ ub_number: string }>>(
+      `SELECT ub_number FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      [bookingId, companyId],
+    );
+    ubNumber = rows[0]?.ub_number || bookingId;
+    await database.execute(
+      `UPDATE package_bookings
+       SET status='VOID', updated_at=$1, updated_by_user_id=$2
+       WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
+      [now, actorUserId, bookingId, companyId],
+    );
+  }
+
+  await syncPackageBookingVoid(bookingId, now, actorUserId);
+
+  if (actorUserId) {
+    await createAuditLog(
+      companyId,
+      actorUserId,
+      "BOOKING_VOIDED",
+      "PACKAGE",
+      bookingId,
+      `Package booking ${ubNumber} voided.`,
+    );
+  }
 }
 
 export async function getPackageBookingById(companyId: string, bookingId: string) {
