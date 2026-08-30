@@ -31,6 +31,7 @@ type RowState = {
 };
 
 const amendmentCategories = bookingLifecycleConfigs.PACKAGE.amendmentTypes;
+const serviceLabel = bookingLifecycleConfigs.PACKAGE.label;
 
 function today() {
   const date = new Date();
@@ -212,7 +213,7 @@ export default function PackageBookingAdjustment({
           userId,
         );
         await onSaved?.(
-          `${adjustmentLabel(adjustmentType)} saved for ${booking.ub_number}. ${accountNoun} adjustment: ${signedMoney(result.delta)}. Current Package value: ${money(result.effectiveTotal)}.`,
+          `${adjustmentLabel(adjustmentType)} saved for ${booking.ub_number}. ${accountNoun} adjustment: ${signedMoney(result.delta)}. Current ${serviceLabel} value: ${money(result.effectiveTotal)}.`,
         );
       } else {
         const result = await savePackageCancellation(
@@ -233,7 +234,7 @@ export default function PackageBookingAdjustment({
           userId,
         );
         await onSaved?.(
-          `${adjustmentLabel(adjustmentType)} saved for ${booking.ub_number}. Account credit: ${money(result.accountCredit)}. Current Package value: ${money(result.effectiveTotal)}.`,
+          `${adjustmentLabel(adjustmentType)} saved for ${booking.ub_number}. Account credit: ${money(result.accountCredit)}. Current ${serviceLabel} value: ${money(result.effectiveTotal)}.`,
         );
       }
       onClose();
@@ -267,7 +268,7 @@ export default function PackageBookingAdjustment({
       {
         type: "FULL_CANCELLATION",
         title: "Full Cancellation",
-        text: "Cancel the complete Package booking while retaining any applicable cancellation charge.",
+        text: `Cancel the complete ${serviceLabel} booking while retaining any applicable cancellation charge.`,
         badge: "FULL BOOKING",
       },
     ];
@@ -464,7 +465,7 @@ export default function PackageBookingAdjustment({
             <span>REV 1</span>
             <div>
               <small>{booking.transaction_date}</small>
-              <h4>Original Package Booking</h4>
+              <h4>Original {serviceLabel} Booking</h4>
               <p>
                 {booking.transaction_type} · {booking.counterparty_name || "Account"}
               </p>
@@ -498,7 +499,7 @@ export default function PackageBookingAdjustment({
         </div>
         {!history.length && (
           <div className="adj-empty-history">
-            No booking adjustments yet. This is still the original Package booking.
+            No booking adjustments yet. This is still the original {serviceLabel} booking.
           </div>
         )}
       </div>
@@ -514,7 +515,7 @@ export default function PackageBookingAdjustment({
       <section className="adj-shell" onMouseDown={(e) => e.stopPropagation()}>
         <div className="adj-toolbar">
           <div>
-            <span className="eyebrow blue">PACKAGE BOOKING</span>
+            <span className="eyebrow blue">{serviceLabel.toUpperCase()} BOOKING</span>
             <h2>
               {view === "HISTORY"
                 ? `Booking History — ${booking.ub_number}`

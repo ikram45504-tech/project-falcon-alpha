@@ -47,7 +47,7 @@ describe("LedgerEngine", () => {
         kind: "SALE_BOOKING",
         service_type: "PACKAGE",
         ref_no: "UB-001",
-        description: "PACKAGE Booking",
+        description: "Full Package Booking",
         total_pkr: 1000,
         status: "ACTIVE",
         payment_kind: null,

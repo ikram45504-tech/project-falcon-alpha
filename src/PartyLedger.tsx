@@ -3,6 +3,7 @@ import type { Party, PaymentEntry } from "./db";
 import { getPayments } from "./db";
 import { downloadExcel } from "./exportUtils";
 import { type BookingAccountingEntry, accountDirectionLabel, getBookingAccountingEntries } from "./BookingAccounting";
+import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
 
 type Props = {
   companyId: string;
@@ -87,7 +88,7 @@ export default function PartyLedger({
       "SR #": i + 1,
       Date: formatDate(b.transaction_date),
       "UB #": b.ub_number || "-",
-      Service: b.service_type,
+      Service: bookingServiceDisplayLabel(b.service_type as BookingServiceName),
       Type: b.transaction_type,
       "Total SAR": b.total_sar || 0,
       "Pending SAR": b.unconverted_sar || 0,
@@ -212,7 +213,7 @@ export default function PartyLedger({
                       <b>{entry.ub_number || "—"}</b>
                     </td>
                     <td>
-                      <b>{entry.service_type}</b>
+                      <b>{bookingServiceDisplayLabel(entry.service_type as BookingServiceName)}</b>
                     </td>
                     <td className="centered">{entry.transaction_type}</td>
                     <td className="right">{entry.total_sar ? `SAR ${formatNumber(entry.total_sar)}` : "—"}</td>

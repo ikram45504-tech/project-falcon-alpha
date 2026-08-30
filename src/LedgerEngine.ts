@@ -1,6 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { initMiscDatabase } from "./miscDb";
 import type { Party } from "./db";
+import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
 import { isDesktopApp } from "./cloudSync";
 import { supabase } from "./supabaseClient";
 
@@ -76,7 +77,7 @@ const bookingUnion = `
 export async function getChronologicalLedger(companyId: string, party: Party): Promise<LedgerRow[]> {
   await initMiscDatabase();
 
-  let transactions: LedgerTransaction[] = [];
+  let transactions: LedgerTransaction[];
 
   if (!isDesktopApp()) {
     // Phase-1 web ledger: package bookings + payments (synced tables).
@@ -114,7 +115,7 @@ export async function getChronologicalLedger(companyId: string, party: Party): P
         kind: (row.transaction_type === "SALE" ? "SALE_BOOKING" : "PURCHASE_BOOKING") as LedgerTransaction["kind"],
         service_type: "PACKAGE",
         ref_no: row.ub_number,
-        description: "PACKAGE Booking",
+        description: `${bookingServiceDisplayLabel("PACKAGE")} Booking`,
         total_pkr: Number(row.total_pkr) || 0,
         status: row.status as "ACTIVE" | "VOID",
       })),
@@ -184,6 +185,10 @@ export async function getChronologicalLedger(companyId: string, party: Party): P
     let debit = 0;
     let credit = 0;
     let description = tx.description;
+    if (tx.kind === "SALE_BOOKING" || tx.kind === "PURCHASE_BOOKING") {
+      const service = tx.service_type as BookingServiceName;
+      description = `${bookingServiceDisplayLabel(service)} Booking`;
+    }
 
     if (tx.status === "ACTIVE") {
       if (isVendor) {

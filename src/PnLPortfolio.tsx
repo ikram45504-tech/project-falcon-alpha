@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getChronologicalLedger, type LedgerRow } from "./LedgerEngine";
 import { getParties, type Party } from "./db";
 import { downloadExcel } from "./exportUtils";
+import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
 import "./BookingFinalization.css";
 
 type Props = { companyId: string; onBack: () => void };
@@ -189,7 +190,7 @@ export default function PnLPortfolio({ companyId, onBack }: Props) {
         "SR #": i + 1,
         "UB Number": ub.ub,
         "Party Name": ub.partyNames,
-        "Service Type": ub.service,
+        "Service Type": bookingServiceDisplayLabel(ub.service as BookingServiceName),
         "Total Sales (PKR)": ub.sale,
         "Total Purchases (PKR)": ub.purchase,
         "Gross Margin (PKR)": ub.margin,
@@ -212,7 +213,7 @@ export default function PnLPortfolio({ companyId, onBack }: Props) {
     } else if (activeTab === "SERVICE") {
       const data = serviceProfits.map((s, i) => ({
         "SR #": i + 1,
-        "Service Type": s.service,
+        "Service Type": bookingServiceDisplayLabel(s.service as BookingServiceName),
         "Total Sales (PKR)": s.sale,
         "Total Purchases (PKR)": s.purchase,
         "Gross Margin (PKR)": s.margin,
@@ -317,7 +318,7 @@ export default function PnLPortfolio({ companyId, onBack }: Props) {
                       <td>
                         <span className="party-name">{ub.partyNames}</span>
                       </td>
-                      <td>{ub.service}</td>
+                      <td>{bookingServiceDisplayLabel(ub.service as BookingServiceName)}</td>
                       <td className="bf-money" style={{ textAlign: "right" }}>
                         {money(ub.sale)}
                       </td>
@@ -448,7 +449,7 @@ export default function PnLPortfolio({ companyId, onBack }: Props) {
                   serviceProfits.map((s) => (
                     <tr key={s.service}>
                       <td>
-                        <b>{s.service}</b>
+                        <b>{bookingServiceDisplayLabel(s.service as BookingServiceName)}</b>
                       </td>
                       <td className="bf-money" style={{ textAlign: "right" }}>
                         {money(s.sale)}

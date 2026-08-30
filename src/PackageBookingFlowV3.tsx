@@ -603,7 +603,7 @@ export default function PackageBookingFlowV2({
             <div className="package14-section-heading">
               <span>02</span>
               <div>
-                <b>PACKAGE DETAILS & RATES</b>
+                <b>{serviceLabel.toUpperCase()} DETAILS & RATES</b>
                 <small>
                   {editingId
                     ? "Current effective commercial rows — use Booking Adjustment to change them."
@@ -623,11 +623,11 @@ export default function PackageBookingFlowV2({
             </div>
             <div className="package14-summary">
               <div className="package14-summary-title">
-                <span>PACKAGE BOOKING SUMMARY</span>
+                <span>{serviceLabel.toUpperCase()} BOOKING SUMMARY</span>
                 <small>
                   {editingId
                     ? "Current row base. Register total may also include amendment/cancellation charges or credits."
-                    : "Part of Section 02 — these totals form the Package accounting value."}
+                    : `Part of Section 02 — these totals form the ${serviceLabel} accounting value.`}
                 </small>
               </div>
               <div className="package14-summary-body">
@@ -704,7 +704,9 @@ export default function PackageBookingFlowV2({
             >
               <span className="package14-step-purple">03</span>
               <div>
-                <b>PACKAGE TRAVEL & PASSENGER DETAILS — {ubNumber}</b>
+                <b>
+                  {serviceLabel.toUpperCase()} TRAVEL & PASSENGER DETAILS — {ubNumber}
+                </b>
                 <small>Operational details remain separate from accounting values.</small>
               </div>
               <span className="package14-optional">OPTIONAL</span>
@@ -728,7 +730,9 @@ export default function PackageBookingFlowV2({
         )}
 
         {!ubAssigned && (
-          <div className="package14-next-step">Create / Assign a Booking UB to unlock Package Details & Rates.</div>
+          <div className="package14-next-step">
+            Create / Assign a Booking UB to unlock {serviceLabel} Details & Rates.
+          </div>
         )}
         {ubAssigned && !commercialSaved && (
           <div className="package14-next-step">Save Section 02 to activate the {serviceLabel} booking.</div>

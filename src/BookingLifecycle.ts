@@ -90,6 +90,10 @@ export const bookingLifecycleConfigs: Record<BookingServiceName, BookingLifecycl
   },
 };
 
+export function bookingServiceDisplayLabel(service: BookingServiceName): string {
+  return bookingLifecycleConfigs[service]?.label ?? service;
+}
+
 export function bookingAccountTerms(transactionType: BookingTransactionType) {
   if (transactionType === "SALE") {
     return {
