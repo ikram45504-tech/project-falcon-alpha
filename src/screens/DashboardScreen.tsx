@@ -4,6 +4,7 @@ import { useWorkspace } from "../WorkspaceContext";
 import { useIsDesktop } from "../useIsDesktop";
 import { getDashboardMetrics, getRecentActivity, DashboardMetrics, RecentActivity } from "../DashboardDb";
 import { usePhoneUi } from "../phoneUi";
+import { useNavigate } from "react-router-dom";
 // Helper to format currency
 const pkr = (val: number) =>
   new Intl.NumberFormat("en-PK", {
