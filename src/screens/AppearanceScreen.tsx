@@ -4,21 +4,9 @@ export default function AppearanceScreen() {
   const { mode, layout, setMode, setLayout } = useTheme();
 
   return (
-    <section className="panel" style={{ position: "relative", padding: "40px" }}>
+    <section className="panel appearance-panel">
       {/* Top Right Theme Toggle */}
-      <div
-        style={{
-          position: "absolute",
-          top: "40px",
-          right: "40px",
-          display: "flex",
-          background: "var(--bg-app)",
-          border: "1px solid var(--border-light)",
-          borderRadius: "999px",
-          padding: "4px",
-          gap: "2px",
-        }}
-      >
+      <div className="appearance-themes">
         {[
           { id: "light" as const, icon: "☀️", label: "Bright" },
           { id: "dark" as const, icon: "🌙", label: "Dark" },
@@ -56,7 +44,7 @@ export default function AppearanceScreen() {
       </div>
 
       <div style={{ marginTop: "40px", paddingBottom: "60px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+        <div className="appearance-layouts">
           <LayoutCard
             title="LAYOUT 1: Classic Enterprise"
             desc="The standard, reliable horizontal navigation at the top of the screen."

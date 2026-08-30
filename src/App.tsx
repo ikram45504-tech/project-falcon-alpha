@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import "./App.css";
+import "./App.mobile.css";
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
 import { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
@@ -34,6 +35,16 @@ function AppLayout() {
   const [statementPartyId, setStatementPartyId] = useState("");
   const [bookingReset, setBookingReset] = useState(0);
   const [paymentReset, setPaymentReset] = useState(0);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.classList.toggle("mobile-nav-open", mobileNavOpen);
+    return () => document.body.classList.remove("mobile-nav-open");
+  }, [mobileNavOpen]);
 
   useEffect(() => {
     // Only run the auto-updater check and title updates if we are inside the Tauri desktop app
@@ -119,6 +130,28 @@ function AppLayout() {
   return (
     <main className="workspace">
       <header className="app-header">
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileNavOpen}
+          onClick={() => setMobileNavOpen((open) => !open)}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {mobileNavOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
+              </>
+            )}
+          </svg>
+        </button>
         <div className="identity">
           <div className="header-logo">{company?.logo_data ? <img src={company.logo_data} alt="" /> : initials}</div>
           <div>
@@ -155,7 +188,18 @@ function AppLayout() {
         </div>
       </header>
 
-      <nav className="workspace-nav main-workspace-nav">
+      <button
+        type="button"
+        className={`mobile-nav-backdrop${mobileNavOpen ? " is-open" : ""}`}
+        aria-label="Close menu"
+        onClick={() => setMobileNavOpen(false)}
+      />
+      <nav
+        className={`workspace-nav main-workspace-nav${mobileNavOpen ? " is-open" : ""}`}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("a")) setMobileNavOpen(false);
+        }}
+      >
         <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
             <svg

@@ -65,17 +65,9 @@ export default function DashboardScreen() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "32px", padding: "16px", minHeight: "100%" }}>
+    <div className="dash-page">
       {/* Header section */}
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          borderBottom: "1px solid var(--border-light)",
-          paddingBottom: "16px",
-        }}
-      >
+      <header className="dash-page-head">
         <div>
           <h1 style={{ fontSize: "28px", fontWeight: 800, margin: 0, color: "var(--brand-primary)" }}>
             Command Center
@@ -84,7 +76,7 @@ export default function DashboardScreen() {
             Welcome back to {company?.name || "your agency"}. Here's your performance this month.
           </p>
         </div>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        <div className="dash-page-actions">
           {syncNote ? (
             <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>{syncNote}</span>
           ) : null}
@@ -128,7 +120,7 @@ export default function DashboardScreen() {
       </header>
 
       {/* KPI Grid */}
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "24px" }}>
+      <section className="dash-kpis">
         {/* Sales Card */}
         <div
           style={{
@@ -334,7 +326,7 @@ export default function DashboardScreen() {
       </section>
 
       {/* Main Content Split */}
-      <section style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px", flex: 1 }}>
+      <section className="dash-split">
         {/* Left Column: Recent Activity Feed */}
         <div
           style={{

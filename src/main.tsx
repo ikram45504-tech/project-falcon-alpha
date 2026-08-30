@@ -3,6 +3,7 @@ import App from "./App";
 import { initializeDatabaseSafety } from "./DatabaseSafety";
 import { ThemeProvider } from "./ThemeContext";
 import { PRODUCT_NAME } from "./brand";
+import { registerPwa } from "./registerPwa";
 
 function renderSafetyFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -40,6 +41,7 @@ function renderSafetyFailure(error: unknown) {
 }
 
 async function bootstrap() {
+  registerPwa();
   try {
     document.title = PRODUCT_NAME;
     const report = await initializeDatabaseSafety();

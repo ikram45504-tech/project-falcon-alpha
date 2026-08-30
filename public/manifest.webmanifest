@@ -2,22 +2,35 @@
   "name": "Travel Hisab",
   "short_name": "Travel Hisab",
   "description": "Travel Accounting and Booking Management by SMC Softwares",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#082751",
   "theme_color": "#082751",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "finance"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/travel-hisab-logo-square.png",
-      "sizes": "512x512",
+      "src": "/icons/pwa-192x192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/logo/travel-hisab-logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icons/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

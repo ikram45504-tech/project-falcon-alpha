@@ -39,19 +39,9 @@ export default function SettingsScreen() {
   if (!session || !company) return <Navigate to="/" />;
 
   return (
-    <div style={{ display: "flex", gap: "24px", height: "100%", alignItems: "flex-start" }}>
+    <div className="settings-shell">
       {/* Settings Sidebar */}
-      <aside
-        style={{
-          width: "260px",
-          flexShrink: 0,
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-light)",
-          borderRadius: "12px",
-          padding: "16px",
-          boxShadow: "var(--shadow-sm)",
-        }}
-      >
+      <aside className="settings-hub">
         <h3
           style={{
             marginBottom: "16px",
@@ -63,7 +53,7 @@ export default function SettingsScreen() {
         >
           SETTINGS HUB
         </h3>
-        <nav style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        <nav className="settings-hub-links">
           <NavLink
             to="/settings/appearance"
             style={({ isActive }) => ({
@@ -234,7 +224,7 @@ export default function SettingsScreen() {
       </aside>
 
       {/* Settings Content Area */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="settings-hub-content">
         <Routes>
           <Route path="/" element={<Navigate to="appearance" replace />} />
           <Route path="appearance" element={<AppearanceScreen />} />
