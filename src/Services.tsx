@@ -18,7 +18,7 @@ type ModalProps = {
 
 /**
  * Legacy compatibility component.
- * Package, Ticket, Visa, Transport and Misc are now created from the unified
+ * Full Package, Ticket, Visa, Transport and Misc are now created from the unified
  * Bookings module. Keeping this route read-only prevents duplicate ledgers.
  */
 export function ServicesModule(_props: ModuleProps) {
@@ -29,8 +29,8 @@ export function ServicesModule(_props: ModuleProps) {
           <span className="eyebrow green-text">LEGACY MODULE RETIRED</span>
           <h2>Services moved to Bookings</h2>
           <p>
-            Use Bookings → Sale/Purchase and select Package, Ticket, Visa, Transport or Misc. Those records now feed
-            ledgers and Statements automatically.
+            Use Bookings → Sale/Purchase and select Full Package, Ticket, Visa, Transport or Misc. Those records now
+            feed ledgers and Statements automatically.
           </p>
         </div>
       </div>

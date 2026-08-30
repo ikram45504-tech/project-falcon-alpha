@@ -832,7 +832,7 @@ function effectivePendingSar<T extends StatementBookingMeta & { unconverted_sar?
 function drawReconciliation(doc: jsPDF, data: StatementPdfData, y: number) {
   const sections = data.sections;
   const serviceRows: Array<[string, number]> = [
-    ["Package Bookings / Adjustments", statementSectionPeriodTotal(sections.packageBookings)],
+    ["Full Package Bookings / Adjustments", statementSectionPeriodTotal(sections.packageBookings)],
     ["Ticket Bookings / Adjustments", statementSectionPeriodTotal(sections.ticketBookings)],
     ["Hotel Bookings / Adjustments", statementSectionPeriodTotal(sections.hotelBookings)],
     ["Visa Bookings / Adjustments", statementSectionPeriodTotal(sections.visaBookings)],
@@ -981,10 +981,10 @@ export function buildStatementPdf(data: StatementPdfData) {
   y = renderSection(
     doc,
     data,
-    "PACKAGE BOOKINGS",
+    "FULL PACKAGE BOOKINGS",
     packageColumns,
     packageRows,
-    { label: "PACKAGE STATEMENT SUBTOTAL", pkr: statementSectionPeriodTotal(data.sections.packageBookings) },
+    { label: "FULL PACKAGE STATEMENT SUBTOTAL", pkr: statementSectionPeriodTotal(data.sections.packageBookings) },
     BOOKING_THEME,
     y,
   );

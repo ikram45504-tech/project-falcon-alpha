@@ -176,7 +176,9 @@ export default function PartyLedger({
 
       <div className="ledger-section blue-section services-ledger-section">
         <div className="ledger-section-title">
-          <b>{isVendor ? "PURCHASE BOOKINGS" : "SALE BOOKINGS"} — PACKAGE / TICKET / HOTEL / VISA / TRANSPORT / MISC</b>
+          <b>
+            {isVendor ? "PURCHASE BOOKINGS" : "SALE BOOKINGS"} — FULL PACKAGE / TICKET / HOTEL / VISA / TRANSPORT / MISC
+          </b>
           <div className="section-right">
             <strong>TOTAL: {formatMoney(bookingTotal)}</strong>
           </div>

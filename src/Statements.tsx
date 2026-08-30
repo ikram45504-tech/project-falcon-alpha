@@ -506,7 +506,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
           <span className="eyebrow blue">SERVICE-WISE BOOKING STATEMENT</span>
           <h2>{statementDirection === "PARTY" ? "Party Statement" : "Vendor Statement"}</h2>
           <p>
-            Package, Ticket, Hotel, Visa, Transport and Misc are shown as separate statement sections with
+            Full Package, Ticket, Hotel, Visa, Transport and Misc are shown as separate statement sections with
             service-specific fields.
           </p>
         </div>

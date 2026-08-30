@@ -14,7 +14,10 @@ import PackageBookingAdjustment from "./PackageBookingAdjustment";
 import { useBookingFlowState } from "./useBookingFlowState";
 import { getPackageAdjustmentSummaryMap, type PackageAdjustmentSummary } from "./PackageAdjustmentDb";
 import { packageEffectiveCount, packageRowHasData, packageRowTotal, calculatePackageSummary } from "./pricingEngines";
+import { bookingLifecycleConfigs } from "./BookingLifecycle";
 import "./PackageBookingFlow.css";
+
+const serviceLabel = bookingLifecycleConfigs.PACKAGE.label;
 
 type Props = {
   companyId: string;
@@ -114,7 +117,7 @@ export default function PackageBookingFlowV2({
     setMessage,
     assignUb: hookAssign,
     resetState,
-  } = useBookingFlowState(companyId, transactionType, entries, "Package");
+  } = useBookingFlowState(companyId, transactionType, entries, serviceLabel);
 
   const [rows, setRows] = useState<PackageRowState[]>([newRow("ADULT")]);
   const [registerFilter, setRegisterFilter] = useState<RegisterFilter>("ALL");
@@ -225,7 +228,7 @@ export default function PackageBookingFlowV2({
       setEditingId(id);
       setCommercialSaved(true);
       setMessage(
-        `Package booking ${ubNumber} saved successfully. Commercial values are now locked; use Booking Adjustment for future corrections, amendments or cancellations.`,
+        `${serviceLabel} booking ${ubNumber} saved successfully. Commercial values are now locked; use Booking Adjustment for future corrections, amendments or cancellations.`,
       );
       await loadEntries(search);
       await onChanged?.();
@@ -317,7 +320,7 @@ export default function PackageBookingFlowV2({
     if (!canVoid || entry.status !== "ACTIVE" || busy) return;
     if (
       !window.confirm(
-        `Void Package booking ${entry.ub_number}? Use Void only when this booking should never have existed. The audit record will remain.`,
+        `Void ${serviceLabel} booking ${entry.ub_number}? Use Void only when this booking should never have existed. The audit record will remain.`,
       )
     )
       return;
@@ -328,7 +331,7 @@ export default function PackageBookingFlowV2({
       await loadEntries(search);
       await onChanged?.();
       if (editingId === entry.id) resetForm();
-      setMessage(`Package booking ${entry.ub_number} voided.`);
+      setMessage(`${serviceLabel} booking ${entry.ub_number} voided.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -339,7 +342,7 @@ export default function PackageBookingFlowV2({
   async function deleteEntry(entry: PackageBooking) {
     if (
       !window.confirm(
-        `Are you sure you want to permanently delete this Package Booking (${entry.ub_number})? This is a temporary testing function.`,
+        `Are you sure you want to permanently delete this ${serviceLabel} Booking (${entry.ub_number})? This is a temporary testing function.`,
       )
     )
       return;
@@ -351,7 +354,7 @@ export default function PackageBookingFlowV2({
       await loadEntries(search);
       await onChanged?.();
       if (editingId === entry.id) resetForm();
-      setMessage(`Package booking ${entry.ub_number} deleted.`);
+      setMessage(`${serviceLabel} booking ${entry.ub_number} deleted.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -475,18 +478,18 @@ export default function PackageBookingFlowV2({
                 void loadEntries(search);
               }}
             >
-              Package Booking Register
+              {serviceLabel} Booking Register
             </button>
           </div>
         </div>
         <div className="package14-title">
           <div>
-            <span className="eyebrow blue">PACKAGE BOOKING</span>
-            <h2>{commercialSaved ? `Package Booking — ${ubNumber}` : "New Package Booking"}</h2>
+            <span className="eyebrow blue">{serviceLabel.toUpperCase()} BOOKING</span>
+            <h2>{commercialSaved ? `${serviceLabel} Booking — ${ubNumber}` : `New ${serviceLabel} Booking`}</h2>
             <p>
               {editingId
-                ? "Review the current effective Package booking. Commercial changes are protected by Booking Adjustment history."
-                : "Create the UB first, save the accounting Package values second, then complete optional passenger/travel operations when required."}
+                ? `Review the current effective ${serviceLabel} booking. Commercial changes are protected by Booking Adjustment history.`
+                : `Create the UB first, save the accounting ${serviceLabel} values second, then complete optional passenger/travel operations when required.`}
             </p>
           </div>
         </div>
@@ -530,7 +533,7 @@ export default function PackageBookingFlowV2({
               <label>
                 Date of Booking *
                 <input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} />
-                <small>Accounting date for the Package booking.</small>
+                <small>Accounting date for the {serviceLabel} booking.</small>
               </label>
               <label>
                 Booking Number *
@@ -562,7 +565,7 @@ export default function PackageBookingFlowV2({
           <section className={`package14-identity-complete ${commercialSaved ? "saved" : "ready"}`}>
             <span className="package14-check">✓</span>
             <div className="package14-identity-main">
-              <small>{commercialSaved ? "PACKAGE BOOKING" : "BOOKING UB READY"}</small>
+              <small>{commercialSaved ? `${serviceLabel.toUpperCase()} BOOKING` : "BOOKING UB READY"}</small>
               <b>{ubNumber}</b>
               <span>{selectedAccount?.name || accountNoun}</span>
             </div>
@@ -660,7 +663,7 @@ export default function PackageBookingFlowV2({
             <div className="package14-commercial-actions">
               {commercialSaved && (
                 <button type="button" className="secondary" onClick={resetForm}>
-                  + New Package Booking
+                  + New {serviceLabel} Booking
                 </button>
               )}
               {!editingId && canCreate && (
@@ -670,7 +673,7 @@ export default function PackageBookingFlowV2({
                   disabled={busy}
                   onClick={() => void saveCommercial()}
                 >
-                  {busy ? "Saving..." : `Save Package Booking — ${ubNumber}`}
+                  {busy ? "Saving..." : `Save ${serviceLabel} Booking — ${ubNumber}`}
                 </button>
               )}
               {editingId && canEdit && openedLifecycle !== "CANCELLED" && (
@@ -728,7 +731,7 @@ export default function PackageBookingFlowV2({
           <div className="package14-next-step">Create / Assign a Booking UB to unlock Package Details & Rates.</div>
         )}
         {ubAssigned && !commercialSaved && (
-          <div className="package14-next-step">Save Section 02 to activate the Package booking.</div>
+          <div className="package14-next-step">Save Section 02 to activate the {serviceLabel} booking.</div>
         )}
 
         {quickAccountOpen && (
@@ -742,7 +745,7 @@ export default function PackageBookingFlowV2({
               </button>
               <span className="eyebrow blue">QUICK ACCOUNT</span>
               <h2>Create {activeTransactionType === "SALE" ? "Party / Customer" : "Vendor / Supplier"}</h2>
-              <p>Create the account without leaving the Package booking. It will be selected automatically.</p>
+              <p>Create the account without leaving the {serviceLabel} booking. It will be selected automatically.</p>
               <div className="package14-quick-grid">
                 <label>
                   Name *
@@ -814,14 +817,14 @@ export default function PackageBookingFlowV2({
               setError("");
             }}
           >
-            ← Back to Package Booking
+            ← Back to {serviceLabel} Booking
           </button>
-          <span className="booking-foundation-badge active-engine">PACKAGE REGISTER</span>
+          <span className="booking-foundation-badge active-engine">{serviceLabel.toUpperCase()} REGISTER</span>
         </div>
         <div className="package14-register-title">
           <div>
-            <span className="eyebrow blue">PACKAGE BOOKING REGISTER</span>
-            <h2>Package Booking Register</h2>
+            <span className="eyebrow blue">{serviceLabel.toUpperCase()} BOOKING REGISTER</span>
+            <h2>{serviceLabel} Booking Register</h2>
             <p>
               Original bookings stay tied to their genuine UB. Correction, Amendment and Cancellation are stored as
               revision history.
@@ -857,7 +860,7 @@ export default function PackageBookingFlowV2({
                 className={registerFilter === item ? "active" : ""}
                 onClick={() => setRegisterFilter(item)}
               >
-                {item === "ALL" ? "All Package Bookings" : item === "SALE" ? "Sales" : "Purchases"}
+                {item === "ALL" ? `All ${serviceLabel} Bookings` : item === "SALE" ? "Sales" : "Purchases"}
               </button>
             ))}
           </div>
@@ -876,8 +879,8 @@ export default function PackageBookingFlowV2({
         {visibleEntries.length === 0 ? (
           <div className="empty-state compact-empty">
             <div className="empty-icon">PKG</div>
-            <h3>No Package bookings found</h3>
-            <p>Create a Package booking or change the filter/search.</p>
+            <h3>No {serviceLabel} bookings found</h3>
+            <p>Create a {serviceLabel} booking or change the filter/search.</p>
           </div>
         ) : (
           <div className="party-table-wrap package14-register-wrap">

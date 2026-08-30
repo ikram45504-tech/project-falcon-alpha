@@ -1,5 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { hasPermission, type UserRole } from "./permissions";
+import { flushDesktopSyncQueue, isDesktopApp, queueSync, syncTransportOperationalBundle } from "./cloudSync";
+import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -35,15 +37,13 @@ export type SaveTransportOperationalInput = {
 
 async function db() {
   if (!databasePromise) {
-    const isTauri = "__TAURI_INTERNALS__" in window;
-    if (isTauri) {
+    if (isDesktopApp()) {
       databasePromise = Database.load(DB_PATH);
     } else {
-      console.warn("Running in Web Mode. Local database is not available for " + DB_PATH);
       databasePromise = Promise.resolve({
         execute: async () => ({ lastInsertId: 0, rowsAffected: 0 }),
         select: async () => [],
-      } as any);
+      } as unknown as Database);
     }
   }
   return databasePromise;
@@ -127,6 +127,46 @@ export async function getTransportOperationalDetails(
   bookingId: string,
 ): Promise<TransportOperationalDetails> {
   await ensureSchema();
+
+  if (!isDesktopApp()) {
+    const [sectorsRes, metaRes] = await Promise.all([
+      supabase
+        .from("transport_operational_sectors")
+        .select(
+          "id,sector_sort_order,pickup_time,pickup_point,driver_name,driver_mobile,vehicle_plate,confirmation_reference,sort_order",
+        )
+        .eq("company_id", companyId)
+        .eq("booking_id", bookingId)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("transport_operational_meta")
+        .select("passenger_saudi_contact,group_family_head,transport_instructions,notes")
+        .eq("company_id", companyId)
+        .eq("booking_id", bookingId)
+        .maybeSingle(),
+    ]);
+    if (sectorsRes.error) throw new Error(sectorsRes.error.message);
+    if (metaRes.error) throw new Error(metaRes.error.message);
+
+    return {
+      sectors: (sectorsRes.data || []).map((item) => ({
+        id: item.id,
+        sectorSortOrder: item.sector_sort_order,
+        pickupTime: item.pickup_time,
+        pickupPoint: item.pickup_point,
+        driverName: item.driver_name,
+        driverMobile: item.driver_mobile,
+        vehiclePlate: item.vehicle_plate,
+        confirmationReference: item.confirmation_reference,
+        sortOrder: item.sort_order,
+      })),
+      passengerSaudiContact: metaRes.data?.passenger_saudi_contact || "",
+      groupFamilyHead: metaRes.data?.group_family_head || "",
+      transportInstructions: metaRes.data?.transport_instructions || "",
+      notes: metaRes.data?.notes || "",
+    };
+  }
+
   const database = await db();
   const sectors = await database.select<
     Array<{
@@ -177,44 +217,88 @@ export async function saveTransportOperationalDetails(
 ) {
   await requireEdit(companyId, userId);
   await ensureSchema();
-  const database = await db();
   const now = new Date().toISOString();
-  await database.execute(`DELETE FROM transport_operational_sectors WHERE company_id=$1 AND booking_id=$2`, [
-    companyId,
-    bookingId,
-  ]);
-  for (const [index, sector] of input.sectors.entries()) {
+
+  const sectors = input.sectors.map((sector, index) => ({
+    id: crypto.randomUUID(),
+    company_id: companyId,
+    booking_id: bookingId,
+    sector_sort_order: sector.sectorSortOrder,
+    pickup_time: sector.pickupTime,
+    pickup_point: sector.pickupPoint.trim(),
+    driver_name: sector.driverName.trim(),
+    driver_mobile: sector.driverMobile.trim(),
+    vehicle_plate: sector.vehiclePlate.trim().toUpperCase(),
+    confirmation_reference: sector.confirmationReference.trim().toUpperCase(),
+    sort_order: index,
+  }));
+
+  let createdAt = now;
+  if (isDesktopApp()) {
+    const database = await db();
+    const metaRows = await database.select<Array<{ created_at: string }>>(
+      `SELECT created_at FROM transport_operational_meta WHERE booking_id=$1 LIMIT 1`,
+      [bookingId],
+    );
+    if (metaRows[0]?.created_at) createdAt = metaRows[0].created_at;
+
+    await database.execute(`DELETE FROM transport_operational_sectors WHERE company_id=$1 AND booking_id=$2`, [
+      companyId,
+      bookingId,
+    ]);
+    for (const sector of sectors) {
+      await database.execute(
+        `INSERT INTO transport_operational_sectors (id,company_id,booking_id,sector_sort_order,pickup_time,pickup_point,driver_name,driver_mobile,vehicle_plate,confirmation_reference,sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [
+          sector.id,
+          sector.company_id,
+          sector.booking_id,
+          sector.sector_sort_order,
+          sector.pickup_time,
+          sector.pickup_point,
+          sector.driver_name,
+          sector.driver_mobile,
+          sector.vehicle_plate,
+          sector.confirmation_reference,
+          sector.sort_order,
+        ],
+      );
+    }
     await database.execute(
-      `INSERT INTO transport_operational_sectors (id,company_id,booking_id,sector_sort_order,pickup_time,pickup_point,driver_name,driver_mobile,vehicle_plate,confirmation_reference,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      `INSERT INTO transport_operational_meta (booking_id,company_id,passenger_saudi_contact,group_family_head,transport_instructions,notes,created_at,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,passenger_saudi_contact=excluded.passenger_saudi_contact,group_family_head=excluded.group_family_head,transport_instructions=excluded.transport_instructions,notes=excluded.notes,updated_at=excluded.updated_at`,
       [
-        crypto.randomUUID(),
-        companyId,
         bookingId,
-        sector.sectorSortOrder,
-        sector.pickupTime,
-        sector.pickupPoint.trim(),
-        sector.driverName.trim(),
-        sector.driverMobile.trim(),
-        sector.vehiclePlate.trim().toUpperCase(),
-        sector.confirmationReference.trim().toUpperCase(),
-        index,
+        companyId,
+        input.passengerSaudiContact.trim(),
+        input.groupFamilyHead.trim(),
+        input.transportInstructions.trim(),
+        input.notes.trim(),
+        createdAt,
+        now,
       ],
     );
+    await audit(companyId, userId, bookingId);
+  } else {
+    const { data } = await supabase
+      .from("transport_operational_meta")
+      .select("created_at")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+    if (data?.created_at) createdAt = data.created_at;
   }
-  await database.execute(
-    `INSERT INTO transport_operational_meta (booking_id,company_id,passenger_saudi_contact,group_family_head,transport_instructions,notes,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$7)
-     ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,passenger_saudi_contact=excluded.passenger_saudi_contact,group_family_head=excluded.group_family_head,transport_instructions=excluded.transport_instructions,notes=excluded.notes,updated_at=excluded.updated_at`,
-    [
-      bookingId,
-      companyId,
-      input.passengerSaudiContact.trim(),
-      input.groupFamilyHead.trim(),
-      input.transportInstructions.trim(),
-      input.notes.trim(),
-      now,
-    ],
-  );
-  await audit(companyId, userId, bookingId);
+
+  await syncTransportOperationalBundle(bookingId, companyId, {
+    passengerSaudiContact: input.passengerSaudiContact.trim(),
+    groupFamilyHead: input.groupFamilyHead.trim(),
+    transportInstructions: input.transportInstructions.trim(),
+    notes: input.notes.trim(),
+    createdAt,
+    updatedAt: now,
+    sectors,
+  });
+  await queueSync("UPDATE", "transport_bookings", bookingId, { updated_at: now });
+  if (isDesktopApp()) await flushDesktopSyncQueue();
 }

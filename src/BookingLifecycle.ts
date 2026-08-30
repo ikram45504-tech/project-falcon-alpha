@@ -14,11 +14,11 @@ export type BookingLifecycleConfig = {
 export const bookingLifecycleConfigs: Record<BookingServiceName, BookingLifecycleConfig> = {
   PACKAGE: {
     service: "PACKAGE",
-    label: "Package",
+    label: "Full Package",
     amendmentTypes: [
       "Travel Date Change",
       "Passenger / Pax Change",
-      "Package Change",
+      "Full Package Change",
       "Included Service Change",
       "Rate / Price Change",
       "Hotel Component Change",

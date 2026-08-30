@@ -1,5 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { initMiscDatabase } from "./miscDb";
+import { isDesktopApp } from "./cloudSync";
+import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -105,7 +107,72 @@ const bookingUnion = `
   WHERE b.company_id=$1
 `;
 
+const WEB_BOOKING_SOURCES: Array<{
+  table: string;
+  service_type: BookingServiceName;
+  includeSar: boolean;
+}> = [
+  { table: "package_bookings", service_type: "PACKAGE", includeSar: false },
+  { table: "ticket_bookings", service_type: "TICKET", includeSar: false },
+  { table: "hotel_bookings", service_type: "HOTEL", includeSar: true },
+  { table: "visa_bookings", service_type: "VISA", includeSar: true },
+  { table: "transport_bookings", service_type: "TRANSPORT", includeSar: true },
+  { table: "misc_bookings", service_type: "MISC", includeSar: true },
+];
+
+async function fetchWebBookingAccountingEntries(companyId: string, counterpartyId = "") {
+  const { data: parties, error: partyError } = await supabase
+    .from("parties")
+    .select("id,name")
+    .eq("company_id", companyId);
+  if (partyError) throw new Error(partyError.message);
+
+  const partyNames = new Map((parties || []).map((row) => [String(row.id), String(row.name || "")]));
+  const entries: BookingAccountingEntry[] = [];
+
+  for (const source of WEB_BOOKING_SOURCES) {
+    let query = supabase
+      .from(source.table)
+      .select(
+        "id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at,total_sar,unconverted_sar",
+      )
+      .eq("company_id", companyId);
+    if (counterpartyId) query = query.eq("counterparty_id", counterpartyId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    for (const row of data || []) {
+      entries.push({
+        id: String(row.id),
+        company_id: companyId,
+        service_type: source.service_type,
+        transaction_type: row.transaction_type as BookingAccountingDirection,
+        counterparty_id: String(row.counterparty_id),
+        counterparty_name: partyNames.get(String(row.counterparty_id)) || "",
+        transaction_date: String(row.transaction_date),
+        ub_number: String(row.ub_number || ""),
+        total_sar: source.includeSar ? Number(row.total_sar || 0) : 0,
+        total_pkr: Number(row.total_pkr || 0),
+        unconverted_sar: source.includeSar ? Number(row.unconverted_sar || 0) : 0,
+        status: row.status as "ACTIVE" | "VOID",
+        created_at: String(row.created_at || ""),
+      });
+    }
+  }
+
+  return entries.sort(
+    (a, b) =>
+      a.transaction_date.localeCompare(b.transaction_date) ||
+      a.created_at.localeCompare(b.created_at) ||
+      a.service_type.localeCompare(b.service_type),
+  );
+}
+
 export async function getBookingAccountingEntries(companyId: string, counterpartyId = "") {
+  if (!isDesktopApp()) {
+    return fetchWebBookingAccountingEntries(companyId, counterpartyId);
+  }
+
   const database = await ready();
   return database.select<BookingAccountingEntry[]>(
     `SELECT * FROM (${bookingUnion}) q

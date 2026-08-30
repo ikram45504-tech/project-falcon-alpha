@@ -6,7 +6,7 @@ export const PRODUCT_WINDOW_TITLE = PRODUCT_NAME;
 export const PRODUCT_BYLINE = `${PRODUCT_NAME} by ${COMPANY_NAME}`;
 
 export const PRODUCT_HIGHLIGHTS = [
-  "Package, Hotel, Ticket, Visa, Transport & Misc bookings",
+  "Full Package, Hotel, Ticket, Visa, Transport & Misc bookings",
   "Party ledgers, payments and service-wise statements",
   "Amendments with revision history on every booking",
   "Desktop app with secure cloud sync for your team",

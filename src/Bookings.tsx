@@ -22,7 +22,7 @@ type Props = {
 };
 
 const serviceCards: Array<{ key: BookingService; title: string; subtitle: string }> = [
-  { key: "PACKAGE", title: "Package", subtitle: "Umrah package booking" },
+  { key: "PACKAGE", title: "Full Package", subtitle: "Full Umrah package booking" },
   { key: "TICKET", title: "Ticket", subtitle: "Air ticket booking" },
   { key: "HOTEL", title: "Hotel", subtitle: "Hotel accommodation" },
   { key: "VISA", title: "Visa", subtitle: "Visa services" },

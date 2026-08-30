@@ -4,6 +4,7 @@ import { createPasswordRecord, verifyPassword } from "./security";
 import { hasPermission, Permission, UserRole } from "./permissions";
 import {
   applyCloudOperation,
+  isDeprecatedCloudTable,
   queueSync as enqueueCloudSync,
   syncClearBookingChildren,
   syncPackageBookingVoid,
@@ -2307,7 +2308,6 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
     "transport_operational_sectors",
     "misc_booking_lines",
     "misc_booking_adjustments",
-    "misc_booking_details",
     "misc_operational_meta",
     "misc_operational_services",
     "misc_commercial_family_refs",
@@ -3364,354 +3364,13 @@ export {
   voidVisaBooking,
 } from "./VisaFlowDb";
 
-// -----------------------------------------------------------------------------
-// PHASE 12A — TRANSPORT BOOKING ENGINE
-// -----------------------------------------------------------------------------
-function normalizeTransportUb(value: string) {
-  return value.trim().replace(/\s+/g, " ").toUpperCase();
-}
-
-export function calculateTransportLines(lines: TransportBookingLineInput[]) {
-  const allowedTypes: TransportType[] = ["SHARING_BUS", "PRIVATE_VEHICLE"];
-  const privateVehicles: TransportVehicleType[] = [
-    "CAR",
-    "GMC_YUKON",
-    "STARIA",
-    "STAREX",
-    "HIACE",
-    "COASTER",
-    "BUS",
-    "OTHER",
-  ];
-  const calculated: Array<{
-    transportDate: string;
-    transportType: TransportType;
-    fromLocation: string;
-    toLocation: string;
-    vehicleType: TransportVehicleType;
-    customVehicleName: string;
-    vehicleCount: number;
-    rateSar: number;
-    paxCount: number;
-    roe: number;
-    lineTotalSar: number;
-    lineTotalPkr: number;
-    sortOrder: number;
-  }> = [];
-
-  lines.forEach((line, index) => {
-    const rowNo = index + 1;
-    const transportDate = line.transportDate.trim();
-    const fromLocation = line.fromLocation.trim();
-    const toLocation = line.toLocation.trim();
-    const rateSar = Number(line.rateSar);
-    const paxCount = Math.trunc(Number(line.paxCount));
-    const roe = line.roe == null ? 0 : Number(line.roe);
-
-    if (!transportDate) throw new Error(`Transport row ${rowNo}: Transport Date is required.`);
-    if (!allowedTypes.includes(line.transportType))
-      throw new Error(`Transport row ${rowNo}: select Sharing Bus or Private Vehicle.`);
-    if (!fromLocation) throw new Error(`Transport row ${rowNo}: From route is required.`);
-    if (!toLocation) throw new Error(`Transport row ${rowNo}: To route is required.`);
-    if (fromLocation.toLowerCase() === toLocation.toLowerCase())
-      throw new Error(`Transport row ${rowNo}: From and To cannot be the same.`);
-    if (!Number.isFinite(rateSar) || rateSar <= 0) throw new Error(`Transport row ${rowNo}: enter a valid SAR rate.`);
-    if (!Number.isFinite(paxCount) || paxCount < 1 || paxCount > 999)
-      throw new Error(`Transport row ${rowNo}: No. of Pax must be between 1 and 999.`);
-    if (!Number.isFinite(roe) || roe < 0)
-      throw new Error(`Transport row ${rowNo}: enter a valid ROE or leave it blank.`);
-
-    let vehicleType: TransportVehicleType = "SHARING_BUS";
-    let customVehicleName = "";
-    let vehicleCount = 0;
-    let lineTotalSar = rateSar * paxCount;
-
-    if (line.transportType === "PRIVATE_VEHICLE") {
-      if (!privateVehicles.includes(line.vehicleType))
-        throw new Error(`Transport row ${rowNo}: select a Private Vehicle type.`);
-      vehicleType = line.vehicleType;
-      customVehicleName = line.customVehicleName.trim();
-      if (vehicleType === "OTHER" && !customVehicleName)
-        throw new Error(`Transport row ${rowNo}: enter the Custom Vehicle name.`);
-      vehicleCount = Math.trunc(Number(line.vehicleCount));
-      if (!Number.isFinite(vehicleCount) || vehicleCount < 1 || vehicleCount > 99)
-        throw new Error(`Transport row ${rowNo}: No. of Vehicles must be between 1 and 99.`);
-      lineTotalSar = rateSar * vehicleCount;
-    }
-
-    const lineTotalPkr = roe > 0 ? lineTotalSar * roe : 0;
-    calculated.push({
-      transportDate,
-      transportType: line.transportType,
-      fromLocation,
-      toLocation,
-      vehicleType,
-      customVehicleName,
-      vehicleCount,
-      rateSar,
-      paxCount,
-      roe,
-      lineTotalSar,
-      lineTotalPkr,
-      sortOrder: index,
-    });
-  });
-
-  if (!calculated.length) throw new Error("Add at least one Transport row.");
-  const totalSar = calculated.reduce((sum, line) => sum + line.lineTotalSar, 0);
-  const totalPkr = calculated.reduce((sum, line) => sum + line.lineTotalPkr, 0);
-  const unconvertedSar = calculated.filter((line) => line.roe <= 0).reduce((sum, line) => sum + line.lineTotalSar, 0);
-  return { calculated, totalSar, totalPkr, unconvertedSar };
-}
-
-async function validateUniqueTransportUb(
-  companyId: string,
-  transactionType: BookingTransactionType,
-  counterpartyId: string,
-  ubNumber: string,
-  editingBookingId = "",
-) {
-  const normalized = normalizeTransportUb(ubNumber);
-  const database = await db();
-  const rows = await database.select<
-    Array<{ id: string; transaction_type: BookingTransactionType; counterparty_id: string; ub_number: string }>
-  >(`SELECT id,transaction_type,counterparty_id,ub_number FROM transport_bookings WHERE company_id=$1`, [companyId]);
-  const duplicate = rows.find((row) => {
-    if (row.id === editingBookingId || normalizeTransportUb(row.ub_number) !== normalized) return false;
-    if (transactionType === "SALE") return row.transaction_type === "SALE";
-    return row.transaction_type === "PURCHASE" && row.counterparty_id === counterpartyId;
-  });
-  if (duplicate) {
-    if (transactionType === "SALE")
-      throw new Error(
-        `UB # / Booking "${ubNumber.trim()}" already has a Transport Sale booking. Edit the existing Transport booking or use another UB #.`,
-      );
-    throw new Error(
-      `This Vendor already has a Transport Purchase booking for UB # "${ubNumber.trim()}". Edit that booking or select another Vendor.`,
-    );
-  }
-}
-
-async function validateTransportBooking(companyId: string, input: TransportBookingInput, editingBookingId = "") {
-  if (!["SALE", "PURCHASE"].includes(input.transactionType)) throw new Error("Select Sale or Purchase first.");
-  if (!input.transactionDate) throw new Error("Date of Booking is required.");
-  if (!input.ubNumber.trim()) throw new Error("UB # / Booking is required.");
-  await validatePackageCounterparty(companyId, input.transactionType, input.counterpartyId);
-  await validateUniqueTransportUb(
-    companyId,
-    input.transactionType,
-    input.counterpartyId,
-    input.ubNumber,
-    editingBookingId,
-  );
-  return calculateTransportLines(input.lines);
-}
-
-export async function getTransportBookings(companyId: string, search = "") {
-  const isTauri = "__TAURI_INTERNALS__" in window;
-  if (!isTauri) {
-    let query = supabase
-      .from("transport_bookings")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false });
-
-    if (search.trim()) {
-      const term = `%${search.trim()}%`;
-      query = query.or(`ub_number.ilike.${term}`);
-    }
-
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    if (!data) return [];
-
-    const partyNames = await fetchPartyNameMap(companyId);
-    const lines = await fetchChildRowsByBookingIds(
-      "transport_booking_lines",
-      data.map((row) => String(row.id)),
-    );
-    const linesByBooking = groupRowsByBookingId(lines);
-
-    return data.map((b: any) => ({
-      ...b,
-      counterparty_name: partyNames.get(String(b.counterparty_id)) || "",
-      lines: linesByBooking.get(String(b.id)) || [],
-    })) as TransportBooking[];
-  }
-
-  const database = await db();
-  const clean = search.trim();
-  const term = `%${clean}%`;
-  const headers = await database.select<Omit<TransportBooking, "lines">[]>(
-    `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name,'') AS counterparty_name,
-            b.transaction_date,b.ub_number,b.pax_saudi_number,b.notes,b.total_sar,b.total_pkr,b.unconverted_sar,
-            b.status,b.created_at,b.updated_at
-     FROM transport_bookings b
-     LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
-     WHERE b.company_id=$1
-       AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR b.pax_saudi_number LIKE $3 COLLATE NOCASE OR
-            b.notes LIKE $3 COLLATE NOCASE OR COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR
-            EXISTS (SELECT 1 FROM transport_booking_lines l WHERE l.booking_id=b.id AND
-              (l.from_location LIKE $3 COLLATE NOCASE OR l.to_location LIKE $3 COLLATE NOCASE OR
-               l.transport_type LIKE $3 COLLATE NOCASE OR l.vehicle_type LIKE $3 COLLATE NOCASE OR
-               l.custom_vehicle_name LIKE $3 COLLATE NOCASE)))
-     ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term],
-  );
-  const lines = await database.select<TransportBookingLine[]>(
-    `SELECT l.id,l.booking_id,l.transport_date,l.transport_type,l.from_location,l.to_location,l.vehicle_type,
-            l.custom_vehicle_name,l.vehicle_count,l.rate_sar,l.pax_count,l.roe,l.line_total_sar,l.line_total_pkr,l.sort_order
-     FROM transport_booking_lines l
-     INNER JOIN transport_bookings b ON b.id=l.booking_id
-     WHERE b.company_id=$1 ORDER BY l.sort_order ASC`,
-    [companyId],
-  );
-  const grouped = new Map<string, TransportBookingLine[]>();
-  for (const line of lines) {
-    const current = grouped.get(line.booking_id) || [];
-    current.push(line);
-    grouped.set(line.booking_id, current);
-  }
-  return headers.map((header) => ({ ...header, lines: grouped.get(header.id) || [] })) as TransportBooking[];
-}
-
-async function insertTransportLines(
-  database: Awaited<ReturnType<typeof db>>,
-  bookingId: string,
-  calculated: ReturnType<typeof calculateTransportLines>["calculated"],
-) {
-  for (const line of calculated) {
-    await database.execute(
-      `INSERT INTO transport_booking_lines
-       (id,booking_id,transport_date,transport_type,from_location,to_location,vehicle_type,custom_vehicle_name,
-        vehicle_count,rate_sar,pax_count,roe,line_total_sar,line_total_pkr,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-      [
-        crypto.randomUUID(),
-        bookingId,
-        line.transportDate,
-        line.transportType,
-        line.fromLocation,
-        line.toLocation,
-        line.vehicleType,
-        line.customVehicleName,
-        line.vehicleCount,
-        line.rateSar,
-        line.paxCount,
-        line.roe,
-        line.lineTotalSar,
-        line.lineTotalPkr,
-        line.sortOrder,
-      ],
-    );
-  }
-}
-
-export async function createTransportBooking(companyId: string, input: TransportBookingInput, actorUserId = "") {
-  await requirePermission(companyId, actorUserId, "create_bookings");
-  const result = await validateTransportBooking(companyId, input);
-  const database = await db();
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  await database.execute(
-    `INSERT INTO transport_bookings
-     (id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,pax_saudi_number,notes,
-      total_sar,total_pkr,unconverted_sar,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'ACTIVE',$12,$12,$13,$13)`,
-    [
-      id,
-      companyId,
-      input.transactionType,
-      input.counterpartyId,
-      input.transactionDate,
-      input.ubNumber.trim(),
-      input.paxSaudiNumber.trim(),
-      input.notes.trim(),
-      result.totalSar,
-      result.totalPkr,
-      result.unconvertedSar,
-      now,
-      actorUserId,
-    ],
-  );
-  await insertTransportLines(database, id, result.calculated);
-  if (actorUserId)
-    await createAuditLog(
-      companyId,
-      actorUserId,
-      "BOOKING_CREATED",
-      "TRANSPORT",
-      id,
-      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`,
-    );
-  return id;
-}
-
-export async function updateTransportBooking(
-  companyId: string,
-  bookingId: string,
-  input: TransportBookingInput,
-  actorUserId = "",
-) {
-  await requirePermission(companyId, actorUserId, "edit_bookings");
-  const result = await validateTransportBooking(companyId, input, bookingId);
-  const database = await db();
-  const now = new Date().toISOString();
-  await database.execute(
-    `UPDATE transport_bookings SET transaction_type=$1,counterparty_id=$2,transaction_date=$3,ub_number=$4,
-       pax_saudi_number=$5,notes=$6,total_sar=$7,total_pkr=$8,unconverted_sar=$9,updated_at=$10,updated_by_user_id=$11
-     WHERE id=$12 AND company_id=$13 AND status='ACTIVE'`,
-    [
-      input.transactionType,
-      input.counterpartyId,
-      input.transactionDate,
-      input.ubNumber.trim(),
-      input.paxSaudiNumber.trim(),
-      input.notes.trim(),
-      result.totalSar,
-      result.totalPkr,
-      result.unconvertedSar,
-      now,
-      actorUserId,
-      bookingId,
-      companyId,
-    ],
-  );
-  await database.execute(`DELETE FROM transport_booking_lines WHERE booking_id=$1`, [bookingId]);
-  await insertTransportLines(database, bookingId, result.calculated);
-  if (actorUserId)
-    await createAuditLog(
-      companyId,
-      actorUserId,
-      "BOOKING_UPDATED",
-      "TRANSPORT",
-      bookingId,
-      `${input.transactionType} ${input.ubNumber.trim()} - SAR ${result.totalSar} / PKR ${result.totalPkr}`,
-    );
-}
-
-export async function voidTransportBooking(companyId: string, bookingId: string, actorUserId = "") {
-  await requirePermission(companyId, actorUserId, "void_bookings");
-  const database = await db();
-  const rows = await database.select<Array<{ ub_number: string }>>(
-    `SELECT ub_number FROM transport_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
-    [bookingId, companyId],
-  );
-  await database.execute(
-    `UPDATE transport_bookings SET status='VOID',updated_at=$1,updated_by_user_id=$2 WHERE id=$3 AND company_id=$4 AND status='ACTIVE'`,
-    [new Date().toISOString(), actorUserId, bookingId, companyId],
-  );
-  if (actorUserId)
-    await createAuditLog(
-      companyId,
-      actorUserId,
-      "BOOKING_VOIDED",
-      "TRANSPORT",
-      bookingId,
-      `Transport booking ${rows[0]?.ub_number || bookingId} voided.`,
-    );
-}
+export {
+  calculateTransportLines,
+  getTransportBookings,
+  createTransportBooking,
+  updateTransportBooking,
+  voidTransportBooking,
+} from "./TransportFlowDb";
 
 export async function dangerouslyEraseAllData(companyId: string) {
   const database = await db();
@@ -3843,6 +3502,10 @@ export async function processSyncQueue() {
 
     for (const job of pending) {
       try {
+        if (isDeprecatedCloudTable(job.table_name)) {
+          await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
+          continue;
+        }
         const payload = JSON.parse(job.payload) as Record<string, unknown>;
         await applyCloudOperation(job.operation, job.table_name, job.record_id, payload);
         await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
@@ -4079,6 +3742,9 @@ export async function executePullSync(options?: { companyId?: string; fullResync
   }
 
   // Ensure segment adjustment tables exist before pull upserts.
+  const { initPackageAdjustmentDatabase } = await import("./PackageAdjustmentDb");
+  await initPackageAdjustmentDatabase();
+  columnCache.delete("package_booking_adjustments");
   const { initHotelAdjustmentDatabase } = await import("./HotelAdjustmentDb");
   await initHotelAdjustmentDatabase();
   columnCache.delete("hotel_booking_adjustments");
