@@ -67,23 +67,17 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="app-v${VERSION}"
-          shopt -s nullglob globstar
-          assets=()
-          for pattern in \
-            "src-tauri/target/release/bundle/nsis/*Offline*.exe" \
-            "src-tauri/target/release/bundle/nsis/*Offline*.msi" \
-            "src-tauri/target/release/bundle/dmg/*Offline*.dmg" \
-            "src-tauri/target/release/bundle/macos/*Offline*.tar.gz" \
-            "src-tauri/target/release/bundle/macos/*Offline*.app.tar.gz"
-          do
-            for file in $pattern; do
-              assets+=("$file")
-            done
-          done
+          mapfile -t assets < <(
+            find src-tauri/target/release/bundle -type f \
+              \( -iname '*offline*.exe' -o -iname '*offline*.msi' -o -iname '*offline*.dmg' -o -iname '*offline*.tar.gz' \) \
+              2>/dev/null | sort -u
+          )
           if [ ${#assets[@]} -eq 0 ]; then
-            echo "No offline bundle files found"
+            echo "No offline bundle files found under src-tauri/target/release/bundle"
             exit 1
           fi
+          echo "Uploading offline assets:"
+          printf '  - %s\n' "${assets[@]}"
           gh release upload "$TAG" "${assets[@]}" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
