@@ -266,6 +266,7 @@ CREATE TABLE IF NOT EXISTS visa_bookings (
     counterparty_id TEXT NOT NULL,
     transaction_date TEXT NOT NULL,
     ub_number TEXT NOT NULL DEFAULT '',
+    expected_entry_date TEXT NOT NULL DEFAULT '',
     private_vehicle_type TEXT NOT NULL DEFAULT '',
     private_transport_total_sar REAL NOT NULL DEFAULT 0,
     intercity_bus_rate_sar REAL NOT NULL DEFAULT 0,
@@ -321,9 +322,12 @@ CREATE TABLE IF NOT EXISTS visa_passport_details (
     passenger_name TEXT NOT NULL DEFAULT '',
     passenger_type TEXT NOT NULL DEFAULT 'ADULT',
     visa_type TEXT NOT NULL DEFAULT 'ONLY_UMRAH_VISA',
+    surname TEXT NOT NULL DEFAULT '',
+    given_name TEXT NOT NULL DEFAULT '',
     passport_number TEXT NOT NULL DEFAULT '',
     nationality TEXT NOT NULL DEFAULT '',
     date_of_birth TEXT NOT NULL DEFAULT '',
+    passport_issuance TEXT NOT NULL DEFAULT '',
     passport_expiry TEXT NOT NULL DEFAULT '',
     sort_order INTEGER NOT NULL DEFAULT 0
   );

@@ -1,6 +1,8 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { VisaPassengerType, VisaType } from "./db";
 import { hasPermission, type UserRole } from "./permissions";
+import { flushDesktopSyncQueue, isDesktopApp, queueSync, syncVisaOperationalBundle } from "./cloudSync";
+import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -37,15 +39,13 @@ export type SaveVisaOperationalInput = {
 
 async function db() {
   if (!databasePromise) {
-    const isTauri = "__TAURI_INTERNALS__" in window;
-    if (isTauri) {
+    if (isDesktopApp()) {
       databasePromise = Database.load(DB_PATH);
     } else {
-      console.warn("Running in Web Mode. Local database is not available for " + DB_PATH);
       databasePromise = Promise.resolve({
         execute: async () => ({ lastInsertId: 0, rowsAffected: 0 }),
         select: async () => [],
-      } as any);
+      } as unknown as Database);
     }
   }
   return databasePromise;
@@ -130,6 +130,49 @@ async function audit(companyId: string, userId: string, bookingId: string) {
 
 export async function getVisaOperationalDetails(companyId: string, bookingId: string): Promise<VisaOperationalDetails> {
   await ensureSchema();
+
+  if (!isDesktopApp()) {
+    const [passengersRes, metaRes] = await Promise.all([
+      supabase
+        .from("visa_operational_passengers")
+        .select(
+          "id,source_family_name,passenger_type,visa_type,given_name,surname,passport_number,nationality,date_of_birth,passport_issuance,passport_expiry,visa_number,mofa_reference,sort_order",
+        )
+        .eq("company_id", companyId)
+        .eq("booking_id", bookingId)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("visa_operational_meta")
+        .select("expected_entry_date,notes")
+        .eq("company_id", companyId)
+        .eq("booking_id", bookingId)
+        .maybeSingle(),
+    ]);
+    if (passengersRes.error) throw new Error(passengersRes.error.message);
+    if (metaRes.error) throw new Error(metaRes.error.message);
+
+    return {
+      expectedEntryDate: metaRes.data?.expected_entry_date || "",
+      notes: metaRes.data?.notes || "",
+      passengers: (passengersRes.data || []).map((item) => ({
+        id: item.id,
+        sourceFamilyName: item.source_family_name,
+        passengerType: item.passenger_type as VisaPassengerType,
+        visaType: item.visa_type as VisaType,
+        givenName: item.given_name,
+        surname: item.surname,
+        passportNumber: item.passport_number,
+        nationality: item.nationality,
+        dateOfBirth: item.date_of_birth,
+        passportIssuance: item.passport_issuance,
+        passportExpiry: item.passport_expiry,
+        visaNumber: item.visa_number,
+        mofaReference: item.mofa_reference,
+        sortOrder: item.sort_order,
+      })),
+    };
+  }
+
   const database = await db();
   const passengers = await database.select<
     Array<{
@@ -187,42 +230,88 @@ export async function saveVisaOperationalDetails(
 ) {
   await requireEdit(companyId, userId);
   await ensureSchema();
-  const database = await db();
   const now = new Date().toISOString();
-  await database.execute(`DELETE FROM visa_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [
-    companyId,
-    bookingId,
-  ]);
-  for (const [index, passenger] of input.passengers.entries()) {
-    await database.execute(
-      `INSERT INTO visa_operational_passengers
-       (id,company_id,booking_id,source_family_name,passenger_type,visa_type,given_name,surname,passport_number,nationality,date_of_birth,passport_issuance,passport_expiry,visa_number,mofa_reference,sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-      [
-        crypto.randomUUID(),
-        companyId,
-        bookingId,
-        passenger.sourceFamilyName.trim(),
-        passenger.passengerType,
-        passenger.visaType,
-        passenger.givenName.trim(),
-        passenger.surname.trim(),
-        passenger.passportNumber.trim().toUpperCase(),
-        passenger.nationality.trim(),
-        passenger.dateOfBirth,
-        passenger.passportIssuance,
-        passenger.passportExpiry,
-        passenger.visaNumber.trim().toUpperCase(),
-        passenger.mofaReference.trim().toUpperCase(),
-        index,
-      ],
+
+  const passengers = input.passengers.map((passenger, index) => ({
+    id: crypto.randomUUID(),
+    company_id: companyId,
+    booking_id: bookingId,
+    source_family_name: passenger.sourceFamilyName.trim(),
+    passenger_type: passenger.passengerType,
+    visa_type: passenger.visaType,
+    given_name: passenger.givenName.trim(),
+    surname: passenger.surname.trim(),
+    passport_number: passenger.passportNumber.trim().toUpperCase(),
+    nationality: passenger.nationality.trim(),
+    date_of_birth: passenger.dateOfBirth,
+    passport_issuance: passenger.passportIssuance,
+    passport_expiry: passenger.passportExpiry,
+    visa_number: passenger.visaNumber.trim().toUpperCase(),
+    mofa_reference: passenger.mofaReference.trim().toUpperCase(),
+    sort_order: index,
+  }));
+
+  let createdAt = now;
+  if (isDesktopApp()) {
+    const database = await db();
+    const metaRows = await database.select<Array<{ created_at: string }>>(
+      `SELECT created_at FROM visa_operational_meta WHERE booking_id=$1 LIMIT 1`,
+      [bookingId],
     );
+    if (metaRows[0]?.created_at) createdAt = metaRows[0].created_at;
+
+    await database.execute(`DELETE FROM visa_operational_passengers WHERE company_id=$1 AND booking_id=$2`, [
+      companyId,
+      bookingId,
+    ]);
+    for (const passenger of passengers) {
+      await database.execute(
+        `INSERT INTO visa_operational_passengers
+         (id,company_id,booking_id,source_family_name,passenger_type,visa_type,given_name,surname,passport_number,nationality,date_of_birth,passport_issuance,passport_expiry,visa_number,mofa_reference,sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        [
+          passenger.id,
+          passenger.company_id,
+          passenger.booking_id,
+          passenger.source_family_name,
+          passenger.passenger_type,
+          passenger.visa_type,
+          passenger.given_name,
+          passenger.surname,
+          passenger.passport_number,
+          passenger.nationality,
+          passenger.date_of_birth,
+          passenger.passport_issuance,
+          passenger.passport_expiry,
+          passenger.visa_number,
+          passenger.mofa_reference,
+          passenger.sort_order,
+        ],
+      );
+    }
+    await database.execute(
+      `INSERT INTO visa_operational_meta (booking_id,company_id,expected_entry_date,notes,created_at,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,expected_entry_date=excluded.expected_entry_date,notes=excluded.notes,updated_at=excluded.updated_at`,
+      [bookingId, companyId, input.expectedEntryDate, input.notes.trim(), createdAt, now],
+    );
+    await audit(companyId, userId, bookingId);
+  } else {
+    const { data } = await supabase
+      .from("visa_operational_meta")
+      .select("created_at")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+    if (data?.created_at) createdAt = data.created_at;
   }
-  await database.execute(
-    `INSERT INTO visa_operational_meta (booking_id,company_id,expected_entry_date,notes,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$5)
-     ON CONFLICT(booking_id) DO UPDATE SET company_id=excluded.company_id,expected_entry_date=excluded.expected_entry_date,notes=excluded.notes,updated_at=excluded.updated_at`,
-    [bookingId, companyId, input.expectedEntryDate, input.notes.trim(), now],
-  );
-  await audit(companyId, userId, bookingId);
+
+  await syncVisaOperationalBundle(bookingId, companyId, {
+    expectedEntryDate: input.expectedEntryDate,
+    notes: input.notes.trim(),
+    createdAt,
+    updatedAt: now,
+    passengers,
+  });
+  await queueSync("UPDATE", "visa_bookings", bookingId, { updated_at: now });
+  if (isDesktopApp()) await flushDesktopSyncQueue();
 }

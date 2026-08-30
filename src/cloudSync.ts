@@ -5,6 +5,28 @@ const DB_PATH = "sqlite:travel-accounting.db";
 
 export type SyncOperation = "INSERT" | "UPDATE" | "DELETE" | "UPSERT" | "REPLACE_CHILDREN";
 
+/** Child tables keyed without a single `id` column need composite upsert conflicts. */
+function replaceChildrenOnConflict(tableName: string) {
+  switch (tableName) {
+    case "hotel_commercial_guest_refs":
+    case "misc_commercial_family_refs":
+      return "company_id,booking_id,sort_order";
+    case "hotel_operational_reservations":
+      return "company_id,booking_id,hotel_sort_order";
+    default:
+      return "id";
+  }
+}
+
+function replaceChildRowKey(tableName: string, row: Record<string, unknown>) {
+  const conflict = replaceChildrenOnConflict(tableName);
+  if (conflict === "id") return String(row.id || "");
+  return conflict
+    .split(",")
+    .map((column) => String(row[column.trim()] ?? ""))
+    .join("|");
+}
+
 export type PackageBookingSyncHeader = {
   id: string;
   company_id: string;
@@ -103,14 +125,16 @@ export async function applyCloudOperation(
     const { error: deleteError } = await supabase.from(tableName).delete().eq(parentColumn, recordId);
     if (deleteError) throw new Error(deleteError.message);
     if (rows.length) {
+      const onConflict = replaceChildrenOnConflict(tableName);
       const deduped = [...rows]
         .reverse()
         .filter((row, index, list) => {
-          const id = String((row as { id?: string }).id || "");
-          return id ? list.findIndex((item) => String((item as { id?: string }).id || "") === id) === index : true;
+          const key = replaceChildRowKey(tableName, row);
+          if (!key) return true;
+          return list.findIndex((item) => replaceChildRowKey(tableName, item) === key) === index;
         })
         .reverse();
-      const { error: insertError } = await supabase.from(tableName).upsert(deduped, { onConflict: "id" });
+      const { error: insertError } = await supabase.from(tableName).upsert(deduped, { onConflict });
       if (insertError) throw new Error(insertError.message);
     }
     return;
@@ -122,7 +146,8 @@ export async function applyCloudOperation(
         ? "payment_id"
         : tableName === "package_operational_meta" ||
             tableName === "ticket_operational_meta" ||
-            tableName === "hotel_operational_meta"
+            tableName === "hotel_operational_meta" ||
+            tableName === "visa_operational_meta"
           ? "booking_id"
           : "id";
     const { error } = await supabase.from(tableName).delete().eq(idColumn, recordId);
@@ -136,7 +161,8 @@ export async function applyCloudOperation(
         ? "payment_id"
         : tableName === "package_operational_meta" ||
             tableName === "ticket_operational_meta" ||
-            tableName === "hotel_operational_meta"
+            tableName === "hotel_operational_meta" ||
+            tableName === "visa_operational_meta"
           ? "booking_id"
           : "id";
     const { error } = await supabase.from(tableName).update(payload).eq(idColumn, recordId);
@@ -150,7 +176,8 @@ export async function applyCloudOperation(
       ? "payment_id"
       : tableName === "package_operational_meta" ||
           tableName === "ticket_operational_meta" ||
-          tableName === "hotel_operational_meta"
+          tableName === "hotel_operational_meta" ||
+          tableName === "visa_operational_meta"
         ? "booking_id"
         : "id";
   const { error } = await supabase.from(tableName).upsert(payload, { onConflict });
@@ -418,7 +445,8 @@ export async function syncClearBookingChildren(bookingId: string, childTables: s
     if (
       table === "package_operational_meta" ||
       table === "ticket_operational_meta" ||
-      table === "hotel_operational_meta"
+      table === "hotel_operational_meta" ||
+      table === "visa_operational_meta"
     ) {
       await queueSync("DELETE", table, bookingId, {});
       continue;
@@ -546,6 +574,88 @@ export async function syncTicketAdjustmentBundle(input: {
     rows: input.lines,
   });
   await queueSync("UPSERT", "ticket_booking_adjustments", String(input.adjustment.id), input.adjustment);
+}
+
+export type VisaBookingSyncHeader = {
+  id: string;
+  company_id: string;
+  transaction_type: string;
+  counterparty_id: string;
+  transaction_date: string;
+  ub_number: string;
+  expected_entry_date: string;
+  private_vehicle_type: string;
+  private_transport_total_sar: number;
+  intercity_bus_rate_sar: number;
+  intercity_bus_total_sar: number;
+  applicable_private_pax: number;
+  applicable_full_bus_pax: number;
+  visa_total_sar: number;
+  transport_total_sar: number;
+  total_sar: number;
+  total_pkr: number;
+  unconverted_sar: number;
+  notes: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  created_by_user_id: string;
+  updated_by_user_id: string;
+};
+
+/** Upsert visa header + replace commercial child rows in the cloud. */
+export async function syncVisaBookingBundle(
+  header: VisaBookingSyncHeader,
+  lines: Record<string, unknown>[],
+  fleet: Record<string, unknown>[],
+  passports: Record<string, unknown>[],
+) {
+  await queueSync("UPSERT", "visa_bookings", header.id, header as unknown as Record<string, unknown>);
+  await queueSync("REPLACE_CHILDREN", "visa_booking_lines", header.id, {
+    parent_column: "booking_id",
+    rows: lines,
+  });
+  await queueSync("REPLACE_CHILDREN", "visa_transport_fleet", header.id, {
+    parent_column: "booking_id",
+    rows: fleet,
+  });
+  await queueSync("REPLACE_CHILDREN", "visa_passport_details", header.id, {
+    parent_column: "booking_id",
+    rows: passports,
+  });
+}
+
+export async function syncVisaBookingVoid(bookingId: string, updatedAt: string, updatedByUserId: string) {
+  await queueSync("UPDATE", "visa_bookings", bookingId, {
+    status: "VOID",
+    updated_at: updatedAt,
+    updated_by_user_id: updatedByUserId,
+  });
+}
+
+export async function syncVisaOperationalBundle(
+  bookingId: string,
+  companyId: string,
+  payload: {
+    expectedEntryDate: string;
+    notes: string;
+    createdAt: string;
+    updatedAt: string;
+    passengers: Record<string, unknown>[];
+  },
+) {
+  await queueSync("UPSERT", "visa_operational_meta", bookingId, {
+    booking_id: bookingId,
+    company_id: companyId,
+    expected_entry_date: payload.expectedEntryDate,
+    notes: payload.notes,
+    created_at: payload.createdAt,
+    updated_at: payload.updatedAt,
+  });
+  await queueSync("REPLACE_CHILDREN", "visa_operational_passengers", bookingId, {
+    parent_column: "booking_id",
+    rows: payload.passengers,
+  });
 }
 
 export async function syncVisaAdjustmentBundle(input: {
