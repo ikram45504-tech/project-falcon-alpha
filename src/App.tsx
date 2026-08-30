@@ -42,8 +42,12 @@ function AppLayout() {
   }, [location.pathname]);
 
   useEffect(() => {
+    document.documentElement.classList.toggle("mobile-nav-open", mobileNavOpen);
     document.body.classList.toggle("mobile-nav-open", mobileNavOpen);
-    return () => document.body.classList.remove("mobile-nav-open");
+    return () => {
+      document.documentElement.classList.remove("mobile-nav-open");
+      document.body.classList.remove("mobile-nav-open");
+    };
   }, [mobileNavOpen]);
 
   useEffect(() => {
@@ -135,7 +139,11 @@ function AppLayout() {
           className="mobile-nav-toggle"
           aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileNavOpen}
-          onClick={() => setMobileNavOpen((open) => !open)}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setMobileNavOpen((open) => !open);
+          }}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             {mobileNavOpen ? (
@@ -196,6 +204,7 @@ function AppLayout() {
       />
       <nav
         className={`workspace-nav main-workspace-nav${mobileNavOpen ? " is-open" : ""}`}
+        aria-hidden={!mobileNavOpen}
         onClick={(event) => {
           if ((event.target as HTMLElement).closest("a")) setMobileNavOpen(false);
         }}
