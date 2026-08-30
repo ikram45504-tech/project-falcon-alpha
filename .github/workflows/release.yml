@@ -57,7 +57,13 @@ jobs:
           includeUpdaterJson: true
 
       - name: Build Tauri App (Offline Only)
-        run: npm run tauri build -- --config src-tauri/tauri.offline.conf.json
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "macos-latest" ]; then
+            npm run tauri build -- --config src-tauri/tauri.offline.conf.json --target universal-apple-darwin
+          else
+            npm run tauri build -- --config src-tauri/tauri.offline.conf.json
+          fi
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -67,13 +73,16 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="app-v${VERSION}"
-          mapfile -t assets < <(
-            find src-tauri/target/release/bundle -type f \
-              \( -iname '*offline*.exe' -o -iname '*offline*.msi' -o -iname '*offline*.dmg' -o -iname '*offline*.tar.gz' \) \
-              2>/dev/null | sort -u
-          )
+          # macOS ships bash 3.2 — avoid mapfile (bash 4+ only)
+          assets=()
+          while IFS= read -r file; do
+            [ -n "$file" ] && assets+=("$file")
+          done < <(find src-tauri/target -path '*/release/bundle/*' -type f \
+            \( -iname '*offline*.exe' -o -iname '*offline*.msi' -o -iname '*offline*.dmg' -o -iname '*offline*.tar.gz' \) \
+            2>/dev/null | sort -u)
           if [ ${#assets[@]} -eq 0 ]; then
-            echo "No offline bundle files found under src-tauri/target/release/bundle"
+            echo "No offline bundle files found under src-tauri/target/**/release/bundle"
+            find src-tauri/target -path '*/bundle/*' -type f 2>/dev/null | head -30 || true
             exit 1
           fi
           echo "Uploading offline assets:"
