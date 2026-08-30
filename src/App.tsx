@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import "./App.css";
 import "./App.mobile.css";
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation } from "react-router-dom";
@@ -10,6 +10,8 @@ import { useEffect } from "react";
 import TravelHisabLogo from "./TravelHisabLogo";
 import { PRODUCT_NAME } from "./brand";
 import { isOfflineOnlyBuild, productNameForBuild } from "./appMode";
+import { usePhoneUi } from "./phoneUi";
+import { PhoneMenu, PhoneTabBar } from "./PhoneNav";
 
 // Screens
 import LoginScreen from "./screens/LoginScreen";
@@ -36,6 +38,8 @@ function AppLayout() {
   const [bookingReset, setBookingReset] = useState(0);
   const [paymentReset, setPaymentReset] = useState(0);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const isPhone = usePhoneUi();
+  const phoneMenuFromPointer = useRef(false);
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -139,9 +143,17 @@ function AppLayout() {
           className="mobile-nav-toggle"
           aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileNavOpen}
+          onPointerUp={() => {
+            phoneMenuFromPointer.current = true;
+            setMobileNavOpen((open) => !open);
+          }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
+            if (phoneMenuFromPointer.current) {
+              phoneMenuFromPointer.current = false;
+              return;
+            }
             setMobileNavOpen((open) => !open);
           }}
         >
@@ -196,15 +208,15 @@ function AppLayout() {
         </div>
       </header>
 
-      <button
-        type="button"
-        className={`mobile-nav-backdrop${mobileNavOpen ? " is-open" : ""}`}
-        aria-label="Close menu"
-        onClick={() => setMobileNavOpen(false)}
-      />
+      {isPhone ? (
+        <>
+          <PhoneMenu open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} can={can} />
+          <PhoneTabBar can={can} onOpenMenu={() => setMobileNavOpen(true)} />
+        </>
+      ) : null}
       <nav
         className={`workspace-nav main-workspace-nav${mobileNavOpen ? " is-open" : ""}`}
-        aria-hidden={!mobileNavOpen}
+        aria-hidden={isPhone}
         onClick={(event) => {
           if ((event.target as HTMLElement).closest("a")) setMobileNavOpen(false);
         }}

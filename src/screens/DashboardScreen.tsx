@@ -3,7 +3,7 @@ import { useAuth } from "../AuthContext";
 import { useWorkspace } from "../WorkspaceContext";
 import { useIsDesktop } from "../useIsDesktop";
 import { getDashboardMetrics, getRecentActivity, DashboardMetrics, RecentActivity } from "../DashboardDb";
-import { useNavigate } from "react-router-dom";
+import { usePhoneUi } from "../phoneUi";
 // Helper to format currency
 const pkr = (val: number) =>
   new Intl.NumberFormat("en-PK", {
@@ -17,6 +17,7 @@ export default function DashboardScreen() {
   const { company } = useAuth();
   const { loadParties, loadFinancialTotals } = useWorkspace();
   const isDesktop = useIsDesktop();
+  const isPhone = usePhoneUi();
   const navigate = useNavigate();
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -475,21 +476,23 @@ export default function DashboardScreen() {
               >
                 📔 Master Ledger
               </button>
-              <button
-                onClick={() => navigate("/pnl")}
-                style={{
-                  textAlign: "left",
-                  padding: "12px 16px",
-                  background: "var(--bg-app)",
-                  border: "1px solid var(--border-light)",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  color: "var(--text-main)",
-                }}
-              >
-                📊 PnL & Portfolio
-              </button>
+              {!isPhone ? (
+                <button
+                  onClick={() => navigate("/pnl")}
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 16px",
+                    background: "var(--bg-app)",
+                    border: "1px solid var(--border-light)",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    color: "var(--text-main)",
+                  }}
+                >
+                  📊 PnL & Portfolio
+                </button>
+              ) : null}
             </div>
           </div>
 

@@ -163,6 +163,7 @@
     color: #fff;
     padding: 0;
     pointer-events: auto;
+    transform: none !important;
   }
 
   .identity {
@@ -191,82 +192,18 @@
     margin-left: 0;
   }
 
-  .mobile-nav-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 70;
-    border: 0;
-    padding: 0;
-    background: rgba(5, 12, 24, 0.55);
-  }
-
-  body.mobile-nav-open .mobile-nav-backdrop,
-  .mobile-nav-backdrop.is-open {
-    display: block;
-  }
-
+  /* Desktop nav is a different control. Hide it so it cannot steal taps. */
   .workspace-nav,
+  .mobile-nav-backdrop,
   :root[data-layout="layout-1"] .workspace-nav,
   :root[data-layout="layout-2"] .workspace-nav,
   :root[data-layout="layout-3"] .workspace-nav {
-    position: fixed !important;
-    top: 0 !important;
-    left: -110% !important;
-    bottom: 0 !important;
-    width: min(300px, 86vw) !important;
-    max-width: none !important;
-    height: 100dvh !important;
-    margin: 0 !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
-    flex-wrap: nowrap !important;
-    gap: 6px !important;
-    padding: calc(18px + env(safe-area-inset-top, 0px)) 14px 24px !important;
-    background: var(--brand-primary) !important;
-    box-shadow: none !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    transform: none !important;
-    transition: left 0.2s ease;
-    z-index: 75;
-    visibility: hidden;
-    pointer-events: none;
-  }
-
-  html.mobile-nav-open .workspace-nav,
-  body.mobile-nav-open .workspace-nav,
-  :root[data-layout="layout-1"] .workspace-nav.is-open,
-  :root[data-layout="layout-2"] .workspace-nav.is-open,
-  :root[data-layout="layout-3"] .workspace-nav.is-open,
-  .workspace-nav.is-open {
-    left: 0 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35) !important;
-  }
-
-  .workspace-nav a,
-  :root[data-layout="layout-1"] .workspace-nav a,
-  :root[data-layout="layout-2"] .workspace-nav a,
-  :root[data-layout="layout-3"] .workspace-nav a {
-    width: 100% !important;
-    justify-content: flex-start !important;
-    border-radius: 10px !important;
-    margin: 0 !important;
-    color: rgba(255, 255, 255, 0.78) !important;
-    background: transparent !important;
-  }
-
-  .workspace-nav a.active,
-  :root[data-layout="layout-1"] .workspace-nav a.active,
-  :root[data-layout="layout-2"] .workspace-nav a.active,
-  :root[data-layout="layout-3"] .workspace-nav a.active {
-    color: #fff !important;
-    background: rgba(255, 255, 255, 0.14) !important;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
   }
 
   .layout-content-wrapper,
@@ -278,7 +215,7 @@
     min-width: 0 !important;
     min-height: 0 !important;
     padding: 12px !important;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
     overflow-x: hidden !important;
     box-sizing: border-box;
   }
@@ -395,4 +332,116 @@
   .company-layout {
     grid-template-columns: 1fr !important;
   }
+
+  .appearance-layouts .module-card:nth-child(n + 2) {
+    display: none;
+  }
+
+  button:hover:not(:disabled),
+  button:active:not(:disabled) {
+    transform: none !important;
+  }
 }
+
+.th-phone-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+}
+
+.th-phone-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(5, 12, 24, 0.55);
+}
+
+.th-phone-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(320px, 86vw);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 16px 24px;
+  background: #082751;
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  overflow-y: auto;
+}
+
+.th-phone-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+.th-phone-drawer-close {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.th-phone-drawer a {
+  display: block;
+  padding: 14px 12px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.th-phone-drawer a.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.th-phone-tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9000;
+  display: none;
+          grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: #082751;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 820px) {
+  .th-phone-tabs {
+    display: grid;
+  }
+}
+
+.th-phone-tabs a,
+.th-phone-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  transform: none !important;
+}
+
+.th-phone-tabs a.active,
+.th-phone-tabs button:active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
