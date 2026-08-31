@@ -1,0 +1,527 @@
+/* Mobile PWA shell — loaded only by MobileAppLayout.tsx */
+
+.settings-shell {
+  display: flex;
+  gap: 24px;
+  height: 100%;
+  align-items: flex-start;
+}
+
+.settings-hub {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-hub-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-hub-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 16px;
+  min-height: 100%;
+}
+
+.dash-page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 16px;
+  gap: 16px;
+}
+
+.dash-page-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 24px;
+}
+
+.dash-split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 24px;
+  flex: 1;
+}
+
+.mobile-appearance-panel {
+  padding: 20px !important;
+}
+
+.mobile-appearance-themes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-appearance-theme {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mobile-appearance-theme.active {
+  border-color: var(--brand-secondary);
+  box-shadow: var(--shadow-glow);
+}
+
+.mobile-appearance-theme-icon {
+  font-size: 20px;
+}
+
+.mobile-appearance-theme-label {
+  flex: 1;
+}
+
+.mobile-appearance-theme-check {
+  color: var(--brand-secondary);
+  font-weight: 800;
+}
+
+html.phone-ui,
+html.phone-ui body,
+html.phone-ui #root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html.phone-ui {
+  body.mobile-nav-open {
+    overflow: hidden;
+  }
+
+  .mobile-workspace,
+  &[data-layout="layout-mobile"] .mobile-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .mobile-app-header {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    padding: 10px 14px !important;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .mobile-header-subtitle {
+    display: block;
+    font-size: 12px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+
+  .identity {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .identity h1 {
+    font-size: 16px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-layout-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 12px !important;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box;
+  }
+
+  .welcome,
+  .content-card,
+  .ledger-page,
+  .panel,
+  .module-card,
+  .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+
+  .settings-shell {
+    flex-direction: column;
+    gap: 12px;
+    height: auto;
+    width: 100%;
+  }
+
+  .settings-hub {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .settings-hub h3 {
+    margin-bottom: 10px !important;
+  }
+
+  .settings-hub-links {
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .settings-hub-links a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    border-left: 0 !important;
+    border-bottom: 3px solid transparent;
+  }
+
+  .settings-hub-content {
+    width: 100%;
+  }
+
+  .dash-page {
+    padding: 4px 0 12px;
+    gap: 18px;
+  }
+
+  .dash-page-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dash-page-head h1 {
+    font-size: 22px !important;
+  }
+
+  .dash-page-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .dash-page-actions button {
+    flex: 1 1 auto;
+  }
+
+  .dash-kpis {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dash-split {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .party-table-wrap,
+  .payment-table-wrap,
+  .ledger-table-wrap,
+  .statement-controls,
+  .statement-v6-controls {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .two,
+  .stats,
+  .module-grid,
+  .welcome,
+  .company-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  button:hover:not(:disabled),
+  button:active:not(:disabled) {
+    transform: none !important;
+  }
+}
+
+.th-phone-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+}
+
+.th-phone-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(5, 12, 24, 0.55);
+}
+
+.th-phone-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(320px, 86vw);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 16px 24px;
+  background: #082751;
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  overflow-y: auto;
+}
+
+.th-phone-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.th-phone-drawer-close {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.th-phone-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.th-phone-drawer-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px 4px 4px;
+}
+
+.th-phone-drawer a {
+  display: block;
+  padding: 14px 12px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.th-phone-drawer a.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.th-phone-theme-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.th-phone-theme-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.th-phone-theme-btn.active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #fff;
+}
+
+.th-phone-drawer-footer {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.th-phone-signout {
+  width: 100%;
+  padding: 14px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 120, 120, 0.45);
+  background: rgba(255, 60, 60, 0.15);
+  color: #ffb4b4;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.th-phone-tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9000;
+  display: none;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: #082751;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+html.phone-ui .th-phone-tabs {
+  display: grid;
+}
+
+.th-phone-tabs a,
+.th-phone-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  transform: none !important;
+}
+
+.th-phone-tabs a.active,
+.th-phone-tabs button:active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.pwa-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pwa-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pwa-banner span {
+  flex: 1 1 220px;
+}
+
+.pwa-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pwa-banner-primary,
+.pwa-banner-ghost {
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pwa-banner-primary {
+  border: none;
+  background: #fff;
+  color: #082751;
+}
+
+.pwa-banner-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: inherit;
+}
+
+.pwa-banner-install {
+  background: #082751;
+  color: #fff;
+}
+
+.pwa-banner-update {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.pwa-banner-offline {
+  background: #92400e;
+  color: #fff;
+}
+
+html.phone-ui .pwa-chrome {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+
+html.phone-ui .pwa-chrome + .workspace .app-header {
+  top: 0;
+}

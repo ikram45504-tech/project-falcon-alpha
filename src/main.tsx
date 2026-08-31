@@ -3,7 +3,8 @@ import App from "./App";
 import { initializeDatabaseSafety } from "./DatabaseSafety";
 import { ThemeProvider } from "./ThemeContext";
 import { PRODUCT_NAME } from "./brand";
-import { registerPwa } from "./registerPwa";
+import { PwaChrome } from "./PwaChrome";
+import "./mobile/mobileShell.css";
 
 function renderSafetyFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -41,7 +42,6 @@ function renderSafetyFailure(error: unknown) {
 }
 
 async function bootstrap() {
-  registerPwa();
   try {
     document.title = PRODUCT_NAME;
     const report = await initializeDatabaseSafety();
@@ -52,6 +52,7 @@ async function bootstrap() {
     }
     ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       <ThemeProvider>
+        <PwaChrome />
         <App />
       </ThemeProvider>,
     );

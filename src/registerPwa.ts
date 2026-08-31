@@ -1,19 +1,40 @@
+import { registerSW } from "virtual:pwa-register";
+
 function isTauriShell() {
   return "__TAURI_INTERNALS__" in window;
 }
 
+type PwaHandlers = {
+  onNeedRefresh?: () => void;
+  onOfflineReady?: () => void;
+};
+
+let applyUpdate: ((reloadPage?: boolean) => Promise<void>) | undefined;
+
 /** Install the web app worker on phones/browsers only — never inside the desktop shell. */
-export function registerPwa() {
+export function registerPwa(handlers: PwaHandlers = {}) {
   if (typeof window === "undefined") return;
   if (isTauriShell()) return;
   if (!("serviceWorker" in navigator)) return;
 
-  const hadController = Boolean(navigator.serviceWorker.controller);
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (hadController) window.location.reload();
+  applyUpdate = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      handlers.onNeedRefresh?.();
+    },
+    onOfflineReady() {
+      handlers.onOfflineReady?.();
+    },
+    onRegisterError(error) {
+      console.warn("PWA registration failed:", error);
+    },
   });
+}
 
-  void navigator.serviceWorker.register("/sw.js").catch(() => {
-    // Missing worker is expected for desktop builds and local Vite without a production generate.
-  });
+export async function applyPwaUpdate() {
+  if (applyUpdate) {
+    await applyUpdate(true);
+    return;
+  }
+  window.location.reload();
 }

@@ -1,9 +1,7 @@
 import { useTheme, LayoutType } from "../ThemeContext";
-import { usePhoneUi } from "../phoneUi";
 
 export default function AppearanceScreen() {
   const { mode, layout, setMode, setLayout } = useTheme();
-  const isPhone = usePhoneUi();
 
   return (
     <section className="panel appearance-panel">
@@ -41,39 +39,35 @@ export default function AppearanceScreen() {
         <span className="ready">PERSONALIZATION ENGINE</span>
         <h2 style={{ marginTop: "8px", fontSize: "28px" }}>Appearance & Layout</h2>
         <p style={{ fontSize: "16px", color: "var(--text-muted)" }}>
-          {isPhone
-            ? "Phone uses a simplified layout. Theme still applies. Desktop layout options stay on computer."
-            : "Completely transform the structural architecture of your software."}
+          Completely transform the structural architecture of your software.
         </p>
       </div>
 
-      {!isPhone ? (
-        <div style={{ marginTop: "40px", paddingBottom: "60px" }}>
-          <div className="appearance-layouts">
-            <LayoutCard
-              title="LAYOUT 1: Classic Enterprise"
-              desc="The standard, reliable horizontal navigation at the top of the screen."
-              layoutId="layout-1"
-              currentLayout={layout}
-              onSelect={setLayout}
-            />
-            <LayoutCard
-              title="LAYOUT 2: Floating macOS"
-              desc="The navigation bar becomes a floating, rounded pill in the center of the screen."
-              layoutId="layout-2"
-              currentLayout={layout}
-              onSelect={setLayout}
-            />
-            <LayoutCard
-              title="LAYOUT 3: Professional Vertical"
-              desc="Navigation is moved to a fixed left-side vertical panel. Highly popular in modern tech startups."
-              layoutId="layout-3"
-              currentLayout={layout}
-              onSelect={setLayout}
-            />
-          </div>
+      <div style={{ marginTop: "40px", paddingBottom: "60px" }}>
+        <div className="appearance-layouts">
+          <LayoutCard
+            title="LAYOUT 1: Classic Enterprise"
+            desc="The standard, reliable horizontal navigation at the top of the screen."
+            layoutId="layout-1"
+            currentLayout={layout}
+            onSelect={setLayout}
+          />
+          <LayoutCard
+            title="LAYOUT 2: Floating macOS"
+            desc="The navigation bar becomes a floating, rounded pill in the center of the screen."
+            layoutId="layout-2"
+            currentLayout={layout}
+            onSelect={setLayout}
+          />
+          <LayoutCard
+            title="LAYOUT 3: Professional Vertical"
+            desc="Navigation is moved to a fixed left-side vertical panel. Highly popular in modern tech startups."
+            layoutId="layout-3"
+            currentLayout={layout}
+            onSelect={setLayout}
+          />
         </div>
-      ) : null}
+      </div>
     </section>
   );
 }

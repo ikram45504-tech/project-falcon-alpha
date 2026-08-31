@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { isPhoneViewport } from "./phoneUi";
 
 export type ThemeMode = "light" | "dark" | "ocean";
-export type LayoutType = "layout-1" | "layout-2" | "layout-3";
+export type LayoutType = "layout-1" | "layout-2" | "layout-3" | "layout-mobile";
+
+export const MOBILE_LAYOUT: LayoutType = "layout-mobile";
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -34,15 +37,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Map mode names to CSS data-theme attribute values
     const themeMap: Record<ThemeMode, string> = {
       light: "light",
       dark: "midnight",
       ocean: "ocean",
     };
     document.documentElement.setAttribute("data-theme", themeMap[mode]);
-    document.documentElement.setAttribute("data-layout", layout);
+    const effectiveLayout = isPhoneViewport() ? MOBILE_LAYOUT : layout;
+    document.documentElement.setAttribute("data-layout", effectiveLayout);
   }, [mode, layout]);
+
+  useEffect(() => {
+    const syncLayoutForViewport = () => {
+      const effectiveLayout = isPhoneViewport() ? MOBILE_LAYOUT : layout;
+      document.documentElement.setAttribute("data-layout", effectiveLayout);
+    };
+    syncLayoutForViewport();
+    const mq = window.matchMedia("(max-width: 820px)");
+    mq.addEventListener("change", syncLayoutForViewport);
+    window.addEventListener("resize", syncLayoutForViewport);
+    return () => {
+      mq.removeEventListener("change", syncLayoutForViewport);
+      window.removeEventListener("resize", syncLayoutForViewport);
+    };
+  }, [layout]);
 
   return <ThemeContext.Provider value={{ mode, layout, setMode, setLayout }}>{children}</ThemeContext.Provider>;
 }

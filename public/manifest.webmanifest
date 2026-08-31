@@ -13,6 +13,26 @@
   "dir": "ltr",
   "categories": ["business", "finance"],
   "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/",
+      "icons": [{ "src": "/icons/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Bookings",
+      "short_name": "Bookings",
+      "url": "/bookings",
+      "icons": [{ "src": "/icons/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Payments",
+      "short_name": "Payments",
+      "url": "/payments",
+      "icons": [{ "src": "/icons/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/pwa-192x192.png",

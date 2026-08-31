@@ -1,14 +1,17 @@
 import { NavLink, Routes, Route, Navigate } from "react-router-dom";
 import AppearanceScreen from "./AppearanceScreen";
+import MobileAppearance from "../mobile/MobileAppearance";
 import SecurityCenter from "../SecurityCenter";
 import { useAuth } from "../AuthContext";
 import { useIsDesktop } from "../useIsDesktop";
+import { usePhoneUi } from "../phoneUi";
 import { isOfflineOnlyBuild } from "../appMode";
 import AboutScreen from "./AboutScreen";
 
 export default function SettingsScreen() {
   const { session, company } = useAuth();
   const isDesktop = useIsDesktop();
+  const isPhone = usePhoneUi();
 
   const checkForUpdates = async () => {
     try {
@@ -66,7 +69,7 @@ export default function SettingsScreen() {
               borderLeft: isActive ? "3px solid var(--brand-secondary)" : "3px solid transparent",
             })}
           >
-            🎨 Appearance & Layout
+            🎨 {isPhone ? "Appearance" : "Appearance & Layout"}
           </NavLink>
           <NavLink
             to="/settings/account"
@@ -227,7 +230,7 @@ export default function SettingsScreen() {
       <div className="settings-hub-content">
         <Routes>
           <Route path="/" element={<Navigate to="appearance" replace />} />
-          <Route path="appearance" element={<AppearanceScreen />} />
+          <Route path="appearance" element={isPhone ? <MobileAppearance /> : <AppearanceScreen />} />
           <Route
             path="account"
             element={
