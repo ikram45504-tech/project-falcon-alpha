@@ -6,7 +6,6 @@ import { useState } from "react";
 
 export default function AboutScreen() {
   const isPhone = usePhoneUi();
-  const isWeb = !isTauriShell();
   const { updatePending } = usePwaUpdatePending();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -136,7 +135,7 @@ export default function AboutScreen() {
         </div>
       </div>
 
-      {isWeb ? (
+      {isPhone ? (
         <div
           style={{
             marginTop: "8px",
@@ -176,7 +175,7 @@ export default function AboutScreen() {
               cursor: busy ? "wait" : "pointer",
             }}
           >
-            {busy ? "Checking…" : updatePending ? "Update PWA Now" : "Check / Update PWA"}
+            {busy ? "Checking…" : updatePending ? "Update PWA Now" : "Update PWA"}
           </button>
           {message ? <p style={{ margin: 0, fontSize: "13px", color: "var(--text-muted)" }}>{message}</p> : null}
         </div>

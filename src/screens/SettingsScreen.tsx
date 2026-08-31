@@ -5,7 +5,7 @@ import MobileAppearance from "../mobile/MobileAppearance";
 import SecurityCenter from "../SecurityCenter";
 import { useAuth } from "../AuthContext";
 import { useIsDesktop } from "../useIsDesktop";
-import { usePhoneUi, isTauriShell } from "../phoneUi";
+import { usePhoneUi } from "../phoneUi";
 import { isOfflineOnlyBuild } from "../appMode";
 import AboutScreen from "./AboutScreen";
 import { usePwaUpdatePending } from "../usePwaUpdate";
@@ -14,7 +14,6 @@ export default function SettingsScreen() {
   const { session, company } = useAuth();
   const isDesktop = useIsDesktop();
   const isPhone = usePhoneUi();
-  const isWeb = !isTauriShell();
   const { updatePending } = usePwaUpdatePending();
   const [pwaBusy, setPwaBusy] = useState(false);
   const [pwaMessage, setPwaMessage] = useState("");
@@ -108,7 +107,7 @@ export default function SettingsScreen() {
           </NavLink>
         </nav>
 
-        {isWeb ? (
+        {isPhone ? (
           <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
             {updatePending ? (
               <div

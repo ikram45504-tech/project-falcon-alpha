@@ -388,12 +388,11 @@ select:focus {
   min-height: 100dvh;
   padding: 26px;
   background: #f3f6fa;
-  display: flex;
-  flex-direction: column;
 }
 .app-header {
+  width: 100%;
   max-width: 1500px;
-  margin: auto;
+  margin: 0 auto;
   padding: 19px 22px;
   border-radius: 20px 20px 0 0;
   background: linear-gradient(135deg, #0a2540, #144066);

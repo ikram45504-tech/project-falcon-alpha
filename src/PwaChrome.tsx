@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { isTauriShell } from "./phoneUi";
+import { isPhoneViewport, isTauriShell } from "./phoneUi";
 import { usePwaUpdatePending } from "./usePwaUpdate";
 
 type BeforeInstallPromptEvent = Event & {
@@ -23,6 +23,14 @@ export function PwaChrome() {
   const { updatePending, setUpdatePending } = usePwaUpdatePending();
   const [bannerVisible, setBannerVisible] = useState(false);
   const [offline, setOffline] = useState(() => !navigator.onLine);
+  const [isMobileShell, setIsMobileShell] = useState(() => isPhoneViewport());
+
+  useEffect(() => {
+    const syncShell = () => setIsMobileShell(isPhoneViewport());
+    syncShell();
+    window.addEventListener("resize", syncShell);
+    return () => window.removeEventListener("resize", syncShell);
+  }, []);
 
   useEffect(() => {
     if (isTauriShell() || isStandaloneDisplay()) return;
@@ -50,26 +58,32 @@ export function PwaChrome() {
   useEffect(() => {
     if (isTauriShell()) return;
 
-    void import("./registerPwa").then(({ registerPwa }) => {
+    void import("./registerPwa").then(({ registerPwa, applyPwaUpdate }) => {
       registerPwa({
         onNeedRefresh: () => {
-          setUpdatePending(true);
-          setBannerVisible(true);
+          // Desktop web / desktop PWA: apply silently.
+          // Mobile PWA: show banner + Settings update button (stickier caches).
+          if (isPhoneViewport()) {
+            setUpdatePending(true);
+            setBannerVisible(true);
+            return;
+          }
+          void applyPwaUpdate();
         },
       });
     });
   }, [setUpdatePending]);
 
-  // If update is pending but banner was dismissed, remind every 20 seconds.
+  // Mobile only: if update is pending but banner was dismissed, remind every 20 seconds.
   useEffect(() => {
-    if (!updatePending || bannerVisible || isTauriShell()) return;
+    if (!isMobileShell || !updatePending || bannerVisible || isTauriShell()) return;
 
     const timer = window.setInterval(() => {
       setBannerVisible(true);
     }, UPDATE_REMIND_MS);
 
     return () => window.clearInterval(timer);
-  }, [updatePending, bannerVisible]);
+  }, [isMobileShell, updatePending, bannerVisible]);
 
   async function installApp() {
     if (!installEvent) return;
@@ -100,7 +114,7 @@ export function PwaChrome() {
   if (isTauriShell()) return null;
 
   const showInstall = Boolean(installEvent) && !installDismissed && !isStandaloneDisplay();
-  const showUpdate = updatePending && bannerVisible;
+  const showUpdate = isMobileShell && updatePending && bannerVisible;
 
   return (
     <div className="pwa-chrome" aria-live="polite">
