@@ -206,9 +206,13 @@ export default function BookingsModule({
     ? { companyId, parties, transactionType, userId, canCreate, canEdit, canVoid, onBack: backToServices, onChanged }
     : null;
 
+  // Direction hub matches Counterparties — no white content-card wrapper.
+  if (screen === "DIRECTION") {
+    return renderDirectionScreen();
+  }
+
   return (
     <section className="content-card bookings-page bookings-flow-v2">
-      {screen === "DIRECTION" && renderDirectionScreen()}
       {screen === "SERVICES" && renderServicesScreen()}
       {screen === "SERVICE_FORM" && service === "PACKAGE" && sharedProps && <PackageBookingFlow {...sharedProps} />}
       {screen === "SERVICE_FORM" && service === "TICKET" && sharedProps && <TicketBookingModule {...sharedProps} />}

@@ -1147,9 +1147,10 @@ export function PaymentsModule({
     );
   }
 
-  return (
+  return screen === "DIRECTION" ? (
+    renderDirectionScreen()
+  ) : (
     <section className="content-card payments-page payments-v2">
-      {screen === "DIRECTION" && renderDirectionScreen()}
       {screen === "FORM" && renderForm()}
       {screen === "REGISTER" && renderRegister()}
     </section>

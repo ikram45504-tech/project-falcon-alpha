@@ -3246,6 +3246,33 @@ select:focus {
   min-height: 520px;
 }
 
+/* Front hubs (Counterparties / Bookings / Payments / Statements) — fit viewport, no forced scroll */
+.booking-entry-screen.booking-direction-screen {
+  min-height: 0;
+  max-height: none;
+  padding: 4px 8px 28px;
+  overflow: visible;
+}
+
+.booking-direction-screen .booking-screen-toolbar {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.booking-direction-screen .centered-heading {
+  margin: 18px auto 18px;
+}
+
+.booking-direction-screen .booking-screen-heading h2 {
+  font-size: 24px;
+}
+
+.booking-direction-screen .payment-v2-refund-note {
+  margin-top: 18px;
+}
+
 .booking-screen-heading {
   margin: 16px 0 22px;
 }

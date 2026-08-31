@@ -434,49 +434,43 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
 
   if (!statementDirection) {
     return (
-      <section className="content-card bookings-page bookings-flow-v2">
-        <section className="booking-entry-screen booking-direction-screen">
-          <div className="booking-screen-toolbar">
-            <span></span>
-          </div>
-          <div className="booking-screen-heading centered-heading">
-            <span className="eyebrow blue">STATEMENT OF ACCOUNT</span>
-            <h2>Which statement do you need?</h2>
-            <p>Select whether you want to generate a statement for a Party (Customer) or a Vendor (Supplier).</p>
-          </div>
-          <div className="booking-direction-grid">
-            <button
-              type="button"
-              className="booking-direction-card sale"
-              onClick={() => setStatementDirection("PARTY")}
-            >
-              <span className="direction-card-icon" aria-hidden="true">
-                ↗
-              </span>
-              <div>
-                <small>PARTY / CUSTOMER</small>
-                <b>Customer Statement</b>
-                <p>Generate a statement showing receivable balances and sale bookings.</p>
-              </div>
-              <span className="direction-arrow">→</span>
-            </button>
-            <button
-              type="button"
-              className="booking-direction-card purchase"
-              onClick={() => setStatementDirection("VENDOR")}
-            >
-              <span className="direction-card-icon" aria-hidden="true">
-                ↙
-              </span>
-              <div>
-                <small>VENDOR / SUPPLIER</small>
-                <b>Supplier Statement</b>
-                <p>Generate a statement showing payable balances and purchase bookings.</p>
-              </div>
-              <span className="direction-arrow">→</span>
-            </button>
-          </div>
-        </section>
+      <section className="booking-entry-screen booking-direction-screen">
+        <div className="booking-screen-toolbar">
+          <span></span>
+        </div>
+        <div className="booking-screen-heading centered-heading">
+          <span className="eyebrow blue">STATEMENT OF ACCOUNT</span>
+          <h2>Which statement do you need?</h2>
+          <p>Select whether you want to generate a statement for a Party (Customer) or a Vendor (Supplier).</p>
+        </div>
+        <div className="booking-direction-grid">
+          <button type="button" className="booking-direction-card sale" onClick={() => setStatementDirection("PARTY")}>
+            <span className="direction-card-icon" aria-hidden="true">
+              ↗
+            </span>
+            <div>
+              <small>PARTY / CUSTOMER</small>
+              <b>Customer Statement</b>
+              <p>Generate a statement showing receivable balances and sale bookings.</p>
+            </div>
+            <span className="direction-arrow">→</span>
+          </button>
+          <button
+            type="button"
+            className="booking-direction-card purchase"
+            onClick={() => setStatementDirection("VENDOR")}
+          >
+            <span className="direction-card-icon" aria-hidden="true">
+              ↙
+            </span>
+            <div>
+              <small>VENDOR / SUPPLIER</small>
+              <b>Supplier Statement</b>
+              <p>Generate a statement showing payable balances and purchase bookings.</p>
+            </div>
+            <span className="direction-arrow">→</span>
+          </button>
+        </div>
       </section>
     );
   }

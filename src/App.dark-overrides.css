@@ -2896,19 +2896,29 @@
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .booking-direction-card {
-  border-color: rgba(2, 132, 199, 0.2) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.22) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.1) !important;
 }
 :root[data-theme="ocean"] .booking-direction-card.sale .direction-card-icon {
-  color: var(--text-main) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  color: #047857 !important;
+  background: rgba(209, 250, 229, 0.9) !important;
 }
 :root[data-theme="ocean"] .booking-direction-card.purchase .direction-card-icon {
-  color: var(--text-main) !important;
-  background: rgba(255, 255, 255, 0.4) !important;
+  color: #0369a1 !important;
+  background: rgba(186, 230, 253, 0.95) !important;
 }
 :root[data-theme="ocean"] .booking-direction-card b {
   color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .booking-direction-card p,
+:root[data-theme="ocean"] .booking-direction-card small {
+  color: var(--text-muted) !important;
+}
+:root[data-theme="ocean"] .booking-direction-screen .eyebrow.blue {
+  color: #0284c7 !important;
 }
 :root[data-theme="ocean"] .booking-screen-toolbar {
   border-color: rgba(2, 132, 199, 0.2) !important;

@@ -15,7 +15,7 @@ export default function CounterpartiesScreen() {
       <div className="booking-screen-toolbar">
         <span></span>
       </div>
-      <div className="booking-screen-heading centered-heading" style={{ marginTop: "20px" }}>
+      <div className="booking-screen-heading centered-heading">
         <span className="eyebrow blue">COUNTERPARTIES</span>
         <h2>Manage Parties & Vendors</h2>
         <p>Organize your customers, agents, and suppliers in one place.</p>
