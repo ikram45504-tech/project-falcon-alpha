@@ -21,6 +21,8 @@ export function registerPwa(handlers: PwaHandlers = {}) {
     immediate: true,
     onNeedRefresh() {
       handlers.onNeedRefresh?.();
+      // Auto-apply updates so installed PWAs pick up new mobile shell without manual refresh.
+      void applyPwaUpdate();
     },
     onOfflineReady() {
       handlers.onOfflineReady?.();

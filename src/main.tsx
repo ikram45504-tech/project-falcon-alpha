@@ -4,6 +4,7 @@ import { initializeDatabaseSafety } from "./DatabaseSafety";
 import { ThemeProvider } from "./ThemeContext";
 import { PRODUCT_NAME } from "./brand";
 import { PwaChrome } from "./PwaChrome";
+import { applyPhoneShellDocumentClass } from "./phoneUi";
 import "./mobile/mobileShell.css";
 
 function renderSafetyFailure(error: unknown) {
@@ -44,6 +45,7 @@ function renderSafetyFailure(error: unknown) {
 async function bootstrap() {
   try {
     document.title = PRODUCT_NAME;
+    applyPhoneShellDocumentClass();
     const report = await initializeDatabaseSafety();
     if (report.duplicatePaymentDocuments > 0) {
       console.warn(

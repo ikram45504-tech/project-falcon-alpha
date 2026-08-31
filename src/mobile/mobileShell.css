@@ -422,8 +422,18 @@ html.phone-ui {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+/* Show tabs whenever the mobile shell is mounted — not only after React adds phone-ui. */
+.mobile-workspace .th-phone-tabs,
 html.phone-ui .th-phone-tabs {
   display: grid;
+}
+
+/* Desktop nav must never appear inside the mobile shell. */
+.mobile-workspace .workspace-nav,
+html.phone-ui .workspace-nav {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }
 
 .th-phone-tabs a,

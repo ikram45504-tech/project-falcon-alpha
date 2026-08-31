@@ -24,11 +24,14 @@ export default defineConfig(async () => ({
         "icons/apple-touch-icon.png",
         "travel-hisab-logo-square.png",
         "logo/travel-hisab-logo.svg",
+        "mobile-shell-bootstrap.js",
       ],
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest,woff,woff2}"],
         navigateFallback: "/index.html",
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/[^/]+\.supabase\.co\//,
