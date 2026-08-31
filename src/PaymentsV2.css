@@ -12,50 +12,40 @@
 
 .payment-register-link,
 .payment-register-button {
-  border-color: #7552a6 !important;
-  color: #5c358d !important;
-  background: #f7f2fc !important;
-}
-
-.payment-party-card .direction-card-icon {
-  color: #137a50;
-  background: #e9f8f1;
-}
-
-.payment-vendor-card .direction-card-icon {
-  color: #6940a0;
-  background: #f2ebfa;
+  border-color: #cfe5f7 !important;
+  color: #0d5d9d !important;
+  background: #edf6ff !important;
 }
 
 .payment-v2-refund-note {
   max-width: 920px;
   margin: 26px auto 0;
   padding: 13px 16px;
-  border: 1px solid #ddd2eb;
+  border: 1px solid #dbe5ef;
   border-radius: 12px;
-  background: #faf7fd;
+  background: #f7fafc;
   color: #655975;
   font-size: 13px;
   line-height: 1.55;
 }
 
 .payment-v2-refund-note b {
-  color: #593786;
+  color: #174a86;
 }
 
 .payment-v2-title .purple-text,
 .payment-step-heading span,
 .payment-v2-title h2 {
-  color: #5b3687;
+  color: #1b5b9c;
 }
 
 .payment-v2-identity {
-  border-color: #ded4eb;
+  border-color: #dbe5ef;
 }
 
 .payment-step-heading span {
-  background: #f0e8f8;
-  border-color: #d6c5e8;
+  background: #edf6ff;
+  border-color: #cfe5f7;
 }
 
 .payment-v2-identity-grid {

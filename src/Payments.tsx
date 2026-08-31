@@ -485,16 +485,12 @@ export function PaymentsModule({
           </button>
         </div>
         <div className="booking-screen-heading centered-heading">
-          <span className="eyebrow purple-text">PAYMENTS</span>
+          <span className="eyebrow blue">PAYMENTS</span>
           <h2>Which account are you settling?</h2>
           <p>Choose the account side first. Payments remain account-based and are not allocated to individual UBs.</p>
         </div>
         <div className="booking-direction-grid">
-          <button
-            type="button"
-            className="booking-direction-card sale payment-party-card"
-            onClick={() => chooseSide("PARTY")}
-          >
+          <button type="button" className="booking-direction-card sale" onClick={() => chooseSide("PARTY")}>
             <span className="direction-card-icon" aria-hidden="true">
               ↓
             </span>
@@ -505,11 +501,7 @@ export function PaymentsModule({
             </div>
             <span className="direction-arrow">→</span>
           </button>
-          <button
-            type="button"
-            className="booking-direction-card purchase payment-vendor-card"
-            onClick={() => chooseSide("VENDOR")}
-          >
+          <button type="button" className="booking-direction-card purchase" onClick={() => chooseSide("VENDOR")}>
             <span className="direction-card-icon" aria-hidden="true">
               ↑
             </span>
@@ -557,7 +549,7 @@ export function PaymentsModule({
         </div>
         <div className="package14-title payment-v2-title">
           <div>
-            <span className="eyebrow purple-text">{isParty ? "PARTY PAYMENTS" : "VENDOR PAYMENTS"}</span>
+            <span className="eyebrow blue">{isParty ? "PARTY PAYMENTS" : "VENDOR PAYMENTS"}</span>
             <h2>
               {paymentSaved
                 ? `${documentNoun} — ${form.documentNo}`
@@ -990,7 +982,7 @@ export function PaymentsModule({
         </div>
         <div className="package14-register-title payment-v2-register-title">
           <div>
-            <span className="eyebrow purple-text">PAYMENT REGISTER</span>
+            <span className="eyebrow blue">PAYMENT REGISTER</span>
             <h2>Payment Register</h2>
             <p>
               Account-based Party receipts and Vendor payments. Receipt / Voucher prefixes identify Cash versus Bank

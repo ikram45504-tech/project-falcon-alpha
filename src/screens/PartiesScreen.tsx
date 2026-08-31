@@ -233,7 +233,6 @@ export default function PartiesScreen() {
                         {can("edit_parties") && (
                           <button
                             className="danger"
-                            style={{ color: "var(--red)", border: "1px solid var(--red)" }}
                             onClick={async () => {
                               if (
                                 window.confirm(

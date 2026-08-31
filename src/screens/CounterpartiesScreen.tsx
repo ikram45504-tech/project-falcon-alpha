@@ -16,7 +16,7 @@ export default function CounterpartiesScreen() {
         <span></span>
       </div>
       <div className="booking-screen-heading centered-heading" style={{ marginTop: "20px" }}>
-        <span className="eyebrow green">COUNTERPARTIES WORKSPACE</span>
+        <span className="eyebrow blue">COUNTERPARTIES</span>
         <h2>Manage Parties & Vendors</h2>
         <p>Organize your customers, agents, and suppliers in one place.</p>
       </div>
@@ -58,24 +58,8 @@ export default function CounterpartiesScreen() {
               👤
             </span>
             <div>
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}
-              >
-                <small>PARTIES / CUSTOMERS</small>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: 800,
-                    color: "var(--brand-secondary)",
-                    background: "var(--bg-app)",
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                  }}
-                >
-                  {partyAccounts.length} ACTIVE
-                </span>
-              </div>
-              <b style={{ fontSize: "18px" }}>Customers</b>
+              <small>PARTIES / CUSTOMERS · {partyAccounts.length} ACTIVE</small>
+              <b>Customers</b>
               <p>Manage your direct clients and customers.</p>
             </div>
             <span className="direction-arrow">→</span>
@@ -88,24 +72,8 @@ export default function CounterpartiesScreen() {
               🏢
             </span>
             <div>
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}
-              >
-                <small>VENDORS / SUPPLIERS</small>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: 800,
-                    color: "var(--red)",
-                    background: "var(--bg-app)",
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                  }}
-                >
-                  {vendorAccounts.length} ACTIVE
-                </span>
-              </div>
-              <b style={{ fontSize: "18px" }}>Suppliers</b>
+              <small>VENDORS / SUPPLIERS · {vendorAccounts.length} ACTIVE</small>
+              <b>Suppliers</b>
               <p>Manage the vendors you purchase travel services from.</p>
             </div>
             <span className="direction-arrow">→</span>
