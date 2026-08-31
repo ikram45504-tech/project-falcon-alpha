@@ -1,17 +1,23 @@
 import { NavLink, Routes, Route, Navigate } from "react-router-dom";
+import { useState } from "react";
 import AppearanceScreen from "./AppearanceScreen";
 import MobileAppearance from "../mobile/MobileAppearance";
 import SecurityCenter from "../SecurityCenter";
 import { useAuth } from "../AuthContext";
 import { useIsDesktop } from "../useIsDesktop";
-import { usePhoneUi } from "../phoneUi";
+import { usePhoneUi, isTauriShell } from "../phoneUi";
 import { isOfflineOnlyBuild } from "../appMode";
 import AboutScreen from "./AboutScreen";
+import { usePwaUpdatePending } from "../usePwaUpdate";
 
 export default function SettingsScreen() {
   const { session, company } = useAuth();
   const isDesktop = useIsDesktop();
   const isPhone = usePhoneUi();
+  const isWeb = !isTauriShell();
+  const { updatePending } = usePwaUpdatePending();
+  const [pwaBusy, setPwaBusy] = useState(false);
+  const [pwaMessage, setPwaMessage] = useState("");
 
   const checkForUpdates = async () => {
     try {
@@ -39,11 +45,42 @@ export default function SettingsScreen() {
     }
   };
 
+  async function updatePwa() {
+    setPwaBusy(true);
+    setPwaMessage("");
+    try {
+      const { checkAndApplyPwaUpdate, applyPwaUpdate } = await import("../registerPwa");
+      if (updatePending) {
+        await applyPwaUpdate();
+        return;
+      }
+      const result = await checkAndApplyPwaUpdate();
+      if (result === "current") {
+        setPwaMessage("You are already on the latest web app version.");
+      } else if (result === "unavailable") {
+        setPwaMessage("PWA updates are only available in the browser / installed web app.");
+      }
+    } catch (error) {
+      setPwaMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setPwaBusy(false);
+    }
+  }
+
   if (!session || !company) return <Navigate to="/" />;
+
+  const linkStyle = ({ isActive }: { isActive: boolean }) => ({
+    padding: "10px 12px",
+    borderRadius: "8px",
+    textDecoration: "none" as const,
+    color: isActive ? "var(--brand-secondary)" : "var(--text-main)",
+    background: isActive ? "var(--bg-app)" : "transparent",
+    fontWeight: isActive ? 800 : 600,
+    borderLeft: isActive ? "3px solid var(--brand-secondary)" : "3px solid transparent",
+  });
 
   return (
     <div className="settings-shell">
-      {/* Settings Sidebar */}
       <aside className="settings-hub">
         <h3
           style={{
@@ -57,65 +94,64 @@ export default function SettingsScreen() {
           SETTINGS HUB
         </h3>
         <nav className="settings-hub-links">
-          <NavLink
-            to="/settings/appearance"
-            style={({ isActive }) => ({
-              padding: "10px 12px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              color: isActive ? "var(--brand-secondary)" : "var(--text-main)",
-              background: isActive ? "var(--bg-app)" : "transparent",
-              fontWeight: isActive ? 800 : 600,
-              borderLeft: isActive ? "3px solid var(--brand-secondary)" : "3px solid transparent",
-            })}
-          >
+          <NavLink to="/settings/appearance" style={linkStyle}>
             🎨 {isPhone ? "Appearance" : "Appearance & Layout"}
           </NavLink>
-          <NavLink
-            to="/settings/account"
-            style={({ isActive }) => ({
-              padding: "10px 12px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              color: isActive ? "var(--brand-secondary)" : "var(--text-main)",
-              background: isActive ? "var(--bg-app)" : "transparent",
-              fontWeight: isActive ? 800 : 600,
-              borderLeft: isActive ? "3px solid var(--brand-secondary)" : "3px solid transparent",
-            })}
-          >
+          <NavLink to="/settings/account" style={linkStyle}>
             👤 Account & Profile
           </NavLink>
-          <NavLink
-            to="/settings/security"
-            style={({ isActive }) => ({
-              padding: "10px 12px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              color: isActive ? "var(--brand-secondary)" : "var(--text-main)",
-              background: isActive ? "var(--bg-app)" : "transparent",
-              fontWeight: isActive ? 800 : 600,
-              borderLeft: isActive ? "3px solid var(--brand-secondary)" : "3px solid transparent",
-            })}
-          >
+          <NavLink to="/settings/security" style={linkStyle}>
             🛡️ Security & Access
           </NavLink>
-          {isDesktop && (
-            <NavLink
-              to="/settings/about"
-              style={({ isActive }) => ({
-                padding: "10px 12px",
-                borderRadius: "8px",
-                textDecoration: "none",
-                color: isActive ? "var(--brand-secondary)" : "var(--text-main)",
-                background: isActive ? "var(--bg-app)" : "transparent",
-                fontWeight: isActive ? 800 : 600,
-                borderLeft: isActive ? "3px solid var(--brand-secondary)" : "3px solid transparent",
-              })}
-            >
-              ℹ️ About Software
-            </NavLink>
-          )}
+          <NavLink to="/settings/about" style={linkStyle}>
+            ℹ️ About Software
+          </NavLink>
         </nav>
+
+        {isWeb ? (
+          <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
+            {updatePending ? (
+              <div
+                style={{
+                  marginBottom: "10px",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  background: "#dbeafe",
+                  color: "#1e3a8a",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                }}
+              >
+                Update waiting — refresh to apply.
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void updatePwa()}
+              disabled={pwaBusy}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-glass)",
+                background: updatePending ? "#1d4ed8" : "var(--bg-app)",
+                color: updatePending ? "#fff" : "var(--brand-primary)",
+                fontWeight: 700,
+                cursor: pwaBusy ? "wait" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              {pwaBusy ? "Checking…" : updatePending ? "Update PWA Now" : "Update PWA"}
+            </button>
+            {pwaMessage ? (
+              <p style={{ margin: "10px 0 0", fontSize: "12px", color: "var(--text-muted)" }}>{pwaMessage}</p>
+            ) : null}
+          </div>
+        ) : null}
+
         {isDesktop && !isOfflineOnlyBuild() && (
           <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
             <button
@@ -226,7 +262,6 @@ export default function SettingsScreen() {
         )}
       </aside>
 
-      {/* Settings Content Area */}
       <div className="settings-hub-content">
         <Routes>
           <Route path="/" element={<Navigate to="appearance" replace />} />
@@ -255,7 +290,7 @@ export default function SettingsScreen() {
               />
             }
           />
-          {isDesktop && <Route path="about" element={<AboutScreen />} />}
+          <Route path="about" element={<AboutScreen />} />
         </Routes>
       </div>
     </div>

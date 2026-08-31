@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { isTauriShell } from "./phoneUi";
+import { usePwaUpdatePending } from "./usePwaUpdate";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -7,6 +8,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 const INSTALL_DISMISS_KEY = "travel-hisab-pwa-install-dismissed";
+const UPDATE_REMIND_MS = 20_000;
 
 function isStandaloneDisplay() {
   return (
@@ -18,7 +20,8 @@ function isStandaloneDisplay() {
 export function PwaChrome() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installDismissed, setInstallDismissed] = useState(() => sessionStorage.getItem(INSTALL_DISMISS_KEY) === "1");
-  const [updateReady, setUpdateReady] = useState(false);
+  const { updatePending, setUpdatePending } = usePwaUpdatePending();
+  const [bannerVisible, setBannerVisible] = useState(false);
   const [offline, setOffline] = useState(() => !navigator.onLine);
 
   useEffect(() => {
@@ -49,10 +52,24 @@ export function PwaChrome() {
 
     void import("./registerPwa").then(({ registerPwa }) => {
       registerPwa({
-        onNeedRefresh: () => setUpdateReady(true),
+        onNeedRefresh: () => {
+          setUpdatePending(true);
+          setBannerVisible(true);
+        },
       });
     });
-  }, []);
+  }, [setUpdatePending]);
+
+  // If update is pending but banner was dismissed, remind every 20 seconds.
+  useEffect(() => {
+    if (!updatePending || bannerVisible || isTauriShell()) return;
+
+    const timer = window.setInterval(() => {
+      setBannerVisible(true);
+    }, UPDATE_REMIND_MS);
+
+    return () => window.clearInterval(timer);
+  }, [updatePending, bannerVisible]);
 
   async function installApp() {
     if (!installEvent) return;
@@ -71,6 +88,10 @@ export function PwaChrome() {
     setInstallEvent(null);
   }
 
+  function dismissUpdateBanner() {
+    setBannerVisible(false);
+  }
+
   async function applyUpdate() {
     const { applyPwaUpdate } = await import("./registerPwa");
     await applyPwaUpdate();
@@ -79,6 +100,7 @@ export function PwaChrome() {
   if (isTauriShell()) return null;
 
   const showInstall = Boolean(installEvent) && !installDismissed && !isStandaloneDisplay();
+  const showUpdate = updatePending && bannerVisible;
 
   return (
     <div className="pwa-chrome" aria-live="polite">
@@ -88,14 +110,14 @@ export function PwaChrome() {
         </div>
       ) : null}
 
-      {updateReady ? (
+      {showUpdate ? (
         <div className="pwa-banner pwa-banner-update" role="status">
-          <span>A new version of Travel Hisab is ready.</span>
+          <span>A new version of Travel Hisab is ready. Refresh to apply the update.</span>
           <div className="pwa-banner-actions">
             <button type="button" className="pwa-banner-primary" onClick={() => void applyUpdate()}>
-              Refresh
+              Refresh Now
             </button>
-            <button type="button" className="pwa-banner-ghost" onClick={() => setUpdateReady(false)}>
+            <button type="button" className="pwa-banner-ghost" onClick={dismissUpdateBanner}>
               Later
             </button>
           </div>

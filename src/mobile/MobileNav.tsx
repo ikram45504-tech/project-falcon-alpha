@@ -74,6 +74,9 @@ export function MobileMenu({
           <NavLink to="/settings" onClick={onClose}>
             Settings
           </NavLink>
+          <NavLink to="/settings/about" onClick={onClose}>
+            About
+          </NavLink>
         </div>
 
         <div className="th-phone-drawer-footer">
