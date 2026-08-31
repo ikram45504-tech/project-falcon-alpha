@@ -1,13 +1,6 @@
 import { createPortal } from "react-dom";
 import { NavLink } from "react-router-dom";
 import type { Permission } from "../permissions";
-import { useTheme, type ThemeMode } from "../ThemeContext";
-
-const MOBILE_THEMES: { id: ThemeMode; icon: string; label: string }[] = [
-  { id: "light", icon: "☀️", label: "Bright" },
-  { id: "dark", icon: "🌙", label: "Dark" },
-  { id: "ocean", icon: "🌊", label: "Ocean" },
-];
 
 export function MobileMenu({
   open,
@@ -24,8 +17,6 @@ export function MobileMenu({
   onBookingRetap?: () => void;
   onPaymentRetap?: () => void;
 }) {
-  const { mode, setMode } = useTheme();
-
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
@@ -40,7 +31,6 @@ export function MobileMenu({
         </div>
 
         <div className="th-phone-drawer-section">
-          <span className="th-phone-drawer-label">Navigate</span>
           <NavLink to="/" end onClick={onClose}>
             Dashboard
           </NavLink>
@@ -84,23 +74,6 @@ export function MobileMenu({
           <NavLink to="/settings" onClick={onClose}>
             Settings
           </NavLink>
-        </div>
-
-        <div className="th-phone-drawer-section">
-          <span className="th-phone-drawer-label">Theme</span>
-          <div className="th-phone-theme-row">
-            {MOBILE_THEMES.map((theme) => (
-              <button
-                key={theme.id}
-                type="button"
-                className={`th-phone-theme-btn${mode === theme.id ? " active" : ""}`}
-                onClick={() => setMode(theme.id)}
-                aria-pressed={mode === theme.id}
-              >
-                {theme.icon} {theme.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="th-phone-drawer-footer">

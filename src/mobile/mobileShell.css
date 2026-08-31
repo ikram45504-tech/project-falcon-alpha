@@ -154,13 +154,67 @@ html.phone-ui {
     padding: 10px 14px !important;
     padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
+    background: #082751 !important;
+    color: #fff !important;
+    border-bottom: none !important;
   }
 
-  .mobile-header-subtitle {
+  .mobile-identity {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .mobile-header-logo {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    padding: 3px !important;
+    overflow: hidden;
+  }
+
+  .mobile-header-logo img {
     display: block;
-    font-size: 12px;
-    opacity: 0.85;
-    margin-top: 2px;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    border-radius: 7px;
+  }
+
+  .mobile-header-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+    font-weight: 800;
+    color: #082751;
+    letter-spacing: 0.02em;
+  }
+
+  .mobile-identity-text {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .mobile-identity-text h1 {
+    margin: 0 !important;
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    color: #fff !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.25;
   }
 
   .identity {
@@ -361,33 +415,6 @@ html.phone-ui {
 
 .th-phone-drawer a.active {
   background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-}
-
-.th-phone-theme-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.th-phone-theme-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.th-phone-theme-btn.active {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.45);
   color: #fff;
 }
 
