@@ -385,9 +385,11 @@ select:focus {
   align-self: center;
 }
 .workspace {
-  min-height: 100vh;
+  min-height: 100dvh;
   padding: 26px;
   background: #f3f6fa;
+  display: flex;
+  flex-direction: column;
 }
 .app-header {
   max-width: 1500px;
@@ -3250,27 +3252,67 @@ select:focus {
 .booking-entry-screen.booking-direction-screen {
   min-height: 0;
   max-height: none;
-  padding: 4px 8px 28px;
+  padding: 0 4px 8px;
   overflow: visible;
 }
 
 .booking-direction-screen .booking-screen-toolbar {
   min-height: 0;
-  margin: 0;
-  padding: 0;
+  margin: 0 0 4px;
+  padding: 0 0 8px;
   border: 0;
 }
 
 .booking-direction-screen .centered-heading {
-  margin: 18px auto 18px;
+  margin: 8px auto 14px;
 }
 
 .booking-direction-screen .booking-screen-heading h2 {
-  font-size: 24px;
+  font-size: 22px;
+  margin: 4px 0;
+}
+
+.booking-direction-screen .booking-screen-heading p {
+  font-size: 13px;
+}
+
+.booking-direction-screen .booking-direction-card {
+  min-height: 132px;
+  padding: 18px 20px;
+}
+
+.booking-direction-screen .booking-direction-grid {
+  gap: 14px;
 }
 
 .booking-direction-screen .payment-v2-refund-note {
-  margin-top: 18px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+
+/* Hub pages: content area must not invent scroll from min-height */
+.layout-content-wrapper:has(> .booking-direction-screen),
+.layout-content-wrapper:has(.booking-direction-screen) {
+  min-height: 0 !important;
+  padding-top: 12px !important;
+  padding-bottom: 16px !important;
+  overflow: visible;
+}
+
+/* Keep document height natural on hub chooser screens */
+html:has(.booking-direction-screen) {
+  overflow-y: auto;
+}
+html:has(.booking-direction-screen) body {
+  min-height: 100dvh;
+  height: auto;
+  overflow-x: hidden;
+}
+html:has(.booking-direction-screen) .workspace {
+  min-height: 100dvh;
+  height: auto;
+  overflow: visible;
 }
 
 .booking-screen-heading {
@@ -8861,8 +8903,10 @@ table tbody tr:hover {
 
 :root[data-layout="layout-1"] .layout-content-wrapper {
   background: var(--bg-app);
-  padding: 32px;
-  min-height: calc(100vh - 140px);
+  padding: 24px 32px;
+  /* Do not use calc(100vh - N) here — undercounting chrome forces a fake scrollbar. */
+  min-height: 0;
+  flex: 1;
 }
 :root[data-layout="layout-1"] .module-card,
 :root[data-layout="layout-1"] .card {
@@ -8975,8 +9019,9 @@ table tbody tr:hover {
 }
 :root[data-layout="layout-2"] .layout-content-wrapper {
   background: var(--bg-app);
-  padding: 32px;
-  min-height: calc(100vh - 140px);
+  padding: 24px 32px;
+  min-height: 0;
+  flex: 1;
 }
 
 /* =========================================================
@@ -8997,6 +9042,10 @@ button:hover:not(:disabled),
 .booking-direction-card:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.2);
+}
+/* Hub cards: no scale — scale expands the page and creates a fake scrollbar */
+.booking-direction-screen .booking-direction-card:hover {
+  transform: translateY(-2px);
 }
 button:active:not(:disabled),
 .booking-direction-card:active {
