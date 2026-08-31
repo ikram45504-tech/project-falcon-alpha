@@ -9,6 +9,7 @@ import type {
 } from "./db";
 import { blankPartyInput, createParty, getPackageBookings, normalizePartyInput, voidPackageBooking } from "./db";
 import AccountForm from "./AccountForm";
+import AccountFormModal from "./AccountFormModal";
 import { createPackageCommercialBooking } from "./PackageFlowDb";
 import PackageOperationalDetails from "./PackageOperationalDetails";
 import PackageBookingAdjustment from "./PackageBookingAdjustment";
@@ -730,38 +731,17 @@ export default function PackageBookingFlowV2({
         )}
 
         {quickAccountOpen && (
-          <div
-            className="modal-backdrop package14-modal-backdrop"
-            onMouseDown={(e) => e.currentTarget === e.target && setQuickAccountOpen(false)}
+          <AccountFormModal
+            title={`Add New ${activeTransactionType === "SALE" ? "Party" : "Vendor"}`}
+            busy={quickAccountBusy}
+            busyLabel="Creating..."
+            primaryLabel={`Create ${activeTransactionType === "SALE" ? "Party" : "Vendor"}`}
+            backdropClassName="package14-modal-backdrop"
+            onClose={() => setQuickAccountOpen(false)}
+            onSubmit={() => void saveQuickAccount()}
           >
-            <section
-              className="modal-card account-form-modal package14-quick-modal"
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <button type="button" className="close-btn" onClick={() => setQuickAccountOpen(false)}>
-                ×
-              </button>
-              <span className="eyebrow blue">QUICK ACCOUNT</span>
-              <h2>Create {activeTransactionType === "SALE" ? "Party / Customer" : "Vendor / Supplier"}</h2>
-              <p className="account-form-hint">
-                Create the account without leaving the {serviceLabel} booking. It will be selected automatically.
-              </p>
-              <AccountForm value={quickAccount} onChange={setQuickAccount} />
-              <div className="package14-modal-actions account-form-actions">
-                <button type="button" className="secondary" onClick={() => setQuickAccountOpen(false)}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={quickAccountBusy}
-                  onClick={() => void saveQuickAccount()}
-                >
-                  {quickAccountBusy ? "Creating..." : `Create ${activeTransactionType === "SALE" ? "Party" : "Vendor"}`}
-                </button>
-              </div>
-            </section>
-          </div>
+            <AccountForm value={quickAccount} onChange={setQuickAccount} />
+          </AccountFormModal>
         )}
       </section>
     );

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { BookingTransactionType, Party, PartyInput } from "./db";
 import { blankPartyInput, createParty, normalizePartyInput } from "./db";
 import AccountForm from "./AccountForm";
+import AccountFormModal from "./AccountFormModal";
 import { bookingUbFromDigits, cleanBookingDigits } from "./bookingUb";
 
 type Props = {
@@ -184,33 +185,17 @@ export default function ProgressiveBookingIdentity({
       </section>
 
       {quickOpen && (
-        <div
-          className="modal-backdrop package14-modal-backdrop"
-          onMouseDown={(e) => e.currentTarget === e.target && setQuickOpen(false)}
+        <AccountFormModal
+          title={`Add New ${transactionType === "SALE" ? "Party" : "Vendor"}`}
+          busy={busy}
+          busyLabel="Creating..."
+          primaryLabel={`Create ${transactionType === "SALE" ? "Party" : "Vendor"}`}
+          backdropClassName="package14-modal-backdrop"
+          onClose={() => setQuickOpen(false)}
+          onSubmit={() => void saveQuick()}
         >
-          <section
-            className="modal-card account-form-modal package14-quick-modal"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <button type="button" className="close-btn" onClick={() => setQuickOpen(false)}>
-              ×
-            </button>
-            <span className="eyebrow blue">QUICK ACCOUNT</span>
-            <h2>Create {accountNoun}</h2>
-            <p className="account-form-hint">
-              Create the account without leaving this booking. It will be selected automatically.
-            </p>
-            <AccountForm value={quick} onChange={setQuick} />
-            <div className="package14-modal-actions account-form-actions">
-              <button type="button" className="secondary" onClick={() => setQuickOpen(false)}>
-                Cancel
-              </button>
-              <button type="button" className="primary" disabled={busy} onClick={() => void saveQuick()}>
-                {busy ? "Creating..." : `Create ${transactionType === "SALE" ? "Party" : "Vendor"}`}
-              </button>
-            </div>
-          </section>
-        </div>
+          <AccountForm value={quick} onChange={setQuick} />
+        </AccountFormModal>
       )}
     </>
   );

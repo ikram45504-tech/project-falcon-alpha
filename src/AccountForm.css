@@ -1,14 +1,14 @@
 .account-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 12px;
+  gap: 12px 14px;
 }
 
 .account-form label {
   display: grid;
-  gap: 5px;
-  color: #526a80;
-  font-size: 11px;
+  gap: 6px;
+  color: #3f5a73;
+  font-size: 12px;
   font-weight: 750;
 }
 
@@ -20,49 +20,46 @@
 .account-form select,
 .account-form textarea {
   width: 100%;
-  min-height: 36px;
-  padding: 7px 10px;
+  min-height: 40px;
+  padding: 8px 12px;
   border: 1px solid #c9d6e4;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
   color: #173f68;
-  font-size: 13px;
+  font-size: 14px;
+  box-sizing: border-box;
 }
 
 .account-form input:focus,
 .account-form select:focus {
-  outline: 2px solid rgba(37, 99, 160, 0.25);
+  outline: 2px solid rgba(37, 99, 160, 0.22);
   border-color: #5b87b5;
 }
 
 .account-form-modal {
-  width: min(520px, 94vw);
-  max-height: min(90vh, 640px);
+  width: min(560px, 94vw) !important;
+  max-height: min(90vh, 680px);
   overflow: auto;
+  padding: 24px 26px !important;
 }
 
-.account-form-modal .modal-head,
-.account-form-modal > .eyebrow {
-  margin-bottom: 2px;
+.account-form-modal .modal-head {
+  margin-bottom: 16px;
 }
 
-.account-form-modal h2,
-.account-form-modal h3 {
-  margin: 4px 0 6px;
+.account-form-modal .modal-head h3 {
+  margin: 4px 0 0;
+  color: #143962;
+  font-size: 22px;
+  font-weight: 800;
 }
 
-.account-form-modal > p,
-.account-form-modal .account-form-hint {
-  margin: 0 0 12px;
-  color: #748397;
-  font-size: 12px;
+.account-form-modal .alert {
+  margin-bottom: 12px;
 }
 
-.account-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 9px;
-  margin-top: 14px;
+.account-form-modal .modal-buttons {
+  margin-top: 18px;
 }
 
 @media (max-width: 560px) {

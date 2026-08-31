@@ -14,6 +14,7 @@ import {
   deleteParty,
 } from "../db";
 import AccountForm from "../AccountForm";
+import AccountFormModal from "../AccountFormModal";
 
 function formatMoney(value: number) {
   return `Rs ${Math.round(Number(value) || 0).toLocaleString("en-PK")}`;
@@ -259,40 +260,22 @@ export default function PartiesScreen() {
       </section>
 
       {partyModalOpen && (
-        <div className="modal-backdrop" onMouseDown={() => setPartyModalOpen(false)}>
-          <section className="modal-card account-form-modal" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div>
-                <span className="eyebrow blue">ACCOUNT MASTER</span>
-                <h3>
-                  {editingParty
-                    ? `Edit ${partyForm.accountType === "VENDOR" ? "Vendor" : partyForm.accountType === "PARTY" ? "Party" : "Account"}`
-                    : `Add New ${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"}`}
-                </h3>
-              </div>
-              <button className="close-btn" onClick={() => setPartyModalOpen(false)}>
-                ×
-              </button>
-            </div>
-
-            {error && <div className="alert error">{error}</div>}
-
-            <AccountForm value={partyForm} onChange={setPartyForm} showAccountType={accountView === "UNASSIGNED"} />
-
-            <div className="modal-buttons account-form-actions">
-              <button className="secondary" onClick={() => setPartyModalOpen(false)}>
-                Cancel
-              </button>
-              <button className="primary" onClick={saveParty} disabled={busy}>
-                {busy
-                  ? "Saving..."
-                  : editingParty
-                    ? "Save Changes"
-                    : `Create ${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"}`}
-              </button>
-            </div>
-          </section>
-        </div>
+        <AccountFormModal
+          title={
+            editingParty
+              ? `Edit ${partyForm.accountType === "VENDOR" ? "Vendor" : partyForm.accountType === "PARTY" ? "Party" : "Account"}`
+              : `Add New ${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"}`
+          }
+          error={error}
+          busy={busy}
+          primaryLabel={
+            editingParty ? "Save Changes" : `Create ${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"}`
+          }
+          onClose={() => setPartyModalOpen(false)}
+          onSubmit={() => void saveParty()}
+        >
+          <AccountForm value={partyForm} onChange={setPartyForm} showAccountType={accountView === "UNASSIGNED"} />
+        </AccountFormModal>
       )}
     </>
   );
