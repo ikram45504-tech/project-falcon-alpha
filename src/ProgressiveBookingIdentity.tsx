@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { BookingTransactionType, Party, PartyInput } from "./db";
-import { createParty } from "./db";
+import { blankPartyInput, createParty, normalizePartyInput } from "./db";
+import AccountForm from "./AccountForm";
 import { bookingUbFromDigits, cleanBookingDigits } from "./bookingUb";
 
 type Props = {
@@ -26,9 +27,6 @@ type Props = {
   serviceLabel: string;
 };
 
-type QuickAccountState = { name: string; phone: string; whatsapp: string; address: string; notes: string };
-const blankQuick: QuickAccountState = { name: "", phone: "", whatsapp: "", address: "", notes: "" };
-
 export default function ProgressiveBookingIdentity({
   companyId,
   userId = "",
@@ -51,10 +49,10 @@ export default function ProgressiveBookingIdentity({
   onMessage,
   serviceLabel,
 }: Props) {
-  const [quickOpen, setQuickOpen] = useState(false);
-  const [quick, setQuick] = useState<QuickAccountState>(blankQuick);
-  const [busy, setBusy] = useState(false);
   const accountType = transactionType === "SALE" ? "PARTY" : "VENDOR";
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quick, setQuick] = useState<PartyInput>(() => blankPartyInput(accountType));
+  const [busy, setBusy] = useState(false);
   const accountNoun = transactionType === "SALE" ? "Party / Customer" : "Vendor / Supplier";
   const eligible = useMemo(
     () => parties.filter((item) => item.status === "ACTIVE" && item.account_type === accountType),
@@ -64,23 +62,15 @@ export default function ProgressiveBookingIdentity({
   const preview = bookingUbFromDigits(ubDigits);
 
   async function saveQuick() {
-    if (!quick.name.trim()) return onError?.(`${transactionType === "SALE" ? "Party" : "Vendor"} name is required.`);
+    const input = normalizePartyInput({ ...quick, accountType, status: quick.status || "ACTIVE" });
+    if (!input.name) return onError?.(`${transactionType === "SALE" ? "Party" : "Vendor"} name is required.`);
     setBusy(true);
     onError?.("");
     try {
-      const input: PartyInput = {
-        name: quick.name.trim(),
-        phone: quick.phone.trim(),
-        whatsapp: quick.whatsapp.trim(),
-        address: quick.address.trim(),
-        notes: quick.notes.trim(),
-        status: "ACTIVE",
-        accountType,
-      };
       const id = await createParty(companyId, input, userId);
       onCounterpartyChange(id);
       setQuickOpen(false);
-      setQuick(blankQuick);
+      setQuick(blankPartyInput(accountType));
       await onAccountsChanged?.();
       onMessage?.(
         `${transactionType === "SALE" ? "Party" : "Vendor"} created and selected for this ${serviceLabel} booking.`,
@@ -150,7 +140,7 @@ export default function ProgressiveBookingIdentity({
                 <button
                   type="button"
                   onClick={() => {
-                    setQuick(blankQuick);
+                    setQuick(blankPartyInput(accountType));
                     setQuickOpen(true);
                     onError?.("");
                   }}
@@ -198,44 +188,20 @@ export default function ProgressiveBookingIdentity({
           className="modal-backdrop package14-modal-backdrop"
           onMouseDown={(e) => e.currentTarget === e.target && setQuickOpen(false)}
         >
-          <section className="modal-card package14-quick-modal" onMouseDown={(e) => e.stopPropagation()}>
+          <section
+            className="modal-card account-form-modal package14-quick-modal"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <button type="button" className="close-btn" onClick={() => setQuickOpen(false)}>
               ×
             </button>
             <span className="eyebrow blue">QUICK ACCOUNT</span>
             <h2>Create {accountNoun}</h2>
-            <p>Create the account without leaving this booking. It will be selected automatically.</p>
-            <div className="package14-quick-grid">
-              <label>
-                Name *
-                <input
-                  autoFocus
-                  value={quick.name}
-                  onChange={(e) => setQuick((v) => ({ ...v, name: e.target.value }))}
-                />
-              </label>
-              <label>
-                Phone
-                <input value={quick.phone} onChange={(e) => setQuick((v) => ({ ...v, phone: e.target.value }))} />
-              </label>
-              <label>
-                WhatsApp
-                <input value={quick.whatsapp} onChange={(e) => setQuick((v) => ({ ...v, whatsapp: e.target.value }))} />
-              </label>
-              <label>
-                Address
-                <input value={quick.address} onChange={(e) => setQuick((v) => ({ ...v, address: e.target.value }))} />
-              </label>
-              <label className="wide">
-                Notes
-                <textarea
-                  rows={3}
-                  value={quick.notes}
-                  onChange={(e) => setQuick((v) => ({ ...v, notes: e.target.value }))}
-                />
-              </label>
-            </div>
-            <div className="package14-modal-actions">
+            <p className="account-form-hint">
+              Create the account without leaving this booking. It will be selected automatically.
+            </p>
+            <AccountForm value={quick} onChange={setQuick} />
+            <div className="package14-modal-actions account-form-actions">
               <button type="button" className="secondary" onClick={() => setQuickOpen(false)}>
                 Cancel
               </button>

@@ -7,7 +7,8 @@ import type {
   Party,
   PartyInput,
 } from "./db";
-import { createParty, getPackageBookings, voidPackageBooking } from "./db";
+import { blankPartyInput, createParty, getPackageBookings, normalizePartyInput, voidPackageBooking } from "./db";
+import AccountForm from "./AccountForm";
 import { createPackageCommercialBooking } from "./PackageFlowDb";
 import PackageOperationalDetails from "./PackageOperationalDetails";
 import PackageBookingAdjustment from "./PackageBookingAdjustment";
@@ -40,7 +41,6 @@ type PackageRowState = {
   rate: string;
   count: string;
 };
-type QuickAccountState = { name: string; phone: string; whatsapp: string; address: string; notes: string };
 
 const packageTypeDefaults = [
   "Full Umrah Package",
@@ -52,7 +52,6 @@ const packageTypeDefaults = [
   "Ticket + Visa",
   "Land Package",
 ];
-const blankQuickAccount: QuickAccountState = { name: "", phone: "", whatsapp: "", address: "", notes: "" };
 
 function newRow(passengerType: PackagePassengerType): PackageRowState {
   return { rowId: crypto.randomUUID(), passengerType, passengerName: "", packageType: "", rate: "", count: "" };
@@ -123,7 +122,7 @@ export default function PackageBookingFlowV2({
   const [registerFilter, setRegisterFilter] = useState<RegisterFilter>("ALL");
   const [search, setSearch] = useState("");
   const [quickAccountOpen, setQuickAccountOpen] = useState(false);
-  const [quickAccount, setQuickAccount] = useState<QuickAccountState>(blankQuickAccount);
+  const [quickAccount, setQuickAccount] = useState<PartyInput>(() => blankPartyInput("PARTY"));
   const [quickAccountBusy, setQuickAccountBusy] = useState(false);
   const [adjustmentSummaries, setAdjustmentSummaries] = useState<Record<string, PackageAdjustmentSummary>>({});
   const [adjustmentBooking, setAdjustmentBooking] = useState<PackageBooking | null>(null);
@@ -259,24 +258,16 @@ export default function PackageBookingFlowV2({
   }
 
   async function saveQuickAccount() {
-    if (!quickAccount.name.trim())
-      return setError(`${activeTransactionType === "SALE" ? "Party" : "Vendor"} name is required.`);
+    const accountType = activeTransactionType === "SALE" ? "PARTY" : "VENDOR";
+    const input = normalizePartyInput({ ...quickAccount, accountType, status: quickAccount.status || "ACTIVE" });
+    if (!input.name) return setError(`${activeTransactionType === "SALE" ? "Party" : "Vendor"} name is required.`);
     setQuickAccountBusy(true);
     setError("");
     try {
-      const input: PartyInput = {
-        name: quickAccount.name.trim(),
-        phone: quickAccount.phone.trim(),
-        whatsapp: quickAccount.whatsapp.trim(),
-        address: quickAccount.address.trim(),
-        notes: quickAccount.notes.trim(),
-        status: "ACTIVE",
-        accountType: activeTransactionType === "SALE" ? "PARTY" : "VENDOR",
-      };
       const id = await createParty(companyId, input, userId);
       setCounterpartyId(id);
       setQuickAccountOpen(false);
-      setQuickAccount(blankQuickAccount);
+      setQuickAccount(blankPartyInput(accountType));
       await onChanged?.();
       setMessage(`${activeTransactionType === "SALE" ? "Party" : "Vendor"} created and selected for this booking.`);
     } catch (e) {
@@ -520,7 +511,7 @@ export default function PackageBookingFlowV2({
                   <button
                     type="button"
                     onClick={() => {
-                      setQuickAccount(blankQuickAccount);
+                      setQuickAccount(blankPartyInput(activeTransactionType === "SALE" ? "PARTY" : "VENDOR"));
                       setQuickAccountOpen(true);
                       setError("");
                     }}
@@ -743,53 +734,20 @@ export default function PackageBookingFlowV2({
             className="modal-backdrop package14-modal-backdrop"
             onMouseDown={(e) => e.currentTarget === e.target && setQuickAccountOpen(false)}
           >
-            <section className="modal-card package14-quick-modal" onMouseDown={(e) => e.stopPropagation()}>
+            <section
+              className="modal-card account-form-modal package14-quick-modal"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
               <button type="button" className="close-btn" onClick={() => setQuickAccountOpen(false)}>
                 ×
               </button>
               <span className="eyebrow blue">QUICK ACCOUNT</span>
               <h2>Create {activeTransactionType === "SALE" ? "Party / Customer" : "Vendor / Supplier"}</h2>
-              <p>Create the account without leaving the {serviceLabel} booking. It will be selected automatically.</p>
-              <div className="package14-quick-grid">
-                <label>
-                  Name *
-                  <input
-                    autoFocus
-                    value={quickAccount.name}
-                    onChange={(e) => setQuickAccount((v) => ({ ...v, name: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  Phone
-                  <input
-                    value={quickAccount.phone}
-                    onChange={(e) => setQuickAccount((v) => ({ ...v, phone: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  WhatsApp
-                  <input
-                    value={quickAccount.whatsapp}
-                    onChange={(e) => setQuickAccount((v) => ({ ...v, whatsapp: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  Address
-                  <input
-                    value={quickAccount.address}
-                    onChange={(e) => setQuickAccount((v) => ({ ...v, address: e.target.value }))}
-                  />
-                </label>
-                <label className="wide">
-                  Notes
-                  <textarea
-                    rows={3}
-                    value={quickAccount.notes}
-                    onChange={(e) => setQuickAccount((v) => ({ ...v, notes: e.target.value }))}
-                  />
-                </label>
-              </div>
-              <div className="package14-modal-actions">
+              <p className="account-form-hint">
+                Create the account without leaving the {serviceLabel} booking. It will be selected automatically.
+              </p>
+              <AccountForm value={quickAccount} onChange={setQuickAccount} />
+              <div className="package14-modal-actions account-form-actions">
                 <button type="button" className="secondary" onClick={() => setQuickAccountOpen(false)}>
                   Cancel
                 </button>

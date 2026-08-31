@@ -3,17 +3,17 @@ import { useWorkspace } from "../WorkspaceContext";
 import { useAuth } from "../AuthContext";
 import { hasPermission } from "../permissions";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Party, PartyInput, createParty, updateParty, deleteParty } from "../db";
-
-const blankParty: PartyInput = {
-  name: "",
-  phone: "",
-  whatsapp: "",
-  address: "",
-  notes: "",
-  status: "ACTIVE",
-  accountType: "PARTY",
-};
+import {
+  Party,
+  PartyInput,
+  blankPartyInput,
+  partyToInput,
+  normalizePartyInput,
+  createParty,
+  updateParty,
+  deleteParty,
+} from "../db";
+import AccountForm from "../AccountForm";
 
 function formatMoney(value: number) {
   return `Rs ${Math.round(Number(value) || 0).toLocaleString("en-PK")}`;
@@ -30,7 +30,7 @@ export default function PartiesScreen() {
     useWorkspace();
 
   const [partyModalOpen, setPartyModalOpen] = useState(false);
-  const [partyForm, setPartyForm] = useState<PartyInput>(blankParty);
+  const [partyForm, setPartyForm] = useState<PartyInput>(blankPartyInput());
   const [editingParty, setEditingParty] = useState<Party | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -38,7 +38,6 @@ export default function PartiesScreen() {
 
   const can = (permission: any) => hasPermission(session?.role, permission);
 
-  // Deriving visible accounts based on URL param
   const { parties } = useWorkspace();
   const currentVisibleAccounts = parties.filter((item) => item.account_type === accountView);
 
@@ -56,7 +55,7 @@ export default function PartiesScreen() {
       return;
     }
     setEditingParty(null);
-    setPartyForm({ ...blankParty, accountType: type });
+    setPartyForm(blankPartyInput(type));
     setError("");
     setPartyModalOpen(true);
   }
@@ -67,15 +66,7 @@ export default function PartiesScreen() {
       return;
     }
     setEditingParty(party);
-    setPartyForm({
-      name: party.name,
-      phone: party.phone,
-      whatsapp: party.whatsapp,
-      address: party.address,
-      notes: party.notes,
-      status: party.status,
-      accountType: party.account_type,
-    });
+    setPartyForm(partyToInput(party));
     setError("");
     setPartyModalOpen(true);
   }
@@ -83,8 +74,9 @@ export default function PartiesScreen() {
   async function saveParty() {
     if (!company || !session) return;
     if (!can("edit_parties")) return setError("Your role does not allow changing Party/Vendor accounts.");
-    if (!partyForm.name.trim()) {
-      setError(`${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"} name is required.`);
+    const normalized = normalizePartyInput(partyForm);
+    if (!normalized.name) {
+      setError(`${normalized.accountType === "VENDOR" ? "Vendor" : "Party"} name is required.`);
       return;
     }
 
@@ -92,16 +84,16 @@ export default function PartiesScreen() {
     setError("");
     try {
       if (editingParty) {
-        await updateParty(editingParty.id, company.id, partyForm, session.userId);
-        setMessage(`${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"} updated successfully.`);
+        await updateParty(editingParty.id, company.id, normalized, session.userId);
+        setMessage(`${normalized.accountType === "VENDOR" ? "Vendor" : "Party"} updated successfully.`);
       } else {
-        await createParty(company.id, partyForm, session.userId);
-        setMessage(`${partyForm.accountType === "VENDOR" ? "Vendor" : "Party"} created successfully.`);
+        await createParty(company.id, normalized, session.userId);
+        setMessage(`${normalized.accountType === "VENDOR" ? "Vendor" : "Party"} created successfully.`);
       }
 
       setPartyModalOpen(false);
       setEditingParty(null);
-      setPartyForm(blankParty);
+      setPartyForm(blankPartyInput());
       await loadParties(partySearch);
       await loadFinancialTotals();
     } catch (e) {
@@ -152,7 +144,7 @@ export default function PartiesScreen() {
             <input
               value={partySearch}
               onChange={(e) => void searchParties(e.target.value)}
-              placeholder={`Search ${accountView === "PARTY" ? "parties" : accountView === "VENDOR" ? "vendors" : "accounts"} by name, phone, WhatsApp or address...`}
+              placeholder={`Search ${accountView === "PARTY" ? "parties" : accountView === "VENDOR" ? "vendors" : "accounts"} by name, contact, phone, email or address...`}
             />
           </div>
           <div className="party-count">
@@ -199,62 +191,67 @@ export default function PartiesScreen() {
                 </tr>
               </thead>
               <tbody>
-                {currentVisibleAccounts.map((party, index) => (
-                  <tr key={party.id}>
-                    <td className="centered">{index + 1}</td>
-                    <td>
-                      <b className="party-name">{party.name}</b>
-                      <small className={`account-type-chip ${party.account_type.toLowerCase()}`}>
-                        {party.account_type}
-                      </small>
-                      {party.notes && <small className="table-note">{party.notes}</small>}
-                    </td>
-                    <td>
-                      <span>{party.phone || "—"}</span>
-                      {party.whatsapp && <small className="table-note">WA: {party.whatsapp}</small>}
-                    </td>
-                    <td>{party.address || "—"}</td>
-                    <td>
-                      <span className={`status ${party.status.toLowerCase()}`}>{party.status}</span>
-                    </td>
-                    <td className="amount">
-                      {formatMoney(
-                        (party.account_type === "PARTY"
-                          ? partyBookingTotals[party.id]?.sale_total || 0
-                          : party.account_type === "VENDOR"
-                            ? partyBookingTotals[party.id]?.purchase_total || 0
-                            : 0) - (partyPaymentTotals[party.id] || 0),
-                      )}
-                    </td>
-                    <td>
-                      <div className="row-actions">
-                        <button onClick={() => openLedger(party)}>Open Ledger</button>
-                        {can("edit_parties") && <button onClick={() => editParty(party)}>Edit</button>}
-                        {can("edit_parties") && (
-                          <button
-                            className="danger"
-                            onClick={async () => {
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to permanently delete this Party/Vendor? This is a temporary testing function.",
-                                )
-                              ) {
-                                try {
-                                  await deleteParty(party.id, company?.id || "", session?.userId || "");
-                                  await loadParties(partySearch);
-                                } catch (e) {
-                                  alert(e instanceof Error ? e.message : String(e));
-                                }
-                              }
-                            }}
-                          >
-                            Delete
-                          </button>
+                {currentVisibleAccounts.map((party, index) => {
+                  const phone = party.phone || party.whatsapp || "";
+                  const reference = party.reference || party.notes || "";
+                  return (
+                    <tr key={party.id}>
+                      <td className="centered">{index + 1}</td>
+                      <td>
+                        <b className="party-name">{party.name}</b>
+                        <small className={`account-type-chip ${party.account_type.toLowerCase()}`}>
+                          {party.account_type}
+                        </small>
+                        {party.contact_person && <small className="table-note">Contact: {party.contact_person}</small>}
+                        {reference && <small className="table-note">{reference}</small>}
+                      </td>
+                      <td>
+                        <span>{phone || "—"}</span>
+                        {party.email && <small className="table-note">{party.email}</small>}
+                      </td>
+                      <td>{party.address || "—"}</td>
+                      <td>
+                        <span className={`status ${party.status.toLowerCase()}`}>{party.status}</span>
+                      </td>
+                      <td className="amount">
+                        {formatMoney(
+                          (party.account_type === "PARTY"
+                            ? partyBookingTotals[party.id]?.sale_total || 0
+                            : party.account_type === "VENDOR"
+                              ? partyBookingTotals[party.id]?.purchase_total || 0
+                              : 0) - (partyPaymentTotals[party.id] || 0),
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div className="row-actions">
+                          <button onClick={() => openLedger(party)}>Open Ledger</button>
+                          {can("edit_parties") && <button onClick={() => editParty(party)}>Edit</button>}
+                          {can("edit_parties") && (
+                            <button
+                              className="danger"
+                              onClick={async () => {
+                                if (
+                                  window.confirm(
+                                    "Are you sure you want to permanently delete this Party/Vendor? This is a temporary testing function.",
+                                  )
+                                ) {
+                                  try {
+                                    await deleteParty(party.id, company?.id || "", session?.userId || "");
+                                    await loadParties(partySearch);
+                                  } catch (e) {
+                                    alert(e instanceof Error ? e.message : String(e));
+                                  }
+                                }
+                              }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -263,7 +260,7 @@ export default function PartiesScreen() {
 
       {partyModalOpen && (
         <div className="modal-backdrop" onMouseDown={() => setPartyModalOpen(false)}>
-          <section className="modal-card" onMouseDown={(e) => e.stopPropagation()}>
+          <section className="modal-card account-form-modal" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
                 <span className="eyebrow blue">ACCOUNT MASTER</span>
@@ -280,97 +277,9 @@ export default function PartiesScreen() {
 
             {error && <div className="alert error">{error}</div>}
 
-            <div className="form">
-              <label>
-                {partyForm.accountType === "VENDOR"
-                  ? "Vendor Name *"
-                  : partyForm.accountType === "PARTY"
-                    ? "Party Name *"
-                    : "Account Name *"}
-                <input
-                  autoFocus
-                  value={partyForm.name}
-                  onChange={(e) => setPartyForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g. Father Umrah Accounts"
-                />
-              </label>
+            <AccountForm value={partyForm} onChange={setPartyForm} showAccountType={accountView === "UNASSIGNED"} />
 
-              <div className="two">
-                <label>
-                  Phone
-                  <input
-                    value={partyForm.phone}
-                    onChange={(e) => setPartyForm((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+92..."
-                  />
-                </label>
-                <label>
-                  WhatsApp
-                  <input
-                    value={partyForm.whatsapp}
-                    onChange={(e) => setPartyForm((prev) => ({ ...prev, whatsapp: e.target.value }))}
-                    placeholder="+92..."
-                  />
-                </label>
-              </div>
-
-              <label>
-                Address
-                <textarea
-                  rows={2}
-                  value={partyForm.address}
-                  onChange={(e) => setPartyForm((prev) => ({ ...prev, address: e.target.value }))}
-                  placeholder="Optional address"
-                />
-              </label>
-
-              <label>
-                Notes
-                <textarea
-                  rows={3}
-                  value={partyForm.notes}
-                  onChange={(e) => setPartyForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Optional internal note"
-                />
-              </label>
-
-              {accountView === "UNASSIGNED" && (
-                <label>
-                  Account Type *
-                  <select
-                    value={partyForm.accountType}
-                    onChange={(e) =>
-                      setPartyForm((prev) => ({
-                        ...prev,
-                        accountType: e.target.value as "PARTY" | "VENDOR" | "UNASSIGNED",
-                      }))
-                    }
-                  >
-                    <option value="PARTY">PARTY — Sale / Receivable</option>
-                    <option value="VENDOR">VENDOR — Purchase / Payable</option>
-                    <option value="UNASSIGNED">UNASSIGNED — classify later</option>
-                  </select>
-                </label>
-              )}
-
-              <label>
-                Status
-                <select
-                  value={partyForm.status}
-                  onChange={(e) =>
-                    setPartyForm((prev) => ({
-                      ...prev,
-                      status: e.target.value as "ACTIVE" | "INACTIVE",
-                    }))
-                  }
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="modal-buttons">
+            <div className="modal-buttons account-form-actions">
               <button className="secondary" onClick={() => setPartyModalOpen(false)}>
                 Cancel
               </button>

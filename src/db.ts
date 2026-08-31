@@ -74,9 +74,13 @@ export type Party = {
   id: string;
   company_id: string;
   name: string;
+  contact_person: string;
   phone: string;
   whatsapp: string;
+  email: string;
   address: string;
+  reference: string;
+  /** @deprecated Prefer `reference`; kept in sync for older rows/sync. */
   notes: string;
   status: "ACTIVE" | "INACTIVE";
   account_type: "PARTY" | "VENDOR" | "UNASSIGNED";
@@ -86,13 +90,63 @@ export type Party = {
 
 export type PartyInput = {
   name: string;
+  contactPerson: string;
+  /** Combined Phone / WhatsApp — persisted to both `phone` and `whatsapp`. */
   phone: string;
   whatsapp: string;
+  email: string;
   address: string;
-  notes: string;
+  reference: string;
   status: "ACTIVE" | "INACTIVE";
   accountType: "PARTY" | "VENDOR" | "UNASSIGNED";
 };
+
+export function blankPartyInput(
+  accountType: PartyInput["accountType"] = "PARTY",
+  status: PartyInput["status"] = "ACTIVE",
+): PartyInput {
+  return {
+    name: "",
+    contactPerson: "",
+    phone: "",
+    whatsapp: "",
+    email: "",
+    address: "",
+    reference: "",
+    status,
+    accountType,
+  };
+}
+
+export function partyToInput(party: Party): PartyInput {
+  const phoneWhatsapp = (party.phone || party.whatsapp || "").trim();
+  return {
+    name: party.name,
+    contactPerson: party.contact_person || "",
+    phone: phoneWhatsapp,
+    whatsapp: phoneWhatsapp,
+    email: party.email || "",
+    address: party.address || "",
+    reference: (party.reference || party.notes || "").trim(),
+    status: party.status,
+    accountType: party.account_type,
+  };
+}
+
+/** Normalize form input so phone and whatsapp stay combined. */
+export function normalizePartyInput(input: PartyInput): PartyInput {
+  const phoneWhatsapp = (input.phone || input.whatsapp || "").trim();
+  return {
+    ...input,
+    name: input.name.trim(),
+    contactPerson: (input.contactPerson || "").trim(),
+    phone: phoneWhatsapp,
+    whatsapp: phoneWhatsapp,
+    email: (input.email || "").trim(),
+    address: (input.address || "").trim(),
+    reference: (input.reference || "").trim(),
+  };
+}
 
 export type PaymentEntry = {
   id: string;
@@ -887,6 +941,9 @@ async function initDatabaseOnce() {
   await ensureColumn("parties", "whatsapp", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("parties", "address", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("parties", "notes", "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn("parties", "contact_person", "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn("parties", "email", "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn("parties", "reference", "TEXT NOT NULL DEFAULT ''");
   await ensureColumn("parties", "account_type", "TEXT NOT NULL DEFAULT 'UNASSIGNED'");
 
   await database.execute(`CREATE INDEX IF NOT EXISTS idx_parties_company_name
@@ -2682,11 +2739,7 @@ export async function getCounterpartyPackageTotals(companyId: string) {
   );
 }
 
-
-export {
-  getPackageBookings,
-  voidPackageBooking,
-} from "./PackageFlowDb";
+export { getPackageBookings, voidPackageBooking } from "./PackageFlowDb";
 
 export {
   getHotelBookings,

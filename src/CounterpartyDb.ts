@@ -2,6 +2,7 @@ import Database from "@tauri-apps/plugin-sql";
 import { supabase } from "./supabaseClient";
 import { isDesktopApp, queueSync } from "./cloudSync";
 import type { Party, PartyInput, BookingTransactionType } from "./db";
+import { normalizePartyInput } from "./db";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -26,9 +27,12 @@ type AccountRow = {
   id: string;
   company_id: string;
   name: string;
+  contact_person: string;
   phone: string;
   whatsapp: string;
+  email: string;
   address: string;
+  reference: string;
   notes: string;
   status: "ACTIVE" | "INACTIVE";
   created_at: string;
@@ -37,7 +41,7 @@ type AccountRow = {
   updated_by_user_id?: string;
 };
 
-const ACCOUNT_COLUMNS = `id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at`;
+const ACCOUNT_COLUMNS = `id,company_id,name,contact_person,phone,whatsapp,email,address,reference,notes,status,created_at,updated_at`;
 
 function tableForAccountType(accountType: AccountType): CounterpartyTable {
   if (accountType === "VENDOR") return "vendors";
@@ -52,7 +56,51 @@ function accountTypeForTable(table: CounterpartyTable): AccountType {
 }
 
 function toParty(row: AccountRow, accountType: AccountType): Party {
-  return { ...row, account_type: accountType };
+  const reference = String(row.reference || row.notes || "").trim();
+  return {
+    id: row.id,
+    company_id: row.company_id,
+    name: row.name,
+    contact_person: String(row.contact_person || ""),
+    phone: row.phone || "",
+    whatsapp: row.whatsapp || "",
+    email: String(row.email || ""),
+    address: row.address || "",
+    reference,
+    notes: reference,
+    status: row.status,
+    account_type: accountType,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function rowFromInput(
+  id: string,
+  companyId: string,
+  input: PartyInput,
+  now: string,
+  actorUserId: string,
+  createdAt?: string,
+): AccountRow {
+  const normalized = normalizePartyInput(input);
+  return {
+    id,
+    company_id: companyId,
+    name: normalized.name,
+    contact_person: normalized.contactPerson,
+    phone: normalized.phone,
+    whatsapp: normalized.whatsapp,
+    email: normalized.email,
+    address: normalized.address,
+    reference: normalized.reference,
+    notes: normalized.reference,
+    status: normalized.status,
+    created_at: createdAt || now,
+    updated_at: now,
+    created_by_user_id: actorUserId,
+    updated_by_user_id: actorUserId,
+  };
 }
 
 export async function initCounterpartyTables(database: Database) {
@@ -98,28 +146,39 @@ export async function initCounterpartyTables(database: Database) {
     `CREATE INDEX IF NOT EXISTS idx_unassigned_accounts_company_name ON unassigned_accounts(company_id, name)`,
   );
 
-  await ensureColumn("vendors", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("vendors", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("unassigned_accounts", "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
-  await ensureColumn("unassigned_accounts", "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
+  for (const table of ["parties", "vendors", "unassigned_accounts"] as const) {
+    await ensureColumn(table, "created_by_user_id", "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(table, "updated_by_user_id", "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(table, "contact_person", "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(table, "email", "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(table, "reference", "TEXT NOT NULL DEFAULT ''");
+  }
 
   const vendorCount = await database.select<Array<{ count: number }>>(`SELECT COUNT(*) AS count FROM vendors`);
   if (Number(vendorCount[0]?.count || 0) === 0) {
     await database.execute(
       `INSERT OR IGNORE INTO vendors
-       (id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+       (id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id,contact_person,email,reference)
        SELECT id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at,
-              COALESCE(created_by_user_id,''), COALESCE(updated_by_user_id,'')
+              COALESCE(created_by_user_id,''), COALESCE(updated_by_user_id,''),
+              COALESCE(contact_person,''), COALESCE(email,''), COALESCE(NULLIF(TRIM(reference),''), notes, '')
        FROM parties WHERE account_type='VENDOR'`,
     );
     await database.execute(
       `INSERT OR IGNORE INTO unassigned_accounts
-       (id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
+       (id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id,contact_person,email,reference)
        SELECT id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at,
-              COALESCE(created_by_user_id,''), COALESCE(updated_by_user_id,'')
+              COALESCE(created_by_user_id,''), COALESCE(updated_by_user_id,''),
+              COALESCE(contact_person,''), COALESCE(email,''), COALESCE(NULLIF(TRIM(reference),''), notes, '')
        FROM parties WHERE account_type='UNASSIGNED'`,
     );
     await database.execute(`DELETE FROM parties WHERE account_type IN ('VENDOR','UNASSIGNED')`);
+  }
+
+  for (const table of ["parties", "vendors", "unassigned_accounts"] as const) {
+    await database.execute(
+      `UPDATE ${table} SET reference = notes WHERE TRIM(COALESCE(reference,'')) = '' AND TRIM(COALESCE(notes,'')) <> ''`,
+    );
   }
 }
 
@@ -197,7 +256,7 @@ async function selectAllFromTable(companyId: string, table: CounterpartyTable, s
     let query = supabase.from(table).select(ACCOUNT_COLUMNS).eq("company_id", companyId);
     if (clean) {
       query = query.or(
-        `name.ilike.%${clean}%,phone.ilike.%${clean}%,whatsapp.ilike.%${clean}%,address.ilike.%${clean}%`,
+        `name.ilike.%${clean}%,contact_person.ilike.%${clean}%,phone.ilike.%${clean}%,whatsapp.ilike.%${clean}%,email.ilike.%${clean}%,address.ilike.%${clean}%,reference.ilike.%${clean}%,notes.ilike.%${clean}%`,
       );
     }
     const { data, error } = await query;
@@ -220,7 +279,9 @@ async function selectAllFromTable(companyId: string, table: CounterpartyTable, s
   const rows = await database.select<AccountRow[]>(
     `SELECT ${ACCOUNT_COLUMNS} FROM ${table}
      WHERE company_id=$1 AND (
-       name LIKE $2 COLLATE NOCASE OR phone LIKE $2 OR whatsapp LIKE $2 OR address LIKE $2 COLLATE NOCASE
+       name LIKE $2 COLLATE NOCASE OR contact_person LIKE $2 COLLATE NOCASE OR
+       phone LIKE $2 OR whatsapp LIKE $2 OR email LIKE $2 COLLATE NOCASE OR
+       address LIKE $2 COLLATE NOCASE OR reference LIKE $2 COLLATE NOCASE OR notes LIKE $2 COLLATE NOCASE
      )
      ORDER BY CASE WHEN status='ACTIVE' THEN 0 ELSE 1 END, name COLLATE NOCASE`,
     [companyId, term],
@@ -315,9 +376,12 @@ function syncPayload(row: AccountRow, accountType: AccountType, actorUserId: str
     id: row.id,
     company_id: row.company_id,
     name: row.name,
+    contact_person: row.contact_person,
     phone: row.phone,
     whatsapp: row.whatsapp,
+    email: row.email,
     address: row.address,
+    reference: row.reference,
     notes: row.notes,
     status: row.status,
     updated_at: row.updated_at,
@@ -331,33 +395,36 @@ function syncPayload(row: AccountRow, accountType: AccountType, actorUserId: str
   return { table, payload };
 }
 
+const INSERT_COLS = `id,company_id,name,contact_person,phone,whatsapp,email,address,reference,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id`;
+
 export async function createAccount(companyId: string, input: PartyInput, actorUserId = "") {
   await assertUniqueAccountName(companyId, input.accountType, input.name);
   const table = tableForAccountType(input.accountType);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const row: AccountRow = {
-    id,
-    company_id: companyId,
-    name: input.name.trim(),
-    phone: input.phone.trim(),
-    whatsapp: input.whatsapp.trim(),
-    address: input.address.trim(),
-    notes: input.notes.trim(),
-    status: input.status,
-    created_at: now,
-    updated_at: now,
-    created_by_user_id: actorUserId,
-    updated_by_user_id: actorUserId,
-  };
+  const row = rowFromInput(id, companyId, input, now, actorUserId);
 
   if (isDesktopApp()) {
     const database = await localDb();
     await database.execute(
       `INSERT INTO ${table}
-       (id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$10)`,
-      [id, companyId, row.name, row.phone, row.whatsapp, row.address, row.notes, row.status, now, actorUserId],
+       (${INSERT_COLS})
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$13,$13)`,
+      [
+        id,
+        companyId,
+        row.name,
+        row.contact_person,
+        row.phone,
+        row.whatsapp,
+        row.email,
+        row.address,
+        row.reference,
+        row.notes,
+        row.status,
+        now,
+        actorUserId,
+      ],
     );
   }
 
@@ -380,20 +447,7 @@ export async function updateAccount(accountId: string, companyId: string, input:
   if (!currentTable) throw new Error("Account not found.");
   const targetTable = tableForAccountType(input.accountType);
   const now = new Date().toISOString();
-
-  const row: AccountRow = {
-    id: accountId,
-    company_id: companyId,
-    name: input.name.trim(),
-    phone: input.phone.trim(),
-    whatsapp: input.whatsapp.trim(),
-    address: input.address.trim(),
-    notes: input.notes.trim(),
-    status: input.status,
-    created_at: now,
-    updated_at: now,
-    updated_by_user_id: actorUserId,
-  };
+  const row = rowFromInput(accountId, companyId, input, now, actorUserId, now);
 
   if (isDesktopApp()) {
     const database = await localDb();
@@ -407,15 +461,18 @@ export async function updateAccount(accountId: string, companyId: string, input:
       await database.execute(`DELETE FROM ${currentTable} WHERE id=$1 AND company_id=$2`, [accountId, companyId]);
       await database.execute(
         `INSERT INTO ${targetTable}
-         (id,company_id,name,phone,whatsapp,address,notes,status,created_at,updated_at,created_by_user_id,updated_by_user_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+         (${INSERT_COLS})
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
         [
           accountId,
           companyId,
           row.name,
+          row.contact_person,
           row.phone,
           row.whatsapp,
+          row.email,
           row.address,
+          row.reference,
           row.notes,
           row.status,
           source.created_at,
@@ -428,9 +485,23 @@ export async function updateAccount(accountId: string, companyId: string, input:
     } else {
       await database.execute(
         `UPDATE ${targetTable}
-         SET name=$1,phone=$2,whatsapp=$3,address=$4,notes=$5,status=$6,updated_at=$7,updated_by_user_id=$8
-         WHERE id=$9 AND company_id=$10`,
-        [row.name, row.phone, row.whatsapp, row.address, row.notes, row.status, now, actorUserId, accountId, companyId],
+         SET name=$1,contact_person=$2,phone=$3,whatsapp=$4,email=$5,address=$6,reference=$7,notes=$8,status=$9,updated_at=$10,updated_by_user_id=$11
+         WHERE id=$12 AND company_id=$13`,
+        [
+          row.name,
+          row.contact_person,
+          row.phone,
+          row.whatsapp,
+          row.email,
+          row.address,
+          row.reference,
+          row.notes,
+          row.status,
+          now,
+          actorUserId,
+          accountId,
+          companyId,
+        ],
       );
     }
   } else if (currentTable !== targetTable) {
@@ -441,9 +512,12 @@ export async function updateAccount(accountId: string, companyId: string, input:
       id: accountId,
       company_id: companyId,
       name: row.name,
+      contact_person: row.contact_person,
       phone: row.phone,
       whatsapp: row.whatsapp,
+      email: row.email,
       address: row.address,
+      reference: row.reference,
       notes: row.notes,
       status: row.status,
       created_at: existing.created_at,
@@ -469,4 +543,4 @@ export async function deleteAccount(accountId: string, companyId: string) {
   await queueSync("DELETE", table, accountId, {});
 }
 
-export const COUNTERPARTY_ROOT_TABLES: CounterpartyTable[] = ["parties", "vendors", "unassigned_accounts"];
+export { getAllAccounts as getParties };

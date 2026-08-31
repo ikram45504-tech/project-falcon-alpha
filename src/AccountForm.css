@@ -1,0 +1,72 @@
+.account-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.account-form label {
+  display: grid;
+  gap: 5px;
+  color: #526a80;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.account-form-wide {
+  grid-column: 1 / -1;
+}
+
+.account-form input,
+.account-form select,
+.account-form textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #c9d6e4;
+  border-radius: 8px;
+  background: #fff;
+  color: #173f68;
+  font-size: 13px;
+}
+
+.account-form input:focus,
+.account-form select:focus {
+  outline: 2px solid rgba(37, 99, 160, 0.25);
+  border-color: #5b87b5;
+}
+
+.account-form-modal {
+  width: min(520px, 94vw);
+  max-height: min(90vh, 640px);
+  overflow: auto;
+}
+
+.account-form-modal .modal-head,
+.account-form-modal > .eyebrow {
+  margin-bottom: 2px;
+}
+
+.account-form-modal h2,
+.account-form-modal h3 {
+  margin: 4px 0 6px;
+}
+
+.account-form-modal > p,
+.account-form-modal .account-form-hint {
+  margin: 0 0 12px;
+  color: #748397;
+  font-size: 12px;
+}
+
+.account-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+@media (max-width: 560px) {
+  .account-form {
+    grid-template-columns: 1fr;
+  }
+}
