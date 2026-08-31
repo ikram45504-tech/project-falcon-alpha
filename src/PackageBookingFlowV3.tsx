@@ -123,7 +123,9 @@ export default function PackageBookingFlowV2({
   const [registerFilter, setRegisterFilter] = useState<RegisterFilter>("ALL");
   const [search, setSearch] = useState("");
   const [quickAccountOpen, setQuickAccountOpen] = useState(false);
-  const [quickAccount, setQuickAccount] = useState<PartyInput>(() => blankPartyInput("PARTY"));
+  const [quickAccount, setQuickAccount] = useState<PartyInput>(() =>
+    blankPartyInput(activeTransactionType === "SALE" ? "PARTY" : "VENDOR"),
+  );
   const [quickAccountBusy, setQuickAccountBusy] = useState(false);
   const [adjustmentSummaries, setAdjustmentSummaries] = useState<Record<string, PackageAdjustmentSummary>>({});
   const [adjustmentBooking, setAdjustmentBooking] = useState<PackageBooking | null>(null);
