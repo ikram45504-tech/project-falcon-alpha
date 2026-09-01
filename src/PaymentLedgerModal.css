@@ -1,3 +1,5 @@
+@import "./PaymentLedgerModal.dark-overrides.css";
+
 .payment-ledger-modal {
   width: min(760px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);

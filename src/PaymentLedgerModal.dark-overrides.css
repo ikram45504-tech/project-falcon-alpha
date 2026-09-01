@@ -1,0 +1,125 @@
+/* Payment ledger correction / history modal — midnight & ocean */
+
+:root[data-theme="midnight"] .payment-ledger-modal .modal-head h3 {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="midnight"] .payment-ledger-modal .modal-head p {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="midnight"] .payment-ledger-modal-note {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.55) !important;
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="midnight"] .payment-ledger-modal .payment-v2-movement-grid label,
+:root[data-theme="midnight"] .payment-ledger-modal .payment-ledger-correction-grid label,
+:root[data-theme="midnight"] .payment-ledger-modal .payment-v2-setup-grid label {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="midnight"] .payment-ledger-modal .payment-v2-setup-grid input,
+:root[data-theme="midnight"] .payment-ledger-modal .payment-v2-setup-grid select,
+:root[data-theme="midnight"] .payment-ledger-modal .payment-v2-movement-grid input,
+:root[data-theme="midnight"] .payment-ledger-modal .payment-ledger-correction-grid input,
+:root[data-theme="midnight"] .payment-ledger-modal .payment-ledger-correction-grid textarea {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="midnight"] .payment-ledger-modal .payment-v2-movement-grid input:read-only {
+  background: rgba(30, 41, 59, 0.65) !important;
+  color: #7dd3fc !important;
+}
+
+:root[data-theme="midnight"] .payment-ledger-modal .payment-v2-muted-field input {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="midnight"] .payment-ledger-modal .payment-v2-movement-arrow {
+  color: #7dd3fc !important;
+}
+
+:root[data-theme="midnight"] .payment-correction-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+:root[data-theme="midnight"] .payment-correction-card.void {
+  border-color: rgba(248, 113, 113, 0.35) !important;
+  background: rgba(127, 29, 29, 0.22) !important;
+}
+
+:root[data-theme="midnight"] .payment-correction-card-head b {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="midnight"] .payment-correction-card-head span,
+:root[data-theme="midnight"] .payment-correction-card p {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="ocean"] .payment-ledger-modal .modal-head h3 {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-ledger-modal .modal-head p {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="ocean"] .payment-ledger-modal-note {
+  border-color: rgba(14, 116, 144, 0.25) !important;
+  background: rgba(8, 47, 73, 0.45) !important;
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="ocean"] .payment-ledger-modal .payment-v2-movement-grid label,
+:root[data-theme="ocean"] .payment-ledger-modal .payment-ledger-correction-grid label,
+:root[data-theme="ocean"] .payment-ledger-modal .payment-v2-setup-grid label {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-ledger-modal .payment-v2-setup-grid input,
+:root[data-theme="ocean"] .payment-ledger-modal .payment-v2-setup-grid select,
+:root[data-theme="ocean"] .payment-ledger-modal .payment-v2-movement-grid input,
+:root[data-theme="ocean"] .payment-ledger-modal .payment-ledger-correction-grid input,
+:root[data-theme="ocean"] .payment-ledger-modal .payment-ledger-correction-grid textarea {
+  border-color: rgba(14, 116, 144, 0.25) !important;
+  background: rgba(8, 47, 73, 0.35) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-ledger-modal .payment-v2-movement-grid input:read-only {
+  background: rgba(8, 47, 73, 0.55) !important;
+  color: #67e8f9 !important;
+}
+
+:root[data-theme="ocean"] .payment-ledger-modal .payment-v2-muted-field input {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="ocean"] .payment-ledger-modal .payment-v2-movement-arrow {
+  color: #67e8f9 !important;
+}
+
+:root[data-theme="ocean"] .payment-correction-card {
+  border-color: rgba(14, 116, 144, 0.25) !important;
+  background: rgba(8, 47, 73, 0.35) !important;
+}
+
+:root[data-theme="ocean"] .payment-correction-card.void {
+  border-color: rgba(248, 113, 113, 0.35) !important;
+  background: rgba(127, 29, 29, 0.18) !important;
+}
+
+:root[data-theme="ocean"] .payment-correction-card-head b {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-correction-card-head span,
+:root[data-theme="ocean"] .payment-correction-card p {
+  color: var(--text-muted) !important;
+}
