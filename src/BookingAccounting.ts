@@ -120,11 +120,46 @@ const WEB_BOOKING_SOURCES: Array<{
   { table: "misc_bookings", service_type: "MISC", includeSar: true },
 ];
 
-const WEB_BOOKING_BASE_SELECT =
-  "id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at";
+const WEB_BOOKING_PKR_SELECT =
+  "id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at" as const;
+const WEB_BOOKING_SAR_SELECT =
+  "id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at,total_sar,unconverted_sar" as const;
+
+type WebBookingTableName =
+  "package_bookings" | "ticket_bookings" | "hotel_bookings" | "visa_bookings" | "transport_bookings" | "misc_bookings";
+
+type WebBookingRow = {
+  id: string;
+  company_id: string;
+  transaction_type: string;
+  counterparty_id: string;
+  transaction_date: string;
+  ub_number: string | null;
+  total_pkr: number | null;
+  status: string;
+  created_at: string;
+  total_sar?: number | null;
+  unconverted_sar?: number | null;
+};
 
 export function webBookingSelectColumns(includeSar: boolean) {
-  return includeSar ? `${WEB_BOOKING_BASE_SELECT},total_sar,unconverted_sar` : WEB_BOOKING_BASE_SELECT;
+  return includeSar ? WEB_BOOKING_SAR_SELECT : WEB_BOOKING_PKR_SELECT;
+}
+
+async function fetchWebBookingsForTable(table: WebBookingTableName, companyId: string, counterpartyId: string) {
+  if (table === "package_bookings" || table === "ticket_bookings") {
+    let query = supabase.from(table).select(WEB_BOOKING_PKR_SELECT).eq("company_id", companyId);
+    if (counterpartyId) query = query.eq("counterparty_id", counterpartyId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  let query = supabase.from(table).select(WEB_BOOKING_SAR_SELECT).eq("company_id", companyId);
+  if (counterpartyId) query = query.eq("counterparty_id", counterpartyId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 async function fetchWebBookingAccountingEntries(companyId: string, counterpartyId = "") {
@@ -141,15 +176,10 @@ async function fetchWebBookingAccountingEntries(companyId: string, counterpartyI
   const entries: BookingAccountingEntry[] = [];
 
   for (const source of WEB_BOOKING_SOURCES) {
-    let query = supabase
-      .from(source.table)
-      .select(webBookingSelectColumns(source.includeSar))
-      .eq("company_id", companyId);
-    if (counterpartyId) query = query.eq("counterparty_id", counterpartyId);
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
+    const rows = await fetchWebBookingsForTable(source.table as WebBookingTableName, companyId, counterpartyId);
 
-    for (const row of data || []) {
+    for (const row of rows) {
+      const sarRow = row as WebBookingRow;
       entries.push({
         id: String(row.id),
         company_id: companyId,
@@ -159,9 +189,9 @@ async function fetchWebBookingAccountingEntries(companyId: string, counterpartyI
         counterparty_name: counterpartyNames.get(String(row.counterparty_id)) || "",
         transaction_date: String(row.transaction_date),
         ub_number: String(row.ub_number || ""),
-        total_sar: source.includeSar ? Number(row.total_sar || 0) : 0,
+        total_sar: source.includeSar ? Number(sarRow.total_sar || 0) : 0,
         total_pkr: Number(row.total_pkr || 0),
-        unconverted_sar: source.includeSar ? Number(row.unconverted_sar || 0) : 0,
+        unconverted_sar: source.includeSar ? Number(sarRow.unconverted_sar || 0) : 0,
         status: row.status as "ACTIVE" | "VOID",
         created_at: String(row.created_at || ""),
       });
