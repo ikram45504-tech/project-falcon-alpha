@@ -133,6 +133,32 @@ function counterpartyLabel(kind: PaymentTransactionKind) {
   return "RECEIVED FROM";
 }
 
+export function amountSumLabel(kind: PaymentTransactionKind) {
+  if (kind === "VENDOR_PAYMENT" || kind === "PARTY_REFUND") return "PAID THE SUM OF :";
+  return "RECEIVED THE SUM OF :";
+}
+
+function drawVoidWatermark(doc: jsPDF) {
+  doc.setGState(doc.GState({ opacity: 0.12 }));
+  fill(doc, "#FCECEE");
+  doc.rect(RX, 8, RW, RECEIPT_H - 9, "F");
+  doc.setGState(doc.GState({ opacity: 1 }));
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(34);
+  textColor(doc, COLORS.red);
+  doc.setGState(doc.GState({ opacity: 0.4 }));
+  try {
+    doc.text("VOID", PAGE_W / 2, 52, { align: "center", angle: 12 });
+  } catch {
+    doc.text("VOID", PAGE_W / 2, 52, { align: "center" });
+  }
+  doc.setGState(doc.GState({ opacity: 1 }));
+
+  fill(doc, COLORS.accent);
+  doc.rect(RX, RECEIPT_H - 1.2, RW, 1.2, "F");
+}
+
 function bankRefLine(entry: PaymentEntry, meta: PaymentV2Meta | null) {
   if (entry.payment_type === "CASH") return "CASH";
   const parts = [meta?.bank_name, meta?.bank_transaction_reference, meta?.cheque_no]
@@ -181,7 +207,7 @@ function drawInlineField(doc: jsPDF, x: number, y: number, width: number, label:
 
 export function buildPaymentReceiptPdf(data: PaymentReceiptPdfData) {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-  const { company, party, entry, meta, transactionKind } = data;
+  const { company, party, entry, meta, transactionKind, preparedBy } = data;
   const flowFrom = entry.from_account || "—";
   const flowTo = entry.to_account || "—";
   const flowLine = `${flowFrom}  →  ${flowTo}`;
@@ -244,7 +270,7 @@ export function buildPaymentReceiptPdf(data: PaymentReceiptPdfData) {
   y += 5;
 
   y = drawField(doc, RX + 6, y, RW - 12, `${counterpartyLabel(transactionKind)} :`, safeText(party.name));
-  y = drawField(doc, RX + 6, y, RW - 12, "RECEIVED THE SUM OF :", amountWords, true);
+  y = drawField(doc, RX + 6, y, RW - 12, amountSumLabel(transactionKind), amountWords, true);
 
   const halfW = (RW - 14) / 2;
   const rowY = y;
@@ -298,24 +324,22 @@ export function buildPaymentReceiptPdf(data: PaymentReceiptPdfData) {
   doc.text(doc.splitTextToSize(DISCLAIMER, RW - 12), PAGE_W / 2, y, { align: "center" });
   y += 5;
 
+  const preparedByText = safeText(preparedBy);
+  if (preparedByText !== "—") {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.2);
+    textColor(doc, COLORS.muted);
+    doc.text(`Prepared by : ${preparedByText}`, RX + 6, y);
+    y += 3.5;
+  }
+
   doc.setFont("helvetica", "bolditalic");
   doc.setFontSize(5.8);
   textColor(doc, COLORS.ink);
   doc.text(`For ${company.name}`, RX + RW - 6, y, { align: "right" });
 
   if (entry.status === "VOID") {
-    fill(doc, "#FCECEE");
-    doc.rect(RX, 8, RW, RECEIPT_H - 9, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(34);
-    textColor(doc, COLORS.red);
-    try {
-      doc.text("VOID", PAGE_W / 2, 52, { align: "center", angle: 12 });
-    } catch {
-      doc.text("VOID", PAGE_W / 2, 52, { align: "center" });
-    }
-    fill(doc, COLORS.accent);
-    doc.rect(RX, RECEIPT_H - 1.2, RW, 1.2, "F");
+    drawVoidWatermark(doc);
   }
 
   doc.setProperties({

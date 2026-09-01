@@ -42,6 +42,7 @@ function LedgerRoute({
       party={party}
       parties={parties}
       userId={session?.userId}
+      preparedByName={session?.fullName}
       canEditPayments={can("edit_payments")}
       onBack={() => navigate(`/parties/${party.account_type === "UNASSIGNED" ? "UNASSIGNED" : party.account_type}`)}
       onEditParty={() => {}}

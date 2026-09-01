@@ -23,6 +23,7 @@ type Props = {
   party: Party;
   parties?: Party[];
   userId?: string;
+  preparedByName?: string;
   canEditPayments?: boolean;
   onBack: () => void;
   onEditParty: (party: Party) => void;
@@ -69,6 +70,7 @@ export default function PartyLedger({
   onOpenPayments,
   onChanged,
   userId = "",
+  preparedByName = "",
   canEditPayments = false,
 }: Props) {
   const [bookings, setBookings] = useState<BookingAccountingEntry[]>([]);
@@ -260,13 +262,13 @@ export default function PartyLedger({
             Void
           </button>
         )}
-        {canEditPayments && (
+        {import.meta.env.DEV && canEditPayments && (
           <button
             type="button"
             className="danger-action"
             onClick={() => void deletePayment(entry)}
             disabled={busyId === entry.id}
-            title="Test cleanup — permanently removes this payment"
+            title="Dev only — permanently removes this payment"
           >
             Delete
           </button>
@@ -471,6 +473,7 @@ export default function PartyLedger({
           entry={receiptPreview.entry}
           meta={receiptPreview.meta}
           transactionKind={receiptPreview.transactionKind}
+          preparedBy={preparedByName}
           onClose={() => setReceiptPreview(null)}
         />
       )}
