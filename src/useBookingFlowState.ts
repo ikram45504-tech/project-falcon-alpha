@@ -56,14 +56,21 @@ export function useBookingFlowState<T extends CommonEntry>(
     setMessage("");
   }
 
-  async function assignUb(formatted: string) {
+  async function validateBookingUb(formatted: string): Promise<boolean> {
     setError("");
-    if (!counterpartyId)
-      return setError(tx === "SALE" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");
-    if (!bookingDate) return setError("Date of Booking is required.");
-    if (!formatted) return setError("Enter a booking number using 1 to 4 digits.");
+    if (!counterpartyId) {
+      setError(tx === "SALE" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");
+      return false;
+    }
+    if (!bookingDate) {
+      setError("Date of Booking is required.");
+      return false;
+    }
+    if (!formatted) {
+      setError("Enter a booking number using 1 to 4 digits.");
+      return false;
+    }
 
-    // 1. Check local duplicates within this service
     const duplicate = entries.find(
       (entry) =>
         normalizeBookingUb(entry.ub_number) === formatted &&
@@ -81,7 +88,6 @@ export function useBookingFlowState<T extends CommonEntry>(
       return false;
     }
 
-    // 2. Global UB Ownership Check (Only for SALE)
     try {
       setBusy(true);
       const owner = await getGlobalUbSaleOwner(companyId, formatted);
@@ -99,6 +105,13 @@ export function useBookingFlowState<T extends CommonEntry>(
     } finally {
       setBusy(false);
     }
+
+    return true;
+  }
+
+  async function assignUb(formatted: string) {
+    const ok = await validateBookingUb(formatted);
+    if (!ok) return false;
 
     setUbNumber(formatted);
     setAssigned(true);
@@ -137,6 +150,7 @@ export function useBookingFlowState<T extends CommonEntry>(
     message,
     setMessage,
     assignUb,
+    validateBookingUb,
     resetState,
   };
 }

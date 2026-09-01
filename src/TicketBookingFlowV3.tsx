@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BookingTransactionType, Party, TicketPassengerType } from "./db";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
-import { bookingDigitsFromUb } from "./bookingUb";
+import { bookingDigitsFromUb, bookingUbFromDigits } from "./bookingUb";
 import { useBookingFlowState } from "./useBookingFlowState";
 import TicketOperationalDetails from "./TicketOperationalDetails";
 import TicketRegister from "./TicketRegister";
@@ -89,8 +89,6 @@ export default function TicketBookingFlowV2({
     setUbDigits,
     ubNumber,
     setUbNumber,
-    assigned,
-    setAssigned,
     saved,
     setSaved,
     detailsOpen,
@@ -103,7 +101,7 @@ export default function TicketBookingFlowV2({
     setError,
     message,
     setMessage,
-    assignUb: assign,
+    validateBookingUb,
   } = useBookingFlowState(companyId, transactionType, entries, "Ticket");
   const [rows, setRows] = useState<Row[]>([newRow()]);
 
@@ -154,24 +152,29 @@ export default function TicketBookingFlowV2({
     }));
   }
 
+  const ubPreview = bookingUbFromDigits(ubDigits);
+
   async function saveCommercial() {
     if (editingId)
       return setError(
         "Commercial Ticket values are locked after saving. Use Ticket Booking Register → Booking Adjustment for Correction, Amendment or Cancellation.",
       );
-    if (!assigned) return setError("Create / Assign the Booking UB first.");
     setBusy(true);
     setError("");
     setMessage("");
     try {
+      const formatted = ubPreview;
+      const valid = await validateBookingUb(formatted);
+      if (!valid) return;
+      setUbNumber(formatted);
       const id = await createTicketCommercialBooking(
         companyId,
-        { transactionType: tx, counterpartyId, transactionDate: bookingDate, ubNumber, lines: lineInputs() },
+        { transactionType: tx, counterpartyId, transactionDate: bookingDate, ubNumber: formatted, lines: lineInputs() },
         userId,
       );
       setEditingId(id);
       setSaved(true);
-      setMessage(`Ticket booking ${ubNumber} saved. Optional Ticket Booking Details are now available.`);
+      setMessage(`Ticket booking ${formatted} saved. Additional booking details are available below.`);
       await loadEntries();
       await onChanged?.();
     } catch (e) {
@@ -188,7 +191,6 @@ export default function TicketBookingFlowV2({
     setBookingDate(entry.transaction_date);
     setUbNumber(entry.ub_number);
     setUbDigits(bookingDigitsFromUb(entry.ub_number));
-    setAssigned(true);
     setSaved(true);
     setDetailsOpen(false);
     setRows(
@@ -264,213 +266,209 @@ export default function TicketBookingFlowV2({
           <p>
             {editingId
               ? "Review the current effective Ticket booking. Commercial changes are protected by Booking Adjustment history."
-              : "Create the UB first, save Ticket fares second, then add optional passenger and flight details."}
+              : "Complete account, UB, and ticket fares on one form, then save once. Additional booking details are optional."}
           </p>
         </div>
       </div>
       {message && <div className="alert success">{message}</div>}
       {error && <div className="alert error">{error}</div>}
 
-      <ProgressiveBookingIdentity
-        companyId={companyId}
-        userId={userId}
-        transactionType={tx}
-        parties={parties}
-        counterpartyId={counterpartyId}
-        onCounterpartyChange={setCounterpartyId}
-        bookingDate={bookingDate}
-        onBookingDateChange={setBookingDate}
-        ubDigits={ubDigits}
-        onUbDigitsChange={setUbDigits}
-        ubNumber={ubNumber}
-        assigned={assigned}
-        saved={saved}
-        onAssign={assign}
-        onEditHeader={() => {
-          if (!editingId) {
-            setAssigned(false);
-            setMessage("");
-          }
-        }}
-        onAccountsChanged={onChanged}
-        onError={setError}
-        onMessage={setMessage}
-        serviceLabel="Ticket"
-      />
+      <section className="ticket9-card ticket9-unified-form">
+        <ProgressiveBookingIdentity
+          companyId={companyId}
+          userId={userId}
+          transactionType={tx}
+          parties={parties}
+          counterpartyId={counterpartyId}
+          onCounterpartyChange={setCounterpartyId}
+          bookingDate={bookingDate}
+          onBookingDateChange={setBookingDate}
+          ubDigits={ubDigits}
+          onUbDigitsChange={setUbDigits}
+          ubNumber={ubNumber}
+          assigned={false}
+          saved={saved}
+          onAssign={() => {}}
+          onAccountsChanged={onChanged}
+          onError={setError}
+          onMessage={setMessage}
+          serviceLabel="Ticket"
+          variant="unified"
+          headerGridClass="ticket9-header-grid"
+          unifiedHint="Party, date, and UB are saved together with ticket fares when you click Save Booking."
+          embedded
+        />
 
-      {assigned && (
-        <section className="ticket9-card">
-          <div className="ticket9-section-head">
-            <span>2</span>
-            <b>TICKET DETAILS & FARES</b>
-            <small>
-              {commercialLocked
-                ? "Current effective commercial rows — use Booking Adjustment to change them."
-                : `Commercial / accounting data under ${ubNumber}`}
-            </small>
-          </div>
-          <div className="ticket17-fare-head">
-            {!commercialLocked && (
-              <button type="button" className="ticket17-add-row" disabled={!canCreate} onClick={addRow}>
-                + Ticket Row
-              </button>
-            )}
-          </div>
-          <div className="ticket17-fare-wrap">
-            <table className="ticket17-fare-table">
-              <thead>
-                <tr>
-                  <th>SR</th>
-                  <th>PAX TYPE</th>
-                  <th>PASSENGER / FAMILY HEAD</th>
-                  <th>AIRLINE</th>
-                  <th>PNR</th>
-                  <th>FLIGHT TYPE</th>
-                  <th>TICKET ROUTE</th>
-                  <th>RATE / TICKET (PKR)</th>
-                  <th>QTY</th>
-                  <th>SUB TOTAL</th>
-                  {!commercialLocked && <th>ACTION</th>}
+        <div className="ticket9-section-head ticket9-commercial-head">
+          <span>2</span>
+          <b>TICKET DETAILS &amp; FARES</b>
+          <small>
+            {commercialLocked
+              ? "Current effective commercial rows — use Booking Adjustment to change them."
+              : "Enter fares below, then save the full booking in one step."}
+          </small>
+        </div>
+        <div className="ticket17-fare-head">
+          {!commercialLocked && (
+            <button type="button" className="ticket17-add-row" disabled={!canCreate} onClick={addRow}>
+              + Ticket Row
+            </button>
+          )}
+        </div>
+        <div className="ticket17-fare-wrap">
+          <table className="ticket17-fare-table">
+            <thead>
+              <tr>
+                <th>SR</th>
+                <th>PAX TYPE</th>
+                <th>PASSENGER / FAMILY HEAD</th>
+                <th>AIRLINE</th>
+                <th>PNR</th>
+                <th>FLIGHT TYPE</th>
+                <th>TICKET ROUTE</th>
+                <th>RATE / TICKET (PKR)</th>
+                <th>QTY</th>
+                <th>SUB TOTAL</th>
+                {!commercialLocked && <th>ACTION</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={row.rowId}>
+                  <td className="ticket17-sr">{index + 1}</td>
+                  <td>
+                    <select
+                      disabled={commercialLocked}
+                      value={row.passengerType}
+                      onChange={(e) => updateRow(row.rowId, { passengerType: e.target.value as TicketPassengerType })}
+                    >
+                      <option value="ADULT">Adult</option>
+                      <option value="CHILD">Child</option>
+                      <option value="INFANT">Infant</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      value={row.passengerName}
+                      onChange={(e) => updateRow(row.rowId, { passengerName: e.target.value })}
+                      placeholder="Passenger / Family Head"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      value={row.airlineName}
+                      onChange={(e) => updateRow(row.rowId, { airlineName: e.target.value })}
+                      placeholder="Airline"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      className="ticket17-pnr-input"
+                      value={row.pnr}
+                      onChange={(e) => updateRow(row.rowId, { pnr: e.target.value.toUpperCase() })}
+                      placeholder="PNR"
+                    />
+                  </td>
+                  <td>
+                    <select
+                      disabled={commercialLocked}
+                      className="ticket17-flight-type-select"
+                      value={row.flightType}
+                      onChange={(e) => updateRow(row.rowId, { flightType: e.target.value as TicketFareFlightType })}
+                    >
+                      <option value="ONE_WAY">One Way</option>
+                      <option value="RETURN">Return</option>
+                      <option value="MULTI_CITY">Multi-City</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      value={row.ticketRoute}
+                      onChange={(e) => updateRow(row.rowId, { ticketRoute: e.target.value.toUpperCase() })}
+                      placeholder="KHI - JED - KHI"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={row.rate}
+                      onChange={(e) => updateRow(row.rowId, { rate: e.target.value })}
+                      placeholder="0"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={row.count}
+                      onChange={(e) => updateRow(row.rowId, { count: e.target.value })}
+                      placeholder="1"
+                    />
+                  </td>
+                  <td className="money-cell">{money(ticketRowTotal(row))}</td>
+                  {!commercialLocked && (
+                    <td>
+                      <button type="button" className="ticket17-remove" onClick={() => removeRow(row.rowId)}>
+                        ×
+                      </button>
+                    </td>
+                  )}
                 </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => (
-                  <tr key={row.rowId}>
-                    <td className="ticket17-sr">{index + 1}</td>
-                    <td>
-                      <select
-                        disabled={commercialLocked}
-                        value={row.passengerType}
-                        onChange={(e) => updateRow(row.rowId, { passengerType: e.target.value as TicketPassengerType })}
-                      >
-                        <option value="ADULT">Adult</option>
-                        <option value="CHILD">Child</option>
-                        <option value="INFANT">Infant</option>
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        value={row.passengerName}
-                        onChange={(e) => updateRow(row.rowId, { passengerName: e.target.value })}
-                        placeholder="Passenger / Family Head"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        value={row.airlineName}
-                        onChange={(e) => updateRow(row.rowId, { airlineName: e.target.value })}
-                        placeholder="Airline"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        className="ticket17-pnr-input"
-                        value={row.pnr}
-                        onChange={(e) => updateRow(row.rowId, { pnr: e.target.value.toUpperCase() })}
-                        placeholder="PNR"
-                      />
-                    </td>
-                    <td>
-                      <select
-                        disabled={commercialLocked}
-                        className="ticket17-flight-type-select"
-                        value={row.flightType}
-                        onChange={(e) => updateRow(row.rowId, { flightType: e.target.value as TicketFareFlightType })}
-                      >
-                        <option value="ONE_WAY">One Way</option>
-                        <option value="RETURN">Return</option>
-                        <option value="MULTI_CITY">Multi-City</option>
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        value={row.ticketRoute}
-                        onChange={(e) => updateRow(row.rowId, { ticketRoute: e.target.value.toUpperCase() })}
-                        placeholder="KHI - JED - KHI"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={row.rate}
-                        onChange={(e) => updateRow(row.rowId, { rate: e.target.value })}
-                        placeholder="0"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={row.count}
-                        onChange={(e) => updateRow(row.rowId, { count: e.target.value })}
-                        placeholder="1"
-                      />
-                    </td>
-                    <td className="money-cell">{money(ticketRowTotal(row))}</td>
-                    {!commercialLocked && (
-                      <td>
-                        <button type="button" className="ticket17-remove" onClick={() => removeRow(row.rowId)}>
-                          ×
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          <div className="ticket9-summary-grid ticket17-summary">
-            <section className="ticket9-summary-card">
-              <div className="ticket9-category adult">
-                <span>Adults</span>
-                <b>{totals.qty.ADULT}</b>
-                <small>{money(totals.amount.ADULT)}</small>
-              </div>
-              <div className="ticket9-category child">
-                <span>Children</span>
-                <b>{totals.qty.CHILD}</b>
-                <small>{money(totals.amount.CHILD)}</small>
-              </div>
-              <div className="ticket9-category infant">
-                <span>Infants</span>
-                <b>{totals.qty.INFANT}</b>
-                <small>{money(totals.amount.INFANT)}</small>
-              </div>
-              <div className="ticket9-total-tickets">
-                <span>Total Tickets</span>
-                <b>{totals.total}</b>
-              </div>
-            </section>
-            <section className="ticket9-grand">
-              <span>GRAND TICKET TOTAL</span>
-              <b>{money(totals.grand)}</b>
-            </section>
-          </div>
-          <div className="ticket17-commercial-actions">
-            {!editingId && canCreate && (
-              <button type="button" className="primary" disabled={busy} onClick={() => void saveCommercial()}>
-                {busy ? "Saving..." : `Save Ticket Booking — ${ubNumber}`}
-              </button>
-            )}
-            {editingId && (
-              <div className="adj-rule-note">
-                <b>Commercial values locked:</b> use Ticket Booking Register → Booking Adjustment for Correction,
-                Amendment, Partial Cancellation or Full Cancellation.
-              </div>
-            )}
-          </div>
-        </section>
-      )}
+        <div className="ticket9-summary-grid ticket17-summary">
+          <section className="ticket9-summary-card">
+            <div className="ticket9-category adult">
+              <span>Adults</span>
+              <b>{totals.qty.ADULT}</b>
+              <small>{money(totals.amount.ADULT)}</small>
+            </div>
+            <div className="ticket9-category child">
+              <span>Children</span>
+              <b>{totals.qty.CHILD}</b>
+              <small>{money(totals.amount.CHILD)}</small>
+            </div>
+            <div className="ticket9-category infant">
+              <span>Infants</span>
+              <b>{totals.qty.INFANT}</b>
+              <small>{money(totals.amount.INFANT)}</small>
+            </div>
+            <div className="ticket9-total-tickets">
+              <span>Total Tickets</span>
+              <b>{totals.total}</b>
+            </div>
+          </section>
+          <section className="ticket9-grand">
+            <span>GRAND TICKET TOTAL</span>
+            <b>{money(totals.grand)}</b>
+          </section>
+        </div>
+        <div className="ticket17-commercial-actions">
+          {!editingId && canCreate && (
+            <button type="button" className="primary" disabled={busy} onClick={() => void saveCommercial()}>
+              {busy ? "Saving..." : `Save Ticket Booking — ${ubPreview || "UB-0000"}`}
+            </button>
+          )}
+          {editingId && (
+            <div className="adj-rule-note">
+              <b>Commercial values locked:</b> use Ticket Booking Register → Booking Adjustment for Correction,
+              Amendment, Partial Cancellation or Full Cancellation.
+            </div>
+          )}
+        </div>
+      </section>
 
       {saved && editingId && (
         <section className={`ticket17-additional ${detailsOpen ? "open" : ""}`}>
@@ -480,14 +478,13 @@ export default function TicketBookingFlowV2({
             onClick={() => setDetailsOpen((value) => !value)}
           >
             <div>
-              <span>03</span>
-              <b>TICKET BOOKING DETAILS — {ubNumber}</b>
+              <b>ADDITIONAL BOOKING DETAILS — {ubNumber}</b>
               <small>
                 Optional passenger, passport and flight journey information. This does not change Ticket accounting
                 totals.
               </small>
             </div>
-            <span className="ticket17-optional">{detailsOpen ? "CLOSE" : "OPTIONAL"}</span>
+            <span className="ticket17-optional">{detailsOpen ? "HIDE" : "SHOW"}</span>
           </button>
           {detailsOpen && (
             <TicketOperationalDetails

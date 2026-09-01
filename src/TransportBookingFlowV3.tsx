@@ -3,7 +3,6 @@ import type {
   BookingTransactionType,
   Party,
   TransportBooking,
-  TransportBookingInput,
   TransportBookingLineInput,
   TransportType,
   TransportVehicleType,
@@ -11,7 +10,7 @@ import type {
 import { createTransportBooking, getTransportBookings } from "./db";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
 import TransportRegister from "./TransportRegister";
-import { bookingDigitsFromUb } from "./bookingUb";
+import { bookingDigitsFromUb, bookingUbFromDigits } from "./bookingUb";
 import {
   getTransportOperationalDetails,
   saveTransportOperationalDetails,
@@ -20,6 +19,7 @@ import {
 import { transportRowCalc, transportRowCapacity, calculateTransportSummary } from "./pricingEngines";
 import { useBookingFlowState } from "./useBookingFlowState";
 import "./BookingFinalization.css";
+import "./BookingIdentity.css";
 
 type Props = {
   companyId: string;
@@ -119,8 +119,6 @@ export default function TransportBookingFlowV3({
     setUbDigits,
     ubNumber,
     setUbNumber,
-    assigned,
-    setAssigned,
     saved,
     setSaved,
     detailsOpen,
@@ -133,7 +131,7 @@ export default function TransportBookingFlowV3({
     setError,
     message,
     setMessage,
-    assignUb: assign,
+    validateBookingUb,
     resetState,
   } = useBookingFlowState(companyId, transactionType, entries, "Transport");
 
@@ -152,6 +150,7 @@ export default function TransportBookingFlowV3({
 
   const summary = useMemo(() => calculateTransportSummary(rows), [rows]);
   const commercialLocked = Boolean(editingId);
+  const ubPreview = bookingUbFromDigits(ubDigits);
 
   async function loadEntries() {
     try {
@@ -220,17 +219,6 @@ export default function TransportBookingFlowV3({
       roe: row.roe.trim() ? Number(row.roe) : null,
     }));
   }
-  function input(): TransportBookingInput {
-    return {
-      transactionType: tx,
-      counterpartyId,
-      transactionDate: bookingDate,
-      ubNumber,
-      paxSaudiNumber: legacySaudiNumber,
-      notes: legacyNotes,
-      lines: lineInputs(),
-    };
-  }
   function syncOperational(existing = operationalRows) {
     const next = rows.map((_, index) => {
       const found = existing.find((item) => item.sectorSortOrder === index);
@@ -255,16 +243,31 @@ export default function TransportBookingFlowV3({
       return setError(
         "Commercial Transport values are locked after saving. Use Transport Booking Register → Booking Adjustment for Correction, Amendment or Cancellation.",
       );
-    if (!assigned) return setError("Create / Assign the Booking UB first.");
     const invalid = rows.find((row) => capacityError(row));
     if (invalid) return setError(capacityError(invalid));
     setBusy(true);
     setError("");
     try {
-      const id = await createTransportBooking(companyId, input(), userId);
+      const formatted = ubPreview;
+      const valid = await validateBookingUb(formatted);
+      if (!valid) return;
+      setUbNumber(formatted);
+      const id = await createTransportBooking(
+        companyId,
+        {
+          transactionType: tx,
+          counterpartyId,
+          transactionDate: bookingDate,
+          ubNumber: formatted,
+          paxSaudiNumber: legacySaudiNumber,
+          notes: legacyNotes,
+          lines: lineInputs(),
+        },
+        userId,
+      );
       setEditingId(id);
       setSaved(true);
-      setMessage(`Transport booking ${ubNumber} saved. Optional Transport Operations are now available.`);
+      setMessage(`Transport booking ${formatted} saved. Additional booking details are available below.`);
       syncOperational();
       await loadEntries();
       await onChanged?.();
@@ -315,7 +318,6 @@ export default function TransportBookingFlowV3({
     setBookingDate(entry.transaction_date);
     setUbNumber(entry.ub_number);
     setUbDigits(bookingDigitsFromUb(entry.ub_number));
-    setAssigned(true);
     setSaved(true);
     setDetailsOpen(false);
     setEditingId(entry.id);
@@ -404,314 +406,308 @@ export default function TransportBookingFlowV3({
           <p>
             {editingId
               ? "Review the current effective Transport booking. Commercial changes are protected by Booking Adjustment history."
-              : "Create the UB first, save Transport accounting second, then complete optional pickup / driver operations."}
+              : "Complete account, UB, and transport sectors on one form, then save once. Additional booking details are optional."}
           </p>
         </div>
       </div>
       {message && <div className="alert success">{message}</div>}
       {error && <div className="alert error">{error}</div>}
-      <ProgressiveBookingIdentity
-        companyId={companyId}
-        userId={userId}
-        transactionType={tx}
-        parties={parties}
-        counterpartyId={counterpartyId}
-        onCounterpartyChange={setCounterpartyId}
-        bookingDate={bookingDate}
-        onBookingDateChange={setBookingDate}
-        ubDigits={ubDigits}
-        onUbDigitsChange={setUbDigits}
-        ubNumber={ubNumber}
-        assigned={assigned}
-        saved={saved}
-        onAssign={assign}
-        onEditHeader={() => {
-          if (!editingId) {
-            setAssigned(false);
-            setMessage("");
-          }
-        }}
-        onAccountsChanged={onChanged}
-        onError={setError}
-        onMessage={setMessage}
-        serviceLabel="Transport"
-      />
+      <section className="bf-card transport12a-section transport-unified-form">
+        <ProgressiveBookingIdentity
+          companyId={companyId}
+          userId={userId}
+          transactionType={tx}
+          parties={parties}
+          counterpartyId={counterpartyId}
+          onCounterpartyChange={setCounterpartyId}
+          bookingDate={bookingDate}
+          onBookingDateChange={setBookingDate}
+          ubDigits={ubDigits}
+          onUbDigitsChange={setUbDigits}
+          ubNumber={ubNumber}
+          assigned={false}
+          saved={saved}
+          onAssign={() => {}}
+          onAccountsChanged={onChanged}
+          onError={setError}
+          onMessage={setMessage}
+          serviceLabel="Transport"
+          variant="unified"
+          headerGridClass="transport12a-header-grid"
+          unifiedHint="Party, date, and UB are saved together with transport rates when you click Save Booking."
+          embedded
+        />
 
-      {assigned && (
-        <section className="bf-card">
-          <div className="bf-section-head">
+        <div className="bf-section-head transport12a-section-title transport-commercial-head">
+          <div>
+            <span>2</span>
             <div>
-              <span>02</span>
-              <div>
-                <b>TRANSPORT DETAILS & RATES</b>
-                <small>
-                  {commercialLocked
-                    ? "Current effective commercial sectors — use Booking Adjustment to change them."
-                    : `Commercial / accounting Transport sectors under ${ubNumber}`}
-                </small>
-              </div>
+              <b>TRANSPORT DETAILS &amp; RATES</b>
+              <small>
+                {commercialLocked
+                  ? "Current effective commercial sectors — use Booking Adjustment to change them."
+                  : "Enter transport sectors below, then save the full booking in one step."}
+              </small>
             </div>
-            {!commercialLocked && (
-              <button className="primary small" onClick={add}>
-                + Transport Row
-              </button>
-            )}
           </div>
-          <div className="bf-inline-toolbar">
-            <label>
-              <input
-                disabled={commercialLocked}
-                type="checkbox"
-                checked={chain}
-                onChange={(e) => setChain(e.target.checked)}
-              />{" "}
-              Use previous destination as next origin when adding a new row
-            </label>
-          </div>
-          <div className="bf-table-wrap">
-            <table className="bf-table transport-v3-table">
-              <thead>
-                <tr>
-                  <th>SR</th>
-                  <th>TRANSPORT DATE</th>
-                  <th>FROM</th>
-                  <th>TO</th>
-                  <th>TRANSPORT TYPE</th>
-                  <th>VEHICLE TYPE / NAME</th>
-                  <th>QTY</th>
-                  <th>PAX</th>
-                  <th>RATE / VEHICLE OR PAX SAR</th>
-                  <th>ROE</th>
-                  <th>TOTAL SAR</th>
-                  <th>TOTAL PKR</th>
-                  {!commercialLocked && <th>ACTION</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => {
-                  const c = transportRowCalc(row);
-                  const err = capacityError(row);
-                  return (
-                    <tr key={row.rowId}>
-                      <td>{index + 1}</td>
-                      <td>
+          {!commercialLocked && (
+            <button className="primary small" onClick={add}>
+              + Transport Row
+            </button>
+          )}
+        </div>
+        <div className="bf-inline-toolbar">
+          <label>
+            <input
+              disabled={commercialLocked}
+              type="checkbox"
+              checked={chain}
+              onChange={(e) => setChain(e.target.checked)}
+            />{" "}
+            Use previous destination as next origin when adding a new row
+          </label>
+        </div>
+        <div className="bf-table-wrap">
+          <table className="bf-table transport-v3-table">
+            <thead>
+              <tr>
+                <th>SR</th>
+                <th>TRANSPORT DATE</th>
+                <th>FROM</th>
+                <th>TO</th>
+                <th>TRANSPORT TYPE</th>
+                <th>VEHICLE TYPE / NAME</th>
+                <th>QTY</th>
+                <th>PAX</th>
+                <th>RATE / VEHICLE OR PAX SAR</th>
+                <th>ROE</th>
+                <th>TOTAL SAR</th>
+                <th>TOTAL PKR</th>
+                {!commercialLocked && <th>ACTION</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => {
+                const c = transportRowCalc(row);
+                const err = capacityError(row);
+                return (
+                  <tr key={row.rowId}>
+                    <td>{index + 1}</td>
+                    <td>
+                      <input
+                        disabled={commercialLocked}
+                        type="date"
+                        value={row.transportDate}
+                        onChange={(e) => update(row.rowId, { transportDate: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <select
+                        disabled={commercialLocked}
+                        value={row.fromChoice}
+                        onChange={(e) => update(row.rowId, { fromChoice: e.target.value })}
+                      >
+                        <option value="">Select / Type</option>
+                        {locations.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                        <option value="OTHER">Custom...</option>
+                      </select>
+                      {row.fromChoice === "OTHER" && (
                         <input
                           disabled={commercialLocked}
-                          type="date"
-                          value={row.transportDate}
-                          onChange={(e) => update(row.rowId, { transportDate: e.target.value })}
+                          style={{ marginTop: 4 }}
+                          value={row.fromCustom}
+                          onChange={(e) => update(row.rowId, { fromCustom: e.target.value })}
+                          placeholder="Custom from"
                         />
-                      </td>
-                      <td>
-                        <select
-                          disabled={commercialLocked}
-                          value={row.fromChoice}
-                          onChange={(e) => update(row.rowId, { fromChoice: e.target.value })}
-                        >
-                          <option value="">Select / Type</option>
-                          {locations.map((item) => (
-                            <option key={item} value={item}>
-                              {item}
-                            </option>
-                          ))}
-                          <option value="OTHER">Custom...</option>
-                        </select>
-                        {row.fromChoice === "OTHER" && (
-                          <input
-                            disabled={commercialLocked}
-                            style={{ marginTop: 4 }}
-                            value={row.fromCustom}
-                            onChange={(e) => update(row.rowId, { fromCustom: e.target.value })}
-                            placeholder="Custom from"
-                          />
-                        )}
-                      </td>
-                      <td>
-                        <select
-                          disabled={commercialLocked}
-                          value={row.toChoice}
-                          onChange={(e) => update(row.rowId, { toChoice: e.target.value })}
-                        >
-                          <option value="">Select / Type</option>
-                          {locations.map((item) => (
-                            <option key={item} value={item}>
-                              {item}
-                            </option>
-                          ))}
-                          <option value="OTHER">Custom...</option>
-                        </select>
-                        {row.toChoice === "OTHER" && (
-                          <input
-                            disabled={commercialLocked}
-                            style={{ marginTop: 4 }}
-                            value={row.toCustom}
-                            onChange={(e) => update(row.rowId, { toCustom: e.target.value })}
-                            placeholder="Custom to"
-                          />
-                        )}
-                      </td>
-                      <td>
-                        <div className="bf-radio-group">
-                          <label>
-                            <input
-                              disabled={commercialLocked}
-                              type="radio"
-                              checked={row.transportType === "PRIVATE_VEHICLE"}
-                              onChange={() => changeType(row, "PRIVATE_VEHICLE")}
-                            />{" "}
-                            Private
-                          </label>
-                          <label>
-                            <input
-                              disabled={commercialLocked}
-                              type="radio"
-                              checked={row.transportType === "SHARING_BUS"}
-                              onChange={() => changeType(row, "SHARING_BUS")}
-                            />{" "}
-                            Sharing
-                          </label>
-                        </div>
-                      </td>
-                      <td>
-                        {row.transportType === "PRIVATE_VEHICLE" ? (
-                          <>
-                            <select
-                              disabled={commercialLocked}
-                              value={row.vehicleType}
-                              onChange={(e) =>
-                                update(row.rowId, { vehicleType: e.target.value as TransportVehicleType })
-                              }
-                            >
-                              {vehicles.map((item) => (
-                                <option key={item.value} value={item.value}>
-                                  {item.label}
-                                </option>
-                              ))}
-                            </select>
-                            {row.vehicleType === "OTHER" && (
-                              <input
-                                disabled={commercialLocked}
-                                style={{ marginTop: 4 }}
-                                value={row.customVehicleName}
-                                onChange={(e) => update(row.rowId, { customVehicleName: e.target.value })}
-                                placeholder="Vehicle name"
-                              />
-                            )}
-                          </>
-                        ) : (
-                          "Sharing Bus"
-                        )}
-                      </td>
-                      <td>
-                        {row.transportType === "PRIVATE_VEHICLE" ? (
-                          <input
-                            disabled={commercialLocked}
-                            type="number"
-                            min="1"
-                            value={row.vehicleCount}
-                            onChange={(e) => update(row.rowId, { vehicleCount: e.target.value })}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td>
-                        <div className="bf-pax-cell">
-                          <input
-                            disabled={commercialLocked}
-                            type="number"
-                            min="1"
-                            value={row.paxCount}
-                            onChange={(e) => update(row.rowId, { paxCount: e.target.value })}
-                          />
-                          {err && (
-                            <div className="bf-error-tooltip" title={err}>
-                              ⚠️
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <input
-                          disabled={commercialLocked}
-                          type="number"
-                          min="0"
-                          value={row.rateSar}
-                          onChange={(e) => update(row.rowId, { rateSar: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          disabled={commercialLocked}
-                          type="number"
-                          min="0"
-                          value={row.roe}
-                          onChange={(e) => update(row.rowId, { roe: e.target.value })}
-                          placeholder="Riyal Rate"
-                        />
-                      </td>
-                      <td className="bf-money">{money(c.totalSar)}</td>
-                      <td className="bf-money">{c.roe > 0 ? pkr(c.totalPkr) : "—"}</td>
-                      {!commercialLocked && (
-                        <td>
-                          <button className="bf-remove" onClick={() => remove(row.rowId)}>
-                            ×
-                          </button>
-                        </td>
                       )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    </td>
+                    <td>
+                      <select
+                        disabled={commercialLocked}
+                        value={row.toChoice}
+                        onChange={(e) => update(row.rowId, { toChoice: e.target.value })}
+                      >
+                        <option value="">Select / Type</option>
+                        {locations.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                        <option value="OTHER">Custom...</option>
+                      </select>
+                      {row.toChoice === "OTHER" && (
+                        <input
+                          disabled={commercialLocked}
+                          style={{ marginTop: 4 }}
+                          value={row.toCustom}
+                          onChange={(e) => update(row.rowId, { toCustom: e.target.value })}
+                          placeholder="Custom to"
+                        />
+                      )}
+                    </td>
+                    <td>
+                      <div className="bf-radio-group">
+                        <label>
+                          <input
+                            disabled={commercialLocked}
+                            type="radio"
+                            checked={row.transportType === "PRIVATE_VEHICLE"}
+                            onChange={() => changeType(row, "PRIVATE_VEHICLE")}
+                          />{" "}
+                          Private
+                        </label>
+                        <label>
+                          <input
+                            disabled={commercialLocked}
+                            type="radio"
+                            checked={row.transportType === "SHARING_BUS"}
+                            onChange={() => changeType(row, "SHARING_BUS")}
+                          />{" "}
+                          Sharing
+                        </label>
+                      </div>
+                    </td>
+                    <td>
+                      {row.transportType === "PRIVATE_VEHICLE" ? (
+                        <>
+                          <select
+                            disabled={commercialLocked}
+                            value={row.vehicleType}
+                            onChange={(e) => update(row.rowId, { vehicleType: e.target.value as TransportVehicleType })}
+                          >
+                            {vehicles.map((item) => (
+                              <option key={item.value} value={item.value}>
+                                {item.label}
+                              </option>
+                            ))}
+                          </select>
+                          {row.vehicleType === "OTHER" && (
+                            <input
+                              disabled={commercialLocked}
+                              style={{ marginTop: 4 }}
+                              value={row.customVehicleName}
+                              onChange={(e) => update(row.rowId, { customVehicleName: e.target.value })}
+                              placeholder="Vehicle name"
+                            />
+                          )}
+                        </>
+                      ) : (
+                        "Sharing Bus"
+                      )}
+                    </td>
+                    <td>
+                      {row.transportType === "PRIVATE_VEHICLE" ? (
+                        <input
+                          disabled={commercialLocked}
+                          type="number"
+                          min="1"
+                          value={row.vehicleCount}
+                          onChange={(e) => update(row.rowId, { vehicleCount: e.target.value })}
+                        />
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>
+                      <div className="bf-pax-cell">
+                        <input
+                          disabled={commercialLocked}
+                          type="number"
+                          min="1"
+                          value={row.paxCount}
+                          onChange={(e) => update(row.rowId, { paxCount: e.target.value })}
+                        />
+                        {err && (
+                          <div className="bf-error-tooltip" title={err}>
+                            ⚠️
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <input
+                        disabled={commercialLocked}
+                        type="number"
+                        min="0"
+                        value={row.rateSar}
+                        onChange={(e) => update(row.rowId, { rateSar: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        disabled={commercialLocked}
+                        type="number"
+                        min="0"
+                        value={row.roe}
+                        onChange={(e) => update(row.rowId, { roe: e.target.value })}
+                        placeholder="Riyal Rate"
+                      />
+                    </td>
+                    <td className="bf-money">{money(c.totalSar)}</td>
+                    <td className="bf-money">{c.roe > 0 ? pkr(c.totalPkr) : "—"}</td>
+                    {!commercialLocked && (
+                      <td>
+                        <button className="bf-remove" onClick={() => remove(row.rowId)}>
+                          ×
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="bf-summary six">
+          <div>
+            <small>TRANSPORT SECTORS</small>
+            <b>{summary.sectors}</b>
           </div>
-          <div className="bf-summary six">
-            <div>
-              <small>TRANSPORT SECTORS</small>
-              <b>{summary.sectors}</b>
-            </div>
-            <div>
-              <small>SHARING PAX ENTRIES</small>
-              <b>{summary.sharingPax}</b>
-            </div>
-            <div>
-              <small>PRIVATE VEHICLE TRIPS</small>
-              <b>{summary.privateTrips}</b>
-            </div>
-            <div>
-              <small>TOTAL PRIVATE VEHICLES</small>
-              <b>{summary.privateVehicles}</b>
-            </div>
-            <div>
-              <small>GRAND TOTAL SAR</small>
-              <b>{money(summary.totalSar)}</b>
-            </div>
-            <div className="grand">
-              <small>GRAND TOTAL PKR</small>
-              <b>{pkr(summary.totalPkr)}</b>
-              {summary.pending > 0 && <span>{money(summary.pending)} pending ROE</span>}
-            </div>
+          <div>
+            <small>SHARING PAX ENTRIES</small>
+            <b>{summary.sharingPax}</b>
           </div>
-          <div className="package14-commercial-actions">
-            {saved && (
-              <button className="secondary" onClick={reset}>
-                + New Transport Booking
-              </button>
-            )}
-            {!editingId && (
-              <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>
-                {busy ? "Saving..." : `Save Transport Booking — ${ubNumber}`}
-              </button>
-            )}
-            {editingId && (
-              <div className="adj-rule-note">
-                <b>Commercial values locked:</b> use Transport Booking Register → Booking Adjustment for Correction,
-                Amendment, Partial Cancellation or Full Cancellation.
-              </div>
-            )}
+          <div>
+            <small>PRIVATE VEHICLE TRIPS</small>
+            <b>{summary.privateTrips}</b>
           </div>
-        </section>
-      )}
+          <div>
+            <small>TOTAL PRIVATE VEHICLES</small>
+            <b>{summary.privateVehicles}</b>
+          </div>
+          <div>
+            <small>GRAND TOTAL SAR</small>
+            <b>{money(summary.totalSar)}</b>
+          </div>
+          <div className="grand">
+            <small>GRAND TOTAL PKR</small>
+            <b>{pkr(summary.totalPkr)}</b>
+            {summary.pending > 0 && <span>{money(summary.pending)} pending ROE</span>}
+          </div>
+        </div>
+        <div className="package14-commercial-actions">
+          {saved && (
+            <button className="secondary" onClick={reset}>
+              + New Transport Booking
+            </button>
+          )}
+          {!editingId && (
+            <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>
+              {busy ? "Saving..." : `Save Transport Booking — ${ubPreview || "UB-0000"}`}
+            </button>
+          )}
+          {editingId && (
+            <div className="adj-rule-note">
+              <b>Commercial values locked:</b> use Transport Booking Register → Booking Adjustment for Correction,
+              Amendment, Partial Cancellation or Full Cancellation.
+            </div>
+          )}
+        </div>
+      </section>
 
       {saved && editingId && (
         <section className={`package14-additional ${detailsOpen ? "open" : "closed"}`}>
@@ -723,13 +719,11 @@ export default function TransportBookingFlowV3({
               if (next) syncOperational();
             }}
           >
-            <span className="package14-step-purple">03</span>
             <div>
-              <b>TRANSPORT BOOKING DETAILS — {ubNumber}</b>
+              <b>ADDITIONAL BOOKING DETAILS — {ubNumber}</b>
               <small>Optional pickup, driver, vehicle and movement operations. No effect on Transport totals.</small>
             </div>
-            <span className="package14-optional">OPTIONAL</span>
-            <strong>{detailsOpen ? "Close Details ▲" : "+ Open Details ▼"}</strong>
+            <strong>{detailsOpen ? "Hide ▲" : "Show ▼"}</strong>
           </button>
           {detailsOpen && (
             <div className="package14-additional-body bf-operational-body">
@@ -849,15 +843,6 @@ export default function TransportBookingFlowV3({
             </div>
           )}
         </section>
-      )}
-
-      {!assigned && (
-        <div className="package14-next-step">Create / Assign a Booking UB to unlock Transport Details & Rates.</div>
-      )}
-      {assigned && !saved && (
-        <div className="package14-next-step">
-          Save Section 02 to activate the Transport booking and unlock Optional Transport Booking Details.
-        </div>
       )}
     </section>
   );

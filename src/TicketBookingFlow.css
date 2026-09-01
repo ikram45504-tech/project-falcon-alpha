@@ -1,6 +1,15 @@
 @import "./TicketBookingFlow.dark-overrides.css";
+@import "./BookingIdentity.css";
 
-@import "./TicketBookingFlow.dark-overrides.css";
+.ticket9-unified-form .ticket9-commercial-head {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid #d2deeb;
+}
+
+.ticket9-unified-form .package14-identity-complete {
+  margin: 0 0 8px;
+}
 
 .ticket17-fare-head {
   display: flex;

@@ -1,6 +1,14 @@
 @import "./BookingFinalization.dark-overrides.css";
 
-@import "./BookingFinalization.dark-overrides.css";
+.transport-unified-form .transport-commercial-head {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid #d2deeb;
+}
+
+.transport-unified-form .package14-identity-complete {
+  margin: 0 0 8px;
+}
 
 .bf-page {
   display: grid;
