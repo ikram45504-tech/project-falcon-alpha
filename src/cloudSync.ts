@@ -459,6 +459,15 @@ export async function syncPaymentCorrection(record: Record<string, unknown>) {
   await queueSync("UPSERT", "payment_corrections", String(record.id), record);
 }
 
+/** Permanently remove a payment and its metadata from the cloud (test / admin delete). */
+export async function syncPaymentDelete(paymentId: string, correctionIds: string[] = []) {
+  for (const correctionId of correctionIds) {
+    await queueSync("DELETE", "payment_corrections", correctionId, {});
+  }
+  await queueSync("DELETE", "payment_v2_meta", paymentId, {});
+  await queueSync("DELETE", "payment_entries", paymentId, {});
+}
+
 /** Clear all known child rows for a booking in the cloud (used by permanent delete). */
 export async function syncClearBookingChildren(bookingId: string, childTables: string[]) {
   for (const table of childTables) {

@@ -3,6 +3,7 @@ import { ensurePaymentDocumentUniqueness, runAtomicTransaction, type AtomicSqlSt
 import {
   isDesktopApp,
   syncPaymentBundle,
+  syncPaymentDelete,
   syncPaymentVoid,
   type PaymentEntrySync,
   type PaymentMetaSync,
@@ -51,6 +52,8 @@ export type PaymentV2Input = {
   amount: number;
   roe: number;
   settlementAccount: string;
+  fromAccount: string;
+  toAccount: string;
   description: string;
   reference: string;
   bankName: string;
@@ -362,7 +365,7 @@ function buildPaymentSyncPayloads(
 ): { entry: PaymentEntrySync; meta: PaymentMetaSync } {
   const documentNo = input.documentNo.trim().toUpperCase();
   const settlement = input.settlementAccount.trim();
-  const movement = movementAccounts(input.transactionKind, accountName, settlement);
+  const movement = resolveMovement(input, accountName, settlement);
   return {
     entry: {
       id: paymentId,
@@ -413,6 +416,13 @@ function movementAccounts(kind: PaymentTransactionKind, accountName: string, set
   if (kind === "VENDOR_PAYMENT") return { from: settlementAccount, to: accountName };
   if (kind === "PARTY_REFUND") return { from: settlementAccount, to: accountName };
   return { from: accountName, to: settlementAccount };
+}
+
+function resolveMovement(input: PaymentV2Input, accountName: string, settlement: string) {
+  const from = input.fromAccount?.trim();
+  const to = input.toAccount?.trim();
+  if (from && to) return { from, to };
+  return movementAccounts(input.transactionKind, accountName, settlement);
 }
 
 function metaStatement(
@@ -488,7 +498,7 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
   const { account, amount, roe, paidAmount } = await validateAndResolveAccount(companyId, input);
   const documentNo = input.documentNo.trim().toUpperCase();
   const settlement = input.settlementAccount.trim();
-  const movement = movementAccounts(input.transactionKind, account.name, settlement);
+  const movement = resolveMovement(input, account.name, settlement);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
@@ -569,7 +579,7 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
   }
   const documentNo = input.documentNo.trim().toUpperCase();
   const settlement = input.settlementAccount.trim();
-  const movement = movementAccounts(input.transactionKind, account.name, settlement);
+  const movement = resolveMovement(input, account.name, settlement);
   const now = new Date().toISOString();
   const createdAt = existingMeta?.created_at || now;
 
@@ -673,4 +683,79 @@ export async function voidPaymentV2(companyId: string, paymentId: string, userId
   }
 
   await syncPaymentVoid(paymentId, now, userId);
+}
+
+/** Hard-delete a payment — for test cleanup only; prefer void for production records. */
+export async function deletePaymentV2(companyId: string, paymentId: string, userId = "") {
+  const now = new Date().toISOString();
+  let correctionIds: string[];
+
+  if (isDesktopApp()) {
+    const database = await ready();
+    const corrections = await database.select<Array<{ id: string }>>(
+      `SELECT id FROM payment_corrections WHERE company_id=$1 AND payment_id=$2`,
+      [companyId, paymentId],
+    );
+    correctionIds = corrections.map((row) => row.id);
+    const rows = await database.select<Array<{ receipt_no: string; paid_amount: number }>>(
+      `SELECT receipt_no,paid_amount FROM payment_entries WHERE company_id=$1 AND id=$2 LIMIT 1`,
+      [companyId, paymentId],
+    );
+    const record = rows[0] || null;
+    const statements: AtomicSqlStatement[] = [
+      {
+        sql: `DELETE FROM payment_corrections WHERE company_id=$1 AND payment_id=$2`,
+        params: [companyId, paymentId],
+      },
+      {
+        sql: `DELETE FROM payment_v2_meta WHERE company_id=$1 AND payment_id=$2`,
+        params: [companyId, paymentId],
+      },
+      {
+        sql: `DELETE FROM payment_entries WHERE company_id=$1 AND id=$2`,
+        params: [companyId, paymentId],
+      },
+    ];
+    if (record) {
+      const audit = auditStatement(
+        companyId,
+        userId,
+        "PAYMENT_DELETED",
+        paymentId,
+        `${record.receipt_no || "Payment"} - PKR ${Number(record.paid_amount || 0).toFixed(2)} (test delete)`,
+        now,
+      );
+      if (audit) statements.push(audit);
+    }
+    await runAtomicTransaction(statements);
+  } else {
+    const { data: corrections, error: correctionsError } = await supabase
+      .from("payment_corrections")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("payment_id", paymentId);
+    if (correctionsError) throw correctionsError;
+    correctionIds = (corrections || []).map((row) => String(row.id));
+
+    for (const correctionId of correctionIds) {
+      const { error } = await supabase.from("payment_corrections").delete().eq("id", correctionId);
+      if (error) throw error;
+    }
+
+    const { error: metaError } = await supabase
+      .from("payment_v2_meta")
+      .delete()
+      .eq("company_id", companyId)
+      .eq("payment_id", paymentId);
+    if (metaError) throw metaError;
+
+    const { error: entryError } = await supabase
+      .from("payment_entries")
+      .delete()
+      .eq("company_id", companyId)
+      .eq("id", paymentId);
+    if (entryError) throw entryError;
+  }
+
+  await syncPaymentDelete(paymentId, correctionIds);
 }

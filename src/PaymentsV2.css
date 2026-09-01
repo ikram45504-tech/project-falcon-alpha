@@ -312,6 +312,14 @@
   padding-bottom: 10px;
 }
 
+.payment-v2-field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #66788a;
+}
+
 .payment-v2-settlement-field {
   grid-column: span 2;
 }

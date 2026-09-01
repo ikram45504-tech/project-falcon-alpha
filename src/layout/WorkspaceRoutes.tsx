@@ -11,15 +11,17 @@ import PnLPortfolio from "../PnLPortfolio";
 import { hasPermission } from "../permissions";
 import { useAuth } from "../AuthContext";
 import type { WorkspaceLayoutState } from "./useWorkspaceLayoutState";
-import { Party } from "../db";
+import { Party, Company } from "../db";
 import { useParams } from "react-router-dom";
 
 function LedgerRoute({
+  company,
   companyId,
   parties,
   onChanged,
   setStatementPartyId,
 }: {
+  company: Company;
   companyId: string;
   parties: Party[];
   onChanged: () => void;
@@ -35,6 +37,7 @@ function LedgerRoute({
 
   return (
     <PartyLedger
+      company={company}
       companyId={companyId}
       party={party}
       parties={parties}
@@ -80,6 +83,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
         element={
           company ? (
             <LedgerRoute
+              company={company}
               companyId={company.id}
               parties={parties}
               onChanged={loadFinancialTotals}

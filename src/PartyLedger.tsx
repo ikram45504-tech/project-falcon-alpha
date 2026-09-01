@@ -1,15 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Party, PaymentEntry } from "./db";
+import type { Company, Party, PaymentEntry } from "./db";
 import { getPayments } from "./db";
 import { downloadExcel } from "./exportUtils";
 import { type BookingAccountingEntry, accountDirectionLabel, getBookingAccountingEntries } from "./BookingAccounting";
 import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
 import { recordPaymentVoidHistory } from "./PaymentCorrectionDb";
+import { buildPaymentReceiptPdf } from "./PaymentReceiptPdf";
+import { downloadPaymentReceiptPdf, paymentReceiptFileName } from "./paymentReceiptExport";
 import PaymentLedgerModal, { inferKind } from "./PaymentLedgerModal";
-import { getPaymentV2Meta, getPaymentV2MetaMap, voidPaymentV2, type PaymentV2Meta } from "./PaymentV2Db";
+import {
+  deletePaymentV2,
+  getPaymentV2Meta,
+  getPaymentV2MetaMap,
+  voidPaymentV2,
+  type PaymentV2Meta,
+} from "./PaymentV2Db";
 import "./PaymentLedgerModal.css";
 
 type Props = {
+  company: Company;
   companyId: string;
   party: Party;
   parties?: Party[];
@@ -45,6 +54,7 @@ function formatNumber(value: number) {
 }
 
 export default function PartyLedger({
+  company,
   companyId,
   party,
   onBack,
@@ -135,6 +145,53 @@ export default function PartyLedger({
     }
   }
 
+  async function downloadReceipt(entry: PaymentEntry) {
+    setError("");
+    setMessage("");
+    try {
+      const meta = metaMap.get(entry.id) || (await getPaymentV2Meta(companyId, entry.id));
+      const kind = inferKind(meta, party.account_type === "VENDOR" ? "VENDOR" : "PARTY");
+      const doc = buildPaymentReceiptPdf({
+        company,
+        party,
+        entry,
+        meta,
+        transactionKind: kind,
+        generatedOn: new Date().toISOString(),
+      });
+      await downloadPaymentReceiptPdf(doc, paymentReceiptFileName(company, entry, party.name));
+      setMessage(`Receipt ${entry.receipt_no || ""} downloaded.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function deletePayment(entry: PaymentEntry) {
+    if (!canEditPayments || busyId) return;
+    if (
+      !window.confirm(
+        `Permanently delete ${entry.receipt_no || "this payment"} for ${formatMoney(entry.paid_amount)}?\n\nThis is for test cleanup only and cannot be undone.`,
+      )
+    )
+      return;
+    if (!window.confirm("Confirm permanent delete?")) return;
+
+    setBusyId(entry.id);
+    setError("");
+    setMessage("");
+    try {
+      await deletePaymentV2(companyId, entry.id, userId);
+      if (modal?.entry.id === entry.id) setModal(null);
+      await load();
+      await onChanged?.();
+      setMessage(`${entry.receipt_no || "Payment"} deleted.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId("");
+    }
+  }
+
   function handleExport() {
     const bookingData = bookings.map((b, i) => ({
       "SR #": i + 1,
@@ -185,6 +242,9 @@ export default function PartyLedger({
   function renderPaymentActions(entry: PaymentEntry) {
     return (
       <div className="row-actions compact-actions ledger-payment-actions">
+        <button type="button" onClick={() => void downloadReceipt(entry)}>
+          Receipt
+        </button>
         <button type="button" onClick={() => void openModal("history", entry)}>
           History
         </button>
@@ -201,6 +261,17 @@ export default function PartyLedger({
             disabled={entry.status !== "ACTIVE" || busyId === entry.id}
           >
             Void
+          </button>
+        )}
+        {canEditPayments && (
+          <button
+            type="button"
+            className="danger-action"
+            onClick={() => void deletePayment(entry)}
+            disabled={busyId === entry.id}
+            title="Test cleanup — permanently removes this payment"
+          >
+            Delete
           </button>
         )}
       </div>

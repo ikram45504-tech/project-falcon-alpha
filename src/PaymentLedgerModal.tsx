@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PaymentEntry } from "./db";
 import { formatAmountInput, parseFormattedAmount, pkrEquivalent } from "./paymentFormatUtils";
-import { fromReceivingLabels, movementFieldState, settlementSideForKind } from "./paymentMovement";
+import { fromReceivingLabels, patchMovementField } from "./paymentMovement";
 import { correctPaymentV2, getPaymentCorrections, type PaymentCorrectionRecord } from "./PaymentCorrectionDb";
 import {
   getPaymentV2Meta,
@@ -33,6 +33,8 @@ type CorrectionForm = {
   amount: string;
   roe: string;
   settlementAccount: string;
+  fromAccount: string;
+  toAccount: string;
   description: string;
   reference: string;
   reason: string;
@@ -61,6 +63,8 @@ function toInput(
     amount: parseFormattedAmount(form.amount),
     roe: form.currency === "SAR" ? parseFormattedAmount(form.roe) : 0,
     settlementAccount: form.settlementAccount,
+    fromAccount: form.fromAccount,
+    toAccount: form.toAccount,
     description: form.description,
     reference: form.reference,
     bankName: meta?.bank_name || "",
@@ -112,6 +116,8 @@ export default function PaymentLedgerModal({
     amount: formatAmountInput(String(entry.amount_entered || "")),
     roe: entry.currency === "SAR" ? formatAmountInput(String(entry.roe || "")) : "",
     settlementAccount: meta?.settlement_account || entry.to_account,
+    fromAccount: entry.from_account || "",
+    toAccount: entry.to_account || "",
     description: entry.description || "",
     reference: meta?.reference || "",
     reason: "",
@@ -122,11 +128,6 @@ export default function PaymentLedgerModal({
   const [loadingHistory, setLoadingHistory] = useState(mode === "history");
 
   const labels = fromReceivingLabels(entry.payment_type);
-  const movement = useMemo(
-    () => movementFieldState(transactionKind, accountName, form.settlementAccount),
-    [transactionKind, accountName, form.settlementAccount],
-  );
-  const settlementSide = settlementSideForKind(transactionKind);
 
   const previewPkr = useMemo(() => {
     const amount = parseFormattedAmount(form.amount);
@@ -154,9 +155,16 @@ export default function PaymentLedgerModal({
   }, [mode, companyId, entry.id]);
 
   function patchMovement(side: "from" | "receiving", value: string) {
-    if (side === settlementSide) {
-      setForm((current) => ({ ...current, settlementAccount: value }));
-    }
+    setForm((current) => ({
+      ...current,
+      ...patchMovementField({
+        transactionKind,
+        side,
+        value,
+        fromAccount: current.fromAccount,
+        toAccount: current.toAccount,
+      }),
+    }));
   }
 
   async function saveCorrection() {
@@ -246,22 +254,14 @@ export default function PaymentLedgerModal({
             <div className="payment-v2-movement-grid">
               <label>
                 {labels.from} *
-                <input
-                  value={movement.fromValue}
-                  readOnly={movement.fromLocked}
-                  onChange={(e) => patchMovement("from", e.target.value)}
-                />
+                <input value={form.fromAccount} onChange={(e) => patchMovement("from", e.target.value)} />
               </label>
               <span className="payment-v2-movement-arrow" aria-hidden="true">
                 →
               </span>
               <label>
                 {labels.receiving} *
-                <input
-                  value={movement.receivingValue}
-                  readOnly={movement.receivingLocked}
-                  onChange={(e) => patchMovement("receiving", e.target.value)}
-                />
+                <input value={form.toAccount} onChange={(e) => patchMovement("receiving", e.target.value)} />
               </label>
             </div>
 

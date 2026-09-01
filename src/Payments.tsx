@@ -22,7 +22,12 @@ import type {
 } from "./PaymentV2Db";
 import "./PaymentsV2.css";
 import { formatAmountInput, parseFormattedAmount, pkrEquivalent } from "./paymentFormatUtils";
-import { fromReceivingLabels, movementFieldState, settlementSideForKind } from "./paymentMovement";
+import {
+  fromReceivingLabels,
+  buildMovementFields,
+  defaultSettlementForMethod,
+  patchMovementField,
+} from "./paymentMovement";
 
 type PaymentSide = "PARTY" | "VENDOR";
 type PaymentPurpose = "STANDARD" | "REFUND";
@@ -39,6 +44,8 @@ type PaymentFormState = {
   amount: string;
   roe: string;
   settlementAccount: string;
+  fromAccount: string;
+  toAccount: string;
   reference: string;
   description: string;
   bankName: string;
@@ -150,6 +157,8 @@ function blankForm(side: PaymentSide): PaymentFormState {
     amount: "",
     roe: "",
     settlementAccount: "Cash in Hand",
+    fromAccount: "",
+    toAccount: "Cash in Hand",
     reference: "",
     description: "",
     bankName: "",
@@ -184,6 +193,8 @@ function entryToForm(entry: PaymentEntry, meta: PaymentV2Meta | undefined, parti
     amount: formatAmountInput(String(entry.amount_entered || "")),
     roe: entry.currency === "SAR" ? formatAmountInput(String(entry.roe || "")) : "",
     settlementAccount,
+    fromAccount: entry.from_account || "",
+    toAccount: entry.to_account || "",
     reference: meta?.reference || "",
     description: entry.description || "",
     bankName: meta?.bank_name || "",
@@ -224,6 +235,8 @@ function toInput(form: PaymentFormState): PaymentV2Input {
     amount: parseFormattedAmount(form.amount),
     roe: form.currency === "SAR" ? parseFormattedAmount(form.roe) : 0,
     settlementAccount: form.settlementAccount,
+    fromAccount: form.fromAccount,
+    toAccount: form.toAccount,
     description: form.description,
     reference: form.reference,
     bankName: form.bankName,
@@ -423,7 +436,23 @@ export function PaymentsModule({
     if (!canEdit) return;
     const nextKind = kindForPurpose(side, purpose);
     setError("");
-    setForm((current) => ({ ...current, transactionKind: nextKind, documentNo: "" }));
+    setForm((current) => {
+      const accountName =
+        parties.find((party) => party.id === current.partyId)?.name ||
+        (side === "PARTY" ? "Party / Customer" : "Vendor / Supplier");
+      return {
+        ...current,
+        transactionKind: nextKind,
+        documentNo: "",
+        ...buildMovementFields({
+          transactionKind: nextKind,
+          accountName,
+          paymentType: current.paymentType,
+          fromAccount: current.fromAccount,
+          toAccount: current.toAccount,
+        }),
+      };
+    });
   }
 
   async function downloadReceipt(entry: PaymentEntry) {
@@ -527,8 +556,34 @@ export function PaymentsModule({
   }
 
   function patchMovement(side: "from" | "receiving", value: string) {
-    const settlementSide = settlementSideForKind(form.transactionKind);
-    if (side === settlementSide) patch("settlementAccount", value);
+    setForm((current) => ({
+      ...current,
+      ...patchMovementField({
+        transactionKind: current.transactionKind,
+        side,
+        value,
+        fromAccount: current.fromAccount,
+        toAccount: current.toAccount,
+      }),
+    }));
+  }
+
+  function syncMovementForAccount(partyId: string, overrides?: Partial<PaymentFormState>) {
+    setForm((current) => {
+      const base = { ...current, ...overrides, partyId };
+      const account = parties.find((party) => party.id === partyId);
+      const accountName = account?.name || (side === "PARTY" ? "Party / Customer" : "Vendor / Supplier");
+      return {
+        ...base,
+        ...buildMovementFields({
+          transactionKind: base.transactionKind,
+          accountName,
+          paymentType: base.paymentType,
+          fromAccount: base.fromAccount,
+          toAccount: base.toAccount,
+        }),
+      };
+    });
   }
 
   function patchAmount(value: string) {
@@ -625,7 +680,6 @@ export function PaymentsModule({
     const amountLabel = amountActionLabel(transactionKind);
     const balanceLabel = balanceLabelForKind(transactionKind);
     const movementLabels = fromReceivingLabels(form.paymentType);
-    const movement = movementFieldState(transactionKind, selectedAccount?.name || accountNoun, form.settlementAccount);
     const documentPreview = form.documentNo || suggestedDocument || `${prefix}0001`;
     const isEditing = Boolean(editingId);
 
@@ -688,7 +742,11 @@ export function PaymentsModule({
             <div className="payment-v2-identity-grid">
               <label>
                 {accountNoun} *
-                <select value={form.partyId} disabled={isEditing} onChange={(e) => patch("partyId", e.target.value)}>
+                <select
+                  value={form.partyId}
+                  disabled={isEditing}
+                  onChange={(e) => syncMovementForAccount(e.target.value)}
+                >
                   <option value="">Select {accountNoun}</option>
                   {eligibleAccounts.map((party) => (
                     <option key={party.id} value={party.id}>
@@ -713,15 +771,24 @@ export function PaymentsModule({
                     className={form.paymentType === "CASH" ? "active cash" : ""}
                     disabled={isEditing}
                     onClick={() =>
-                      setForm((current) => ({
-                        ...current,
-                        paymentType: "CASH",
-                        documentNo: "",
-                        settlementAccount:
-                          current.settlementAccount && current.settlementAccount !== "Cash in Hand"
-                            ? current.settlementAccount
-                            : "Cash in Hand",
-                      }))
+                      setForm((current) => {
+                        const settlement = defaultSettlementForMethod("CASH", current.settlementAccount);
+                        const accountName =
+                          selectedAccount?.name || (side === "PARTY" ? "Party / Customer" : "Vendor / Supplier");
+                        return {
+                          ...current,
+                          paymentType: "CASH",
+                          documentNo: "",
+                          ...buildMovementFields({
+                            transactionKind: current.transactionKind,
+                            accountName,
+                            paymentType: "CASH",
+                            fromAccount: current.fromAccount,
+                            toAccount: current.toAccount,
+                            preferSettlement: settlement,
+                          }),
+                        };
+                      })
                     }
                   >
                     CASH
@@ -731,13 +798,24 @@ export function PaymentsModule({
                     className={form.paymentType === "BANK" ? "active bank" : ""}
                     disabled={isEditing}
                     onClick={() =>
-                      setForm((current) => ({
-                        ...current,
-                        paymentType: "BANK",
-                        documentNo: "",
-                        settlementAccount:
-                          current.settlementAccount === "Cash in Hand" ? "" : current.settlementAccount,
-                      }))
+                      setForm((current) => {
+                        const accountName =
+                          selectedAccount?.name || (side === "PARTY" ? "Party / Customer" : "Vendor / Supplier");
+                        const settlement = defaultSettlementForMethod("BANK", current.settlementAccount);
+                        return {
+                          ...current,
+                          paymentType: "BANK",
+                          documentNo: "",
+                          ...buildMovementFields({
+                            transactionKind: current.transactionKind,
+                            accountName,
+                            paymentType: "BANK",
+                            fromAccount: current.fromAccount,
+                            toAccount: current.toAccount,
+                            preferSettlement: settlement,
+                          }),
+                        };
+                      })
                     }
                   >
                     BANK
@@ -804,11 +882,19 @@ export function PaymentsModule({
               <label>
                 {movementLabels.from} *
                 <input
-                  value={movement.fromValue}
-                  readOnly={movement.fromLocked}
+                  value={form.fromAccount}
                   onChange={(e) => patchMovement("from", e.target.value)}
-                  placeholder={form.paymentType === "BANK" ? "Bank account" : "Person / account"}
+                  placeholder={
+                    form.paymentType === "BANK"
+                      ? "e.g. HBL Current, Office Bank A/C"
+                      : "e.g. Cash in Hand, counter name"
+                  }
                 />
+                <small className="payment-v2-field-hint">
+                  {form.paymentType === "CASH"
+                    ? "Cash side — edit who/where money moves from."
+                    : "Bank side — edit source account for this transaction."}
+                </small>
               </label>
               <span className="payment-v2-movement-arrow" aria-hidden="true">
                 →
@@ -816,11 +902,15 @@ export function PaymentsModule({
               <label>
                 {movementLabels.receiving} *
                 <input
-                  value={movement.receivingValue}
-                  readOnly={movement.receivingLocked}
+                  value={form.toAccount}
                   onChange={(e) => patchMovement("receiving", e.target.value)}
-                  placeholder={form.paymentType === "BANK" ? "e.g. HBL, Meezan, ABL" : "e.g. Cash in Hand, Office Cash"}
+                  placeholder={form.paymentType === "BANK" ? "e.g. HBL, Meezan, ABL" : "e.g. Cash in Hand, staff name"}
                 />
+                <small className="payment-v2-field-hint">
+                  {form.paymentType === "CASH"
+                    ? "Cash side — who receives or holds the cash."
+                    : "Bank side — destination account for this transaction."}
+                </small>
               </label>
             </div>
 
