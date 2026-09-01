@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildReceiptPrintHtml,
   normalizeWhatsAppPhone,
   paymentReceiptWhatsAppDeepLink,
   paymentReceiptWhatsAppMessage,
@@ -51,5 +52,12 @@ describe("paymentReceiptExport WhatsApp", () => {
 
   it("prefers image print on touch and narrow screens", () => {
     expect(typeof shouldPreferImagePrint()).toBe("boolean");
+  });
+
+  it("builds isolated print html with embedded receipt image", () => {
+    const html = buildReceiptPrintHtml("data:image/jpeg;base64,abc123");
+    expect(html).toContain("data:image/jpeg;base64,abc123");
+    expect(html).toContain('<img src="data:image/jpeg;base64,abc123"');
+    expect(html).toContain("@page");
   });
 });

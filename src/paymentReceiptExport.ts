@@ -106,6 +106,45 @@ export function shouldPreferImagePrint() {
   return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
 }
 
+export async function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Could not prepare receipt image."));
+    };
+    reader.onerror = () => reject(new Error("Could not prepare receipt image."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+export function buildReceiptPrintHtml(imageDataUrl: string) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title><style>
+@page { margin: 8mm; }
+html, body { margin: 0; padding: 0; background: #fff; }
+img { display: block; width: 100%; height: auto; }
+</style></head><body><img src="${imageDataUrl}" alt="Receipt" /></body></html>`;
+}
+
+function waitForNextFrame() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
+async function waitForImageReady(img: HTMLImageElement) {
+  if (!img.complete || img.naturalWidth === 0) {
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Could not prepare receipt for printing."));
+    });
+  }
+  if (img.decode) await img.decode().catch(() => undefined);
+  await waitForNextFrame();
+}
+
 function printPdfViaIframe(url: string) {
   return new Promise<void>((resolve, reject) => {
     const iframe = document.createElement("iframe");
@@ -141,19 +180,14 @@ function printPdfViaIframe(url: string) {
   });
 }
 
-function printReceiptImageInPlace(imageUrl: string) {
+function printReceiptImageInIsolatedDocument(imageDataUrl: string) {
   return new Promise<void>((resolve, reject) => {
-    const layer = document.createElement("div");
-    layer.className = "payment-receipt-print-layer";
-    const img = document.createElement("img");
-    img.src = imageUrl;
-    img.alt = "Receipt";
-    layer.appendChild(img);
-    document.body.appendChild(layer);
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    iframe.title = "Print receipt";
 
     const cleanup = () => {
-      layer.remove();
-      document.body.classList.remove("printing-receipt");
+      iframe.remove();
     };
 
     const finish = () => {
@@ -161,28 +195,49 @@ function printReceiptImageInPlace(imageUrl: string) {
       resolve();
     };
 
-    img.onload = () => {
-      document.body.classList.add("printing-receipt");
-      window.addEventListener("afterprint", finish, { once: true });
-      window.print();
-      window.setTimeout(finish, 120_000);
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    if (!doc || !win) {
+      cleanup();
+      reject(new Error("Could not open print dialog."));
+      return;
+    }
+
+    doc.open();
+    doc.write(buildReceiptPrintHtml(imageDataUrl));
+    doc.close();
+
+    const runPrint = async () => {
+      try {
+        const img = doc.querySelector("img");
+        if (!img) throw new Error("Could not prepare receipt for printing.");
+        await waitForImageReady(img);
+        win.addEventListener("afterprint", finish, { once: true });
+        win.focus();
+        win.print();
+        window.setTimeout(finish, 120_000);
+      } catch (e) {
+        cleanup();
+        reject(e instanceof Error ? e : new Error(String(e)));
+      }
     };
 
-    img.onerror = () => {
-      cleanup();
-      reject(new Error("Could not prepare receipt for printing."));
+    if (doc.readyState === "complete") {
+      void runPrint();
+      return;
+    }
+
+    iframe.onload = () => {
+      void runPrint();
     };
   });
 }
 
 export async function printPaymentReceiptPdf(doc: jsPDF) {
   if (shouldPreferImagePrint()) {
-    const imageUrl = URL.createObjectURL(await paymentReceiptJpgBlob(doc));
-    try {
-      await printReceiptImageInPlace(imageUrl);
-    } finally {
-      URL.revokeObjectURL(imageUrl);
-    }
+    const imageDataUrl = await blobToDataUrl(await paymentReceiptJpgBlob(doc));
+    await printReceiptImageInIsolatedDocument(imageDataUrl);
     return;
   }
 
@@ -190,12 +245,8 @@ export async function printPaymentReceiptPdf(doc: jsPDF) {
   try {
     await printPdfViaIframe(pdfUrl);
   } catch {
-    const imageUrl = URL.createObjectURL(await paymentReceiptJpgBlob(doc));
-    try {
-      await printReceiptImageInPlace(imageUrl);
-    } finally {
-      URL.revokeObjectURL(imageUrl);
-    }
+    const imageDataUrl = await blobToDataUrl(await paymentReceiptJpgBlob(doc));
+    await printReceiptImageInIsolatedDocument(imageDataUrl);
   }
 }
 
