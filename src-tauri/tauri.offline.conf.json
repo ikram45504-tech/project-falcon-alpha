@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Travel Hisab Offline",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "identifier": "com.smcsoftwares.travelhisab.offline",
   "build": {
     "beforeDevCommand": "npm run dev:offline",
