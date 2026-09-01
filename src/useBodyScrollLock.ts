@@ -1,19 +1,31 @@
 import { useEffect } from "react";
 
+const SCROLL_LOCK_TARGETS = ".layout-content-wrapper, .mobile-layout-content";
+
 let lockCount = 0;
 let savedScrollY = 0;
+let lockedScrollContainers: Array<{ el: HTMLElement; scrollTop: number }> = [];
 
 function applyBodyScrollLock() {
   savedScrollY = window.scrollY;
   document.documentElement.classList.add("modal-scroll-locked");
   document.body.classList.add("modal-scroll-locked");
-  document.body.style.top = `-${savedScrollY}px`;
+
+  lockedScrollContainers = Array.from(document.querySelectorAll<HTMLElement>(SCROLL_LOCK_TARGETS)).map((el) => {
+    const scrollTop = el.scrollTop;
+    el.classList.add("modal-scroll-locked");
+    return { el, scrollTop };
+  });
 }
 
 function releaseBodyScrollLock() {
   document.documentElement.classList.remove("modal-scroll-locked");
   document.body.classList.remove("modal-scroll-locked");
-  document.body.style.top = "";
+  lockedScrollContainers.forEach(({ el, scrollTop }) => {
+    el.classList.remove("modal-scroll-locked");
+    el.scrollTop = scrollTop;
+  });
+  lockedScrollContainers = [];
   window.scrollTo(0, savedScrollY);
 }
 

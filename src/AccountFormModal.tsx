@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ModalPortal } from "./ModalPortal";
 import { useBodyScrollLock } from "./useBodyScrollLock";
 import "./AccountForm.css";
 
@@ -32,36 +33,38 @@ export default function AccountFormModal({
   useBodyScrollLock(true);
 
   return (
-    <div
-      className={`modal-backdrop ${backdropClassName}`.trim()}
-      onMouseDown={(e) => {
-        if (e.currentTarget === e.target) onClose();
-      }}
-    >
-      <section className="modal-card account-form-modal" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <div>
-            <span className="eyebrow blue">{eyebrow}</span>
-            <h3>{title}</h3>
+    <ModalPortal>
+      <div
+        className={`modal-backdrop ${backdropClassName}`.trim()}
+        onMouseDown={(e) => {
+          if (e.currentTarget === e.target) onClose();
+        }}
+      >
+        <section className="modal-card account-form-modal" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="modal-head">
+            <div>
+              <span className="eyebrow blue">{eyebrow}</span>
+              <h3>{title}</h3>
+            </div>
+            <button type="button" className="close-btn" onClick={onClose} aria-label="Close">
+              ×
+            </button>
           </div>
-          <button type="button" className="close-btn" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
 
-        {error ? <div className="alert error">{error}</div> : null}
+          {error ? <div className="alert error">{error}</div> : null}
 
-        {children}
+          {children}
 
-        <div className="modal-buttons">
-          <button type="button" className="secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" className="primary" disabled={busy} onClick={onSubmit}>
-            {busy ? busyLabel : primaryLabel}
-          </button>
-        </div>
-      </section>
-    </div>
+          <div className="modal-buttons">
+            <button type="button" className="secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="button" className="primary" disabled={busy} onClick={onSubmit}>
+              {busy ? busyLabel : primaryLabel}
+            </button>
+          </div>
+        </section>
+      </div>
+    </ModalPortal>
   );
 }

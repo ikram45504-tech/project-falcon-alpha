@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { jsPDF } from "jspdf";
 import type { Company, Party, PaymentEntry } from "./db";
 import { buildPaymentReceiptPdf, receiptDocumentTitle } from "./PaymentReceiptPdf";
+import { ModalPortal } from "./ModalPortal";
 import { useBodyScrollLock } from "./useBodyScrollLock";
 import {
   downloadPaymentReceiptJpg,
@@ -151,60 +152,78 @@ export default function PaymentReceiptPreviewModal({
   }
 
   return (
-    <div
-      className="modal-backdrop payment-receipt-preview-backdrop"
-      onMouseDown={(e) => e.currentTarget === e.target && onClose()}
-    >
-      <section className="modal-card payment-receipt-preview-modal" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <div>
-            <span className="eyebrow blue">{receiptDocumentTitle(transactionKind)}</span>
-            <h3>{entry.receipt_no || "Payment receipt"}</h3>
-            <p>
-              {party.name} · {entry.payment_type} · Rs {Number(entry.paid_amount || 0).toLocaleString("en-PK")}
-            </p>
+    <ModalPortal>
+      <div
+        className="modal-backdrop payment-receipt-preview-backdrop"
+        onMouseDown={(e) => e.currentTarget === e.target && onClose()}
+      >
+        <section className="modal-card payment-receipt-preview-modal" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="modal-head">
+            <div>
+              <span className="eyebrow blue">{receiptDocumentTitle(transactionKind)}</span>
+              <h3>{entry.receipt_no || "Payment receipt"}</h3>
+              <p>
+                {party.name} · {entry.payment_type} · Rs {Number(entry.paid_amount || 0).toLocaleString("en-PK")}
+              </p>
+            </div>
+            <button type="button" className="secondary" onClick={onClose}>
+              Close
+            </button>
           </div>
-          <button type="button" className="secondary" onClick={onClose}>
-            Close
-          </button>
-        </div>
 
-        {error && <div className="alert error">{error}</div>}
-        {hint && <div className="alert info">{hint}</div>}
+          {error && <div className="alert error">{error}</div>}
+          {hint && <div className="alert info">{hint}</div>}
 
-        <div className="payment-receipt-preview-shell">
-          {busy && !previewUrl ? (
-            <div className="payment-receipt-preview-loading">Building receipt preview...</div>
-          ) : previewUrl ? (
-            <img className="payment-receipt-preview-image" src={previewUrl} alt={`Receipt ${entry.receipt_no || ""}`} />
-          ) : (
-            <div className="payment-receipt-preview-loading">Receipt preview is unavailable.</div>
-          )}
-        </div>
+          <div className="payment-receipt-preview-shell">
+            {busy && !previewUrl ? (
+              <div className="payment-receipt-preview-loading">Building receipt preview...</div>
+            ) : previewUrl ? (
+              <img
+                className="payment-receipt-preview-image"
+                src={previewUrl}
+                alt={`Receipt ${entry.receipt_no || ""}`}
+              />
+            ) : (
+              <div className="payment-receipt-preview-loading">Receipt preview is unavailable.</div>
+            )}
+          </div>
 
-        <div className="modal-buttons payment-receipt-preview-actions">
-          <button type="button" className="secondary" disabled={!doc || busy} onClick={() => void handleDownloadPdf()}>
-            {busy && downloadKind === "pdf" ? "Saving PDF..." : "Download PDF"}
-          </button>
-          <button type="button" className="secondary" disabled={!doc || busy} onClick={() => void handleDownloadJpg()}>
-            {busy && downloadKind === "jpg" ? "Saving JPG..." : "Download JPG"}
-          </button>
-          <button type="button" className="primary" disabled={!doc || busy} onClick={handlePrint}>
-            Print
-          </button>
-          <button
-            type="button"
-            className="secondary payment-receipt-whatsapp-btn"
-            disabled={!doc || busy || !canWhatsApp}
-            title={
-              canWhatsApp ? "Share receipt JPG on WhatsApp with message" : "Add phone in Counterparties to use WhatsApp"
-            }
-            onClick={handleWhatsApp}
-          >
-            {busy && downloadKind === "whatsapp" ? "Preparing..." : "WhatsApp"}
-          </button>
-        </div>
-      </section>
-    </div>
+          <div className="modal-buttons payment-receipt-preview-actions">
+            <button
+              type="button"
+              className="secondary"
+              disabled={!doc || busy}
+              onClick={() => void handleDownloadPdf()}
+            >
+              {busy && downloadKind === "pdf" ? "Saving PDF..." : "Download PDF"}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={!doc || busy}
+              onClick={() => void handleDownloadJpg()}
+            >
+              {busy && downloadKind === "jpg" ? "Saving JPG..." : "Download JPG"}
+            </button>
+            <button type="button" className="primary" disabled={!doc || busy} onClick={handlePrint}>
+              Print
+            </button>
+            <button
+              type="button"
+              className="secondary payment-receipt-whatsapp-btn"
+              disabled={!doc || busy || !canWhatsApp}
+              title={
+                canWhatsApp
+                  ? "Share receipt JPG on WhatsApp with message"
+                  : "Add phone in Counterparties to use WhatsApp"
+              }
+              onClick={handleWhatsApp}
+            >
+              {busy && downloadKind === "whatsapp" ? "Preparing..." : "WhatsApp"}
+            </button>
+          </div>
+        </section>
+      </div>
+    </ModalPortal>
   );
 }

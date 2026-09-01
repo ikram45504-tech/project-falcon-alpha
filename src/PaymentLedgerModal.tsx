@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ModalPortal } from "./ModalPortal";
 import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { PaymentEntry } from "./db";
 import { formatAmountInput, parseFormattedAmount, pkrEquivalent } from "./paymentFormatUtils";
@@ -188,165 +189,169 @@ export default function PaymentLedgerModal({
   }
 
   return (
-    <div
-      className="modal-backdrop payment-ledger-modal-backdrop"
-      onMouseDown={(e) => e.currentTarget === e.target && onClose()}
-    >
-      <section className="modal-card payment-ledger-modal" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <div>
-            <span className="eyebrow blue">{mode === "correct" ? "TRANSACTION CORRECTION" : "CORRECTION HISTORY"}</span>
-            <h3>{entry.receipt_no || "Payment"}</h3>
-            <p>{accountName}</p>
-          </div>
-          <button type="button" className="secondary" onClick={onClose}>
-            Close
-          </button>
-        </div>
-
-        {error && <div className="alert error">{error}</div>}
-
-        {mode === "correct" ? (
-          <div className="payment-ledger-modal-body">
-            <p className="payment-ledger-modal-note">
-              Fix data-entry mistakes here. Every correction is saved to the office history with your reason.
-            </p>
-            <div className="payment-v2-setup-grid payment-ledger-amount-row">
-              <label>
-                Currency *
-                <select
-                  value={form.currency}
-                  onChange={(e) =>
-                    setForm((current) => ({
-                      ...current,
-                      currency: e.target.value as PaymentCurrency,
-                      roe: e.target.value === "PKR" ? "" : current.roe,
-                    }))
-                  }
-                >
-                  <option value="PKR">PKR — Pakistani Rupee</option>
-                  <option value="SAR">SAR — Saudi Riyal</option>
-                </select>
-              </label>
-              <label>
-                Amount ({form.currency}) *
-                <input
-                  value={form.amount}
-                  onChange={(e) => setForm((current) => ({ ...current, amount: e.target.value }))}
-                  onBlur={() => setForm((current) => ({ ...current, amount: formatAmountInput(current.amount) }))}
-                  inputMode="decimal"
-                  placeholder="0"
-                />
-              </label>
-              <label className={form.currency === "PKR" ? "payment-v2-muted-field" : ""}>
-                ROE {form.currency === "SAR" ? "*" : ""}
-                <input
-                  value={form.roe}
-                  onChange={(e) => setForm((current) => ({ ...current, roe: e.target.value }))}
-                  onBlur={() => setForm((current) => ({ ...current, roe: formatAmountInput(current.roe) }))}
-                  disabled={form.currency === "PKR"}
-                  placeholder={form.currency === "SAR" ? "e.g. 76.50" : "Not required"}
-                />
-              </label>
-              <label>
-                PKR Equivalent
-                <input value={pkrEquivalent(previewPkr)} readOnly />
-              </label>
-            </div>
-
-            <div className="payment-v2-movement-grid">
-              <label>
-                {labels.from} *
-                <input value={form.fromAccount} onChange={(e) => patchMovement("from", e.target.value)} />
-              </label>
-              <span className="payment-v2-movement-arrow" aria-hidden="true">
-                →
+    <ModalPortal>
+      <div
+        className="modal-backdrop payment-ledger-modal-backdrop"
+        onMouseDown={(e) => e.currentTarget === e.target && onClose()}
+      >
+        <section className="modal-card payment-ledger-modal" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="modal-head">
+            <div>
+              <span className="eyebrow blue">
+                {mode === "correct" ? "TRANSACTION CORRECTION" : "CORRECTION HISTORY"}
               </span>
-              <label>
-                {labels.receiving} *
-                <input value={form.toAccount} onChange={(e) => patchMovement("receiving", e.target.value)} />
-              </label>
+              <h3>{entry.receipt_no || "Payment"}</h3>
+              <p>{accountName}</p>
             </div>
-
-            <div className="payment-ledger-correction-grid">
-              <label>
-                Date of Payment *
-                <input
-                  type="date"
-                  value={form.transactionDate}
-                  onChange={(e) => setForm((current) => ({ ...current, transactionDate: e.target.value }))}
-                />
-              </label>
-              <label>
-                Reference
-                <input
-                  value={form.reference}
-                  onChange={(e) => setForm((current) => ({ ...current, reference: e.target.value }))}
-                />
-              </label>
-              <label className="wide">
-                Description
-                <textarea
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))}
-                />
-              </label>
-              <label className="wide">
-                Reason for correction *
-                <textarea
-                  rows={2}
-                  value={form.reason}
-                  onChange={(e) => setForm((current) => ({ ...current, reason: e.target.value }))}
-                  placeholder="Required — e.g. wrong amount entered, date corrected"
-                />
-              </label>
-            </div>
-
-            <div className="modal-buttons">
-              <button type="button" className="secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="button" className="primary" disabled={busy} onClick={() => void saveCorrection()}>
-                {busy ? "Saving..." : "Save Correction"}
-              </button>
-            </div>
+            <button type="button" className="secondary" onClick={onClose}>
+              Close
+            </button>
           </div>
-        ) : (
-          <div className="payment-ledger-modal-body">
-            {loadingHistory ? (
-              <div className="alert info">Loading correction history...</div>
-            ) : history.length === 0 ? (
-              <div className="coming-data">No corrections or void records yet for this payment.</div>
-            ) : (
-              <div className="payment-correction-history">
-                {history.map((row) => {
-                  const changed = parseChangedFields(row.changed_fields_json);
-                  return (
-                    <article key={row.id} className={`payment-correction-card ${row.action.toLowerCase()}`}>
-                      <div className="payment-correction-card-head">
-                        <b>
-                          #{row.correction_no} · {row.action === "VOID" ? "Voided" : "Corrected"}
-                        </b>
-                        <span>{formatCorrectionDate(row.corrected_at)}</span>
-                      </div>
-                      <p>
-                        <strong>Reason:</strong> {row.reason}
-                      </p>
-                      {changed.length > 0 && (
-                        <p>
-                          <strong>Changed:</strong> {changed.join(", ")}
-                        </p>
-                      )}
-                    </article>
-                  );
-                })}
+
+          {error && <div className="alert error">{error}</div>}
+
+          {mode === "correct" ? (
+            <div className="payment-ledger-modal-body">
+              <p className="payment-ledger-modal-note">
+                Fix data-entry mistakes here. Every correction is saved to the office history with your reason.
+              </p>
+              <div className="payment-v2-setup-grid payment-ledger-amount-row">
+                <label>
+                  Currency *
+                  <select
+                    value={form.currency}
+                    onChange={(e) =>
+                      setForm((current) => ({
+                        ...current,
+                        currency: e.target.value as PaymentCurrency,
+                        roe: e.target.value === "PKR" ? "" : current.roe,
+                      }))
+                    }
+                  >
+                    <option value="PKR">PKR — Pakistani Rupee</option>
+                    <option value="SAR">SAR — Saudi Riyal</option>
+                  </select>
+                </label>
+                <label>
+                  Amount ({form.currency}) *
+                  <input
+                    value={form.amount}
+                    onChange={(e) => setForm((current) => ({ ...current, amount: e.target.value }))}
+                    onBlur={() => setForm((current) => ({ ...current, amount: formatAmountInput(current.amount) }))}
+                    inputMode="decimal"
+                    placeholder="0"
+                  />
+                </label>
+                <label className={form.currency === "PKR" ? "payment-v2-muted-field" : ""}>
+                  ROE {form.currency === "SAR" ? "*" : ""}
+                  <input
+                    value={form.roe}
+                    onChange={(e) => setForm((current) => ({ ...current, roe: e.target.value }))}
+                    onBlur={() => setForm((current) => ({ ...current, roe: formatAmountInput(current.roe) }))}
+                    disabled={form.currency === "PKR"}
+                    placeholder={form.currency === "SAR" ? "e.g. 76.50" : "Not required"}
+                  />
+                </label>
+                <label>
+                  PKR Equivalent
+                  <input value={pkrEquivalent(previewPkr)} readOnly />
+                </label>
               </div>
-            )}
-          </div>
-        )}
-      </section>
-    </div>
+
+              <div className="payment-v2-movement-grid">
+                <label>
+                  {labels.from} *
+                  <input value={form.fromAccount} onChange={(e) => patchMovement("from", e.target.value)} />
+                </label>
+                <span className="payment-v2-movement-arrow" aria-hidden="true">
+                  →
+                </span>
+                <label>
+                  {labels.receiving} *
+                  <input value={form.toAccount} onChange={(e) => patchMovement("receiving", e.target.value)} />
+                </label>
+              </div>
+
+              <div className="payment-ledger-correction-grid">
+                <label>
+                  Date of Payment *
+                  <input
+                    type="date"
+                    value={form.transactionDate}
+                    onChange={(e) => setForm((current) => ({ ...current, transactionDate: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Reference
+                  <input
+                    value={form.reference}
+                    onChange={(e) => setForm((current) => ({ ...current, reference: e.target.value }))}
+                  />
+                </label>
+                <label className="wide">
+                  Description
+                  <textarea
+                    rows={2}
+                    value={form.description}
+                    onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))}
+                  />
+                </label>
+                <label className="wide">
+                  Reason for correction *
+                  <textarea
+                    rows={2}
+                    value={form.reason}
+                    onChange={(e) => setForm((current) => ({ ...current, reason: e.target.value }))}
+                    placeholder="Required — e.g. wrong amount entered, date corrected"
+                  />
+                </label>
+              </div>
+
+              <div className="modal-buttons">
+                <button type="button" className="secondary" onClick={onClose}>
+                  Cancel
+                </button>
+                <button type="button" className="primary" disabled={busy} onClick={() => void saveCorrection()}>
+                  {busy ? "Saving..." : "Save Correction"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="payment-ledger-modal-body">
+              {loadingHistory ? (
+                <div className="alert info">Loading correction history...</div>
+              ) : history.length === 0 ? (
+                <div className="coming-data">No corrections or void records yet for this payment.</div>
+              ) : (
+                <div className="payment-correction-history">
+                  {history.map((row) => {
+                    const changed = parseChangedFields(row.changed_fields_json);
+                    return (
+                      <article key={row.id} className={`payment-correction-card ${row.action.toLowerCase()}`}>
+                        <div className="payment-correction-card-head">
+                          <b>
+                            #{row.correction_no} · {row.action === "VOID" ? "Voided" : "Corrected"}
+                          </b>
+                          <span>{formatCorrectionDate(row.corrected_at)}</span>
+                        </div>
+                        <p>
+                          <strong>Reason:</strong> {row.reason}
+                        </p>
+                        {changed.length > 0 && (
+                          <p>
+                            <strong>Changed:</strong> {changed.join(", ")}
+                          </p>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
+    </ModalPortal>
   );
 }
 
