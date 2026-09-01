@@ -1,4 +1,5 @@
 import { FormEvent, useState, useEffect } from "react";
+import { useBodyScrollLock } from "../useBodyScrollLock";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
@@ -15,6 +16,8 @@ export default function LoginScreen({
   accountCreatedNotice: any;
   setAccountCreatedNotice: (n: any) => void;
 }) {
+  useBodyScrollLock(Boolean(accountCreatedNotice));
+
   const navigate = useNavigate();
   const { error: globalAuthError, setError: setGlobalAuthError, setSessionData } = useAuth();
 

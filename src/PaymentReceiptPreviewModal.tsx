@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { jsPDF } from "jspdf";
 import type { Company, Party, PaymentEntry } from "./db";
 import { buildPaymentReceiptPdf, receiptDocumentTitle } from "./PaymentReceiptPdf";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import {
   downloadPaymentReceiptJpg,
   downloadPaymentReceiptPdf,
@@ -35,6 +36,8 @@ export default function PaymentReceiptPreviewModal({
   preparedBy,
   onClose,
 }: Props) {
+  useBodyScrollLock(true);
+
   const [previewUrl, setPreviewUrl] = useState("");
   const [doc, setDoc] = useState<jsPDF | null>(null);
   const [busy, setBusy] = useState(false);

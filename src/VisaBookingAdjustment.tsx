@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { VisaBooking, VisaPassengerType, VisaType } from "./db";
 import {
   getVisaAdjustmentHistory,
@@ -111,6 +112,8 @@ export default function VisaBookingAdjustment({
   onClose,
   onSaved,
 }: Props) {
+  useBodyScrollLock(true);
+
   const [view, setView] = useState<"ADJUSTMENT" | "HISTORY">(initialView);
   const [adjustmentType, setAdjustmentType] = useState<VisaAdjustmentType | "">("");
   const [adjustmentDate, setAdjustmentDate] = useState(today());

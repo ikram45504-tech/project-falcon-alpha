@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import "./AccountForm.css";
 
 type Props = {
@@ -28,6 +29,8 @@ export default function AccountFormModal({
   children,
   backdropClassName = "",
 }: Props) {
+  useBodyScrollLock(true);
+
   return (
     <div
       className={`modal-backdrop ${backdropClassName}`.trim()}

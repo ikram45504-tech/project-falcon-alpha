@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { BookingTransactionType, TransportBooking } from "./db";
 import { deleteBooking, getTransportBookings, voidTransportBooking } from "./db";
 import { getTransportAdjustmentSummaryMap, type TransportAdjustmentSummary } from "./TransportAdjustmentDb";
@@ -64,6 +65,7 @@ export default function TransportRegister({
   const [adjustmentBooking, setAdjustmentBooking] = useState<TransportBooking | null>(null);
   const [historyBooking, setHistoryBooking] = useState<TransportBooking | null>(null);
   const [previewBooking, setPreviewBooking] = useState<TransportBooking | null>(null);
+  useBodyScrollLock(Boolean(previewBooking));
 
   useEffect(() => {
     setFilter(transactionType);

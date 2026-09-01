@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { TicketPassengerType } from "./db";
 import type { TicketCommercialBooking, TicketFareFlightType } from "./TicketFlowDb";
 import {
@@ -104,6 +105,8 @@ export default function TicketBookingAdjustment({
   onClose,
   onSaved,
 }: Props) {
+  useBodyScrollLock(true);
+
   const [view, setView] = useState<"ADJUSTMENT" | "HISTORY">(initialView);
   const [adjustmentType, setAdjustmentType] = useState<TicketAdjustmentType | "">("");
   const [adjustmentDate, setAdjustmentDate] = useState(today());

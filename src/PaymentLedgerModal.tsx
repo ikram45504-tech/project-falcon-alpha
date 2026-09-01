@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { PaymentEntry } from "./db";
 import { formatAmountInput, parseFormattedAmount, pkrEquivalent } from "./paymentFormatUtils";
 import { fromReceivingLabels, patchMovementField } from "./paymentMovement";
@@ -110,6 +111,8 @@ export default function PaymentLedgerModal({
   onClose,
   onSaved,
 }: Props) {
+  useBodyScrollLock(true);
+
   const [form, setForm] = useState<CorrectionForm>(() => ({
     transactionDate: entry.transaction_date,
     currency: entry.currency,

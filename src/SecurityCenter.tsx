@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import {
   AuditLog,
   Company,
@@ -88,6 +89,8 @@ export default function SecurityCenter({ company, session, onCompanyUpdated, cat
     foreignCurrency: company.foreign_currency,
     logoData: company.logo_data,
   });
+
+  useBodyScrollLock(showUserForm || Boolean(resetUser));
 
   useEffect(() => {
     setCompanyForm({

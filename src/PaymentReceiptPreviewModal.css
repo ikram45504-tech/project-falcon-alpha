@@ -1,6 +1,7 @@
 .payment-receipt-preview-modal {
-  width: min(720px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  width: 100%;
+  max-width: 720px;
+  max-height: min(calc(100vh - 32px), calc(100dvh - 32px));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -73,4 +74,34 @@
 
 .payment-receipt-whatsapp-btn:not(:disabled):hover {
   background: #ecfdf3;
+}
+
+.payment-receipt-print-layer {
+  display: none;
+}
+
+.printing-receipt .payment-receipt-print-layer {
+  display: block;
+}
+
+@media print {
+  body.printing-receipt > *:not(.payment-receipt-print-layer) {
+    display: none !important;
+  }
+
+  .payment-receipt-print-layer {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .payment-receipt-print-layer img {
+    display: block;
+    width: 100%;
+    max-width: 210mm;
+    margin: 0 auto;
+  }
 }

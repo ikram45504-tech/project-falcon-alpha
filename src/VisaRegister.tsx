@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { BookingTransactionType, VisaBooking, VisaType } from "./db";
 import { deleteBooking, getVisaBookings, voidVisaBooking } from "./db";
 import { getVisaAdjustmentSummaryMap, type VisaAdjustmentSummary } from "./VisaAdjustmentDb";
@@ -70,6 +71,7 @@ export default function VisaRegister({
   const [adjustmentBooking, setAdjustmentBooking] = useState<VisaBooking | null>(null);
   const [historyBooking, setHistoryBooking] = useState<VisaBooking | null>(null);
   const [previewBooking, setPreviewBooking] = useState<VisaBooking | null>(null);
+  useBodyScrollLock(Boolean(previewBooking));
 
   useEffect(() => {
     setFilter(transactionType);

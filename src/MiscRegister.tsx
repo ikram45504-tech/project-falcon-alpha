@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { BookingTransactionType } from "./db";
 import { deleteBooking } from "./db";
 import { getMiscBookings, voidMiscBooking, type MiscBooking } from "./miscDb";
@@ -56,6 +57,7 @@ export default function MiscRegister({
   const [adjustmentBooking, setAdjustmentBooking] = useState<MiscBooking | null>(null);
   const [historyBooking, setHistoryBooking] = useState<MiscBooking | null>(null);
   const [previewBooking, setPreviewBooking] = useState<MiscBooking | null>(null);
+  useBodyScrollLock(Boolean(previewBooking));
 
   useEffect(() => {
     setFilter(transactionType);

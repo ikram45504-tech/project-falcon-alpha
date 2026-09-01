@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { BookingTransactionType } from "./db";
 import { deleteBooking } from "./db";
 import { getTicketCommercialBookings, voidTicketCommercialBooking, type TicketCommercialBooking } from "./TicketFlowDb";
@@ -65,6 +66,7 @@ export default function TicketRegister({
   const [adjustmentBooking, setAdjustmentBooking] = useState<TicketCommercialBooking | null>(null);
   const [historyBooking, setHistoryBooking] = useState<TicketCommercialBooking | null>(null);
   const [previewBooking, setPreviewBooking] = useState<TicketCommercialBooking | null>(null);
+  useBodyScrollLock(Boolean(previewBooking));
 
   useEffect(() => {
     setFilter(transactionType);

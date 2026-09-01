@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { HotelBooking, HotelRoomType } from "./db";
 import {
   getHotelAdjustmentHistory,
@@ -116,6 +117,8 @@ export default function HotelBookingAdjustment({
   onClose,
   onSaved,
 }: Props) {
+  useBodyScrollLock(true);
+
   const [view, setView] = useState<"ADJUSTMENT" | "HISTORY">(initialView);
   const [adjustmentType, setAdjustmentType] = useState<HotelAdjustmentType | "">("");
   const [adjustmentDate, setAdjustmentDate] = useState(today());

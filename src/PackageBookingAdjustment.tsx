@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { PackageBooking, PackagePassengerType } from "./db";
 import {
   getPackageAdjustmentHistory,
@@ -86,6 +87,8 @@ export default function PackageBookingAdjustment({
   onClose,
   onSaved,
 }: Props) {
+  useBodyScrollLock(true);
+
   const [view, setView] = useState<"ADJUSTMENT" | "HISTORY">(initialView);
   const [adjustmentType, setAdjustmentType] = useState<PackageAdjustmentType | "">("");
   const [adjustmentDate, setAdjustmentDate] = useState(today());

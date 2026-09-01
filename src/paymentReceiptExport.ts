@@ -101,9 +101,13 @@ export async function downloadPaymentReceiptJpg(doc: jsPDF, fileName: string) {
   await downloadBlobFile(blob, fileName, { name: "JPEG Image", extensions: ["jpg", "jpeg"] });
 }
 
-export function printPaymentReceiptPdf(doc: jsPDF) {
+export function shouldPreferImagePrint() {
+  if (typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+}
+
+function printPdfViaIframe(url: string) {
   return new Promise<void>((resolve, reject) => {
-    const url = URL.createObjectURL(paymentReceiptPdfBlob(doc));
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
     iframe.title = "Print receipt";
@@ -135,6 +139,64 @@ export function printPaymentReceiptPdf(doc: jsPDF) {
     };
     document.body.appendChild(iframe);
   });
+}
+
+function printReceiptImageInPlace(imageUrl: string) {
+  return new Promise<void>((resolve, reject) => {
+    const layer = document.createElement("div");
+    layer.className = "payment-receipt-print-layer";
+    const img = document.createElement("img");
+    img.src = imageUrl;
+    img.alt = "Receipt";
+    layer.appendChild(img);
+    document.body.appendChild(layer);
+
+    const cleanup = () => {
+      layer.remove();
+      document.body.classList.remove("printing-receipt");
+    };
+
+    const finish = () => {
+      cleanup();
+      resolve();
+    };
+
+    img.onload = () => {
+      document.body.classList.add("printing-receipt");
+      window.addEventListener("afterprint", finish, { once: true });
+      window.print();
+      window.setTimeout(finish, 120_000);
+    };
+
+    img.onerror = () => {
+      cleanup();
+      reject(new Error("Could not prepare receipt for printing."));
+    };
+  });
+}
+
+export async function printPaymentReceiptPdf(doc: jsPDF) {
+  if (shouldPreferImagePrint()) {
+    const imageUrl = URL.createObjectURL(await paymentReceiptJpgBlob(doc));
+    try {
+      await printReceiptImageInPlace(imageUrl);
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
+    return;
+  }
+
+  const pdfUrl = URL.createObjectURL(paymentReceiptPdfBlob(doc));
+  try {
+    await printPdfViaIframe(pdfUrl);
+  } catch {
+    const imageUrl = URL.createObjectURL(await paymentReceiptJpgBlob(doc));
+    try {
+      await printReceiptImageInPlace(imageUrl);
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
+  }
 }
 
 export function partyWhatsAppPhone(party: Pick<Party, "phone" | "whatsapp">) {

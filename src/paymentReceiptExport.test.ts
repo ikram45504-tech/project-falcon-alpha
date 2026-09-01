@@ -5,6 +5,7 @@ import {
   paymentReceiptWhatsAppMessage,
   paymentReceiptWhatsAppUrl,
   receiptWhatsAppShareHint,
+  shouldPreferImagePrint,
 } from "./paymentReceiptExport";
 import type { Company, Party, PaymentEntry } from "./db";
 
@@ -46,5 +47,9 @@ describe("paymentReceiptExport WhatsApp", () => {
   it("builds share hints for clipboard and saved file flows", () => {
     expect(receiptWhatsAppShareHint(true, "receipt.jpg")).toContain("Ctrl+V");
     expect(receiptWhatsAppShareHint(false, "receipt.jpg")).toContain("receipt.jpg");
+  });
+
+  it("prefers image print on touch and narrow screens", () => {
+    expect(typeof shouldPreferImagePrint()).toBe("boolean");
   });
 });

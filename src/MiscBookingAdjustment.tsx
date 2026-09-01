@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { MiscBooking } from "./miscDb";
 import {
   getMiscAdjustmentHistory,
@@ -90,6 +91,8 @@ export default function MiscBookingAdjustment({
   onClose,
   onSaved,
 }: Props) {
+  useBodyScrollLock(true);
+
   const [view, setView] = useState<"ADJUSTMENT" | "HISTORY">(initialView);
   const [adjustmentType, setAdjustmentType] = useState<MiscAdjustmentType | "">("");
   const [adjustmentDate, setAdjustmentDate] = useState(today());

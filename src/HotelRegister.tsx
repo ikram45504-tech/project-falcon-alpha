@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 import type { BookingTransactionType, HotelBooking } from "./db";
 import { deleteBooking } from "./db";
 import { getHotelBookings, voidHotelBooking } from "./HotelFlowDb";
@@ -60,6 +61,7 @@ export default function HotelRegister({
   const [adjustmentBooking, setAdjustmentBooking] = useState<HotelBooking | null>(null);
   const [historyBooking, setHistoryBooking] = useState<HotelBooking | null>(null);
   const [previewBooking, setPreviewBooking] = useState<HotelBooking | null>(null);
+  useBodyScrollLock(Boolean(previewBooking));
 
   useEffect(() => {
     setFilter(transactionType);
