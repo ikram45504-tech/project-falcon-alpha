@@ -168,6 +168,22 @@ async function fetchWebBookingAccountingEntries(companyId: string, counterpartyI
   );
 }
 
+export function aggregatePartyBookingTotals(entries: BookingAccountingEntry[]): PartyBookingTotal[] {
+  const map = new Map<string, { sale_total: number; purchase_total: number }>();
+  for (const row of entries) {
+    if (row.status !== "ACTIVE") continue;
+    const current = map.get(row.counterparty_id) || { sale_total: 0, purchase_total: 0 };
+    if (row.transaction_type === "SALE") current.sale_total += Number(row.total_pkr || 0);
+    else current.purchase_total += Number(row.total_pkr || 0);
+    map.set(row.counterparty_id, current);
+  }
+  return Array.from(map.entries()).map(([counterparty_id, totals]) => ({
+    counterparty_id,
+    sale_total: totals.sale_total,
+    purchase_total: totals.purchase_total,
+  }));
+}
+
 export async function getBookingAccountingEntries(companyId: string, counterpartyId = "") {
   if (!isDesktopApp()) {
     return fetchWebBookingAccountingEntries(companyId, counterpartyId);
@@ -183,6 +199,10 @@ export async function getBookingAccountingEntries(companyId: string, counterpart
 }
 
 export async function getPartyBookingTotals(companyId: string) {
+  if (!isDesktopApp()) {
+    return aggregatePartyBookingTotals(await fetchWebBookingAccountingEntries(companyId));
+  }
+
   const database = await ready();
   return database.select<PartyBookingTotal[]>(
     `SELECT q.counterparty_id,

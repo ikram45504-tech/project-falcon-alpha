@@ -6,6 +6,7 @@ import { hasPermission, Permission, UserRole } from "./permissions";
 import {
   applyCloudOperation,
   isDeprecatedCloudTable,
+  isDesktopApp,
   queueSync as enqueueCloudSync,
   syncClearBookingChildren,
   type SyncOperation as CloudSyncOperation,
@@ -186,6 +187,18 @@ export type PartyPaymentTotal = {
   party_id: string;
   paid_amount: number;
 };
+
+export function aggregatePartyPaymentTotals(
+  rows: Array<{ party_id: string; paid_amount: number | string | null }>,
+): PartyPaymentTotal[] {
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const partyId = String(row.party_id || "");
+    if (!partyId) continue;
+    map.set(partyId, (map.get(partyId) || 0) + Number(row.paid_amount || 0));
+  }
+  return Array.from(map.entries()).map(([party_id, paid_amount]) => ({ party_id, paid_amount }));
+}
 
 export type BookingTransactionType = "SALE" | "PURCHASE";
 export type PackagePassengerType = "ADULT" | "CHILD" | "INFANT";
@@ -2664,6 +2677,16 @@ export async function voidPayment(companyId: string, entryId: string) {
 }
 
 export async function getPartyPaymentTotals(companyId: string) {
+  if (!isDesktopApp()) {
+    const { data, error } = await supabase
+      .from("payment_entries")
+      .select("party_id,paid_amount")
+      .eq("company_id", companyId)
+      .eq("status", "ACTIVE");
+    if (error) throw new Error(error.message);
+    return aggregatePartyPaymentTotals(data || []);
+  }
+
   const database = await db();
   return database.select<PartyPaymentTotal[]>(
     `SELECT party_id, COALESCE(SUM(paid_amount), 0) AS paid_amount
