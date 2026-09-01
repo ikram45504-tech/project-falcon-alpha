@@ -113,8 +113,11 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
           company && can("view_payments") ? (
             <PaymentsModule
               key={`payments-${paymentReset}`}
+              company={company}
               companyId={company.id}
               parties={parties}
+              userId={session?.userId}
+              preparedByName={session?.fullName}
               onOpenLedger={(party) => navigate(`/parties/ledger/${party.id}`)}
               onChanged={loadFinancialTotals}
             />

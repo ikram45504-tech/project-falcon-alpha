@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Party, PaymentEntry } from "./db";
+import type { Company, Party, PaymentEntry } from "./db";
 import { getPayments } from "./db";
 import { getPartyBookingTotals } from "./BookingAccounting";
 import type { PartyBookingTotal } from "./BookingAccounting";
+import { buildPaymentReceiptPdf } from "./PaymentReceiptPdf";
+import { downloadPaymentReceiptPdf, paymentReceiptFileName } from "./paymentReceiptExport";
 import {
   createPaymentV2,
   getNextPaymentDocumentNumber,
@@ -21,8 +23,9 @@ import type {
 import "./PaymentsV2.css";
 
 type PaymentSide = "PARTY" | "VENDOR";
+type PaymentPurpose = "STANDARD" | "REFUND";
 type PaymentScreen = "DIRECTION" | "FORM" | "REGISTER";
-type RegisterFilter = "ALL" | "PARTY_RECEIPT" | "VENDOR_PAYMENT" | "VOID";
+type RegisterFilter = "ALL" | "PARTY_RECEIPT" | "VENDOR_PAYMENT" | "REFUNDS" | "VOID";
 
 type PaymentFormState = {
   transactionKind: PaymentTransactionKind;
@@ -48,9 +51,11 @@ type PaymentFormState = {
 };
 
 type ModuleProps = {
+  company: Company;
   companyId: string;
   parties: Party[];
   userId?: string;
+  preparedByName?: string;
   canEdit?: boolean;
   onOpenLedger: (party: Party) => void;
   onChanged: () => void | Promise<void>;
@@ -78,6 +83,15 @@ function number(value: number) {
   return Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 });
 }
 
+function kindForPurpose(side: PaymentSide, purpose: PaymentPurpose): PaymentTransactionKind {
+  if (side === "PARTY") return purpose === "REFUND" ? "PARTY_REFUND" : "PARTY_RECEIPT";
+  return purpose === "REFUND" ? "VENDOR_REFUND" : "VENDOR_PAYMENT";
+}
+
+function purposeForKind(kind: PaymentTransactionKind): PaymentPurpose {
+  return kind === "PARTY_REFUND" || kind === "VENDOR_REFUND" ? "REFUND" : "STANDARD";
+}
+
 function kindForSide(side: PaymentSide): PaymentTransactionKind {
   return side === "PARTY" ? "PARTY_RECEIPT" : "VENDOR_PAYMENT";
 }
@@ -87,10 +101,54 @@ function sideForKind(kind: PaymentTransactionKind): PaymentSide {
 }
 
 function kindLabel(kind: PaymentTransactionKind) {
-  if (kind === "PARTY_RECEIPT") return "RECEIVE FROM PARTY";
-  if (kind === "VENDOR_PAYMENT") return "PAY TO VENDOR";
-  if (kind === "PARTY_REFUND") return "REFUND TO PARTY";
+  if (kind === "PARTY_RECEIPT") return "RECEIVE PAYMENT";
+  if (kind === "VENDOR_PAYMENT") return "SEND PAYMENT";
+  if (kind === "PARTY_REFUND") return "REFUND TO CUSTOMER";
   return "REFUND FROM VENDOR";
+}
+
+function directionBadge(kind: PaymentTransactionKind) {
+  return kindLabel(kind);
+}
+
+function documentNoun(kind: PaymentTransactionKind) {
+  if (kind === "PARTY_RECEIPT") return "Receipt";
+  if (kind === "PARTY_REFUND") return "Refund Voucher";
+  if (kind === "VENDOR_PAYMENT") return "Payment Voucher";
+  return "Refund Receipt";
+}
+
+function amountActionLabel(kind: PaymentTransactionKind) {
+  if (kind === "PARTY_RECEIPT") return "Payment Received";
+  if (kind === "VENDOR_PAYMENT") return "Payment Sent";
+  if (kind === "PARTY_REFUND") return "Refund Paid";
+  return "Refund Received";
+}
+
+function balanceLabelForKind(kind: PaymentTransactionKind) {
+  return kind === "PARTY_RECEIPT" || kind === "PARTY_REFUND" ? "Receivable" : "Payable";
+}
+
+function moneyFlowText(
+  kind: PaymentTransactionKind,
+  accountName: string,
+  settlement: string,
+  paymentType: PaymentMethod,
+) {
+  const settlementLabel = settlement || (paymentType === "BANK" ? "Bank Account" : "Cash");
+  const account = accountName || "Account";
+  if (kind === "PARTY_RECEIPT") return `${account} → ${settlementLabel}`;
+  if (kind === "PARTY_REFUND") return `${settlementLabel} → ${account}`;
+  if (kind === "VENDOR_PAYMENT") return `${settlementLabel} → ${account}`;
+  return `${account} → ${settlementLabel}`;
+}
+
+function standardPurposeLabel(side: PaymentSide) {
+  return side === "PARTY" ? "Receive Payment" : "Send Payment";
+}
+
+function refundPurposeLabel(side: PaymentSide) {
+  return side === "PARTY" ? "Refund to Customer" : "Refund from Vendor";
 }
 
 function blankForm(side: PaymentSide): PaymentFormState {
@@ -193,9 +251,11 @@ function toInput(form: PaymentFormState): PaymentV2Input {
 }
 
 export function PaymentsModule({
+  company,
   companyId,
   parties,
   userId = "",
+  preparedByName = "",
   canEdit = true,
   onOpenLedger,
   onChanged,
@@ -307,7 +367,14 @@ export function PaymentsModule({
       const meta = metaMap.get(entry.id);
       const kind = inferKind(entry, meta, parties);
       if (registerFilter === "VOID" && entry.status !== "VOID") return false;
-      if (registerFilter !== "ALL" && registerFilter !== "VOID" && kind !== registerFilter) return false;
+      if (registerFilter === "REFUNDS" && kind !== "PARTY_REFUND" && kind !== "VENDOR_REFUND") return false;
+      if (
+        registerFilter !== "ALL" &&
+        registerFilter !== "VOID" &&
+        registerFilter !== "REFUNDS" &&
+        kind !== registerFilter
+      )
+        return false;
       if (!clean) return true;
       const haystack = [
         entry.receipt_no,
@@ -364,6 +431,43 @@ export function PaymentsModule({
     void load();
   }
 
+  function setTransactionPurpose(purpose: PaymentPurpose) {
+    if (!canEdit) return;
+    const nextKind = kindForPurpose(side, purpose);
+    setError("");
+    setForm((current) => ({ ...current, transactionKind: nextKind, documentNo: "" }));
+  }
+
+  async function downloadReceipt(entry: PaymentEntry) {
+    const account = parties.find((party) => party.id === entry.party_id) || null;
+    if (!account) return setError("Account not found for this receipt.");
+    const meta = metaMap.get(entry.id);
+    const kind = inferKind(entry, meta, parties);
+    setError("");
+    try {
+      const doc = buildPaymentReceiptPdf({
+        company,
+        party: account,
+        entry,
+        meta: meta || null,
+        transactionKind: kind,
+        preparedBy: preparedByName,
+        generatedOn: new Date().toISOString(),
+      });
+      await downloadPaymentReceiptPdf(doc, paymentReceiptFileName(company, entry, account.name));
+      setMessage(`Receipt ${entry.receipt_no || ""} downloaded.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function downloadCurrentReceipt() {
+    if (!editingId) return;
+    const entry = entries.find((row) => row.id === editingId);
+    if (!entry) return setError("Save the payment first, then download the receipt.");
+    await downloadReceipt(entry);
+  }
+
   async function savePayment() {
     if (!canEdit) return setError("Your role does not allow payment entry changes.");
     if (!form.partyId)
@@ -401,10 +505,6 @@ export function PaymentsModule({
     const meta = metaMap.get(entry.id);
     const nextForm = entryToForm(entry, meta, parties);
     const nextKind = nextForm.transactionKind;
-    if (nextKind === "PARTY_REFUND" || nextKind === "VENDOR_REFUND") {
-      setError("Refund editing will be enabled when the Refund workflow is activated.");
-      return;
-    }
     setSide(sideForKind(nextKind));
     setForm(nextForm);
     setDetailsOpen(true);
@@ -441,6 +541,9 @@ export function PaymentsModule({
   function renderRegisterEntryActions(entry: PaymentEntry, account: Party | null) {
     return (
       <div className="row-actions compact-actions payment-v2-card-actions">
+        <button type="button" onClick={() => void downloadReceipt(entry)}>
+          Receipt
+        </button>
         <button type="button" onClick={() => account && onOpenLedger(account)} disabled={!account}>
           Ledger
         </button>
@@ -475,7 +578,9 @@ export function PaymentsModule({
         <div className="booking-screen-heading centered-heading">
           <span className="eyebrow blue">PAYMENTS</span>
           <h2>Which account are you settling?</h2>
-          <p>Choose the account side first. Payments remain account-based and are not allocated to individual UBs.</p>
+          <p>
+            Choose customer or vendor. Record payments, refunds, and download a professional receipt for each entry.
+          </p>
         </div>
         <div className="booking-direction-grid">
           <button type="button" className="booking-direction-card sale" onClick={() => chooseSide("PARTY")}>
@@ -483,9 +588,9 @@ export function PaymentsModule({
               ↓
             </span>
             <div>
-              <small>PARTY / CUSTOMER</small>
-              <b>Receive from Party</b>
-              <p>Record money received from a Party / customer and reduce its receivable balance.</p>
+              <small>CUSTOMER ACCOUNT</small>
+              <b>Receive Payment</b>
+              <p>Record money received from a customer, or issue a refund when money is returned.</p>
             </div>
             <span className="direction-arrow">→</span>
           </button>
@@ -494,16 +599,12 @@ export function PaymentsModule({
               ↑
             </span>
             <div>
-              <small>VENDOR / SUPPLIER</small>
-              <b>Pay to Vendor</b>
-              <p>Record money paid to a Vendor / supplier and reduce its payable balance.</p>
+              <small>VENDOR ACCOUNT</small>
+              <b>Send Payment</b>
+              <p>Record money paid to a supplier, or receive a refund when the vendor returns funds.</p>
             </div>
             <span className="direction-arrow">→</span>
           </button>
-        </div>
-        <div className="payment-v2-refund-note">
-          <b>Refund-ready foundation:</b> customer and vendor refund transaction types are reserved in the payment
-          engine and will be activated with the Booking Cancellation / Refund workflow.
         </div>
       </section>
     );
@@ -512,13 +613,18 @@ export function PaymentsModule({
   function renderForm() {
     const isParty = side === "PARTY";
     const accountNoun = isParty ? "Party / Customer" : "Vendor / Supplier";
-    const documentNoun = isParty ? "Receipt" : "Payment Voucher";
-    const prefix = paymentDocumentPrefix(form.transactionKind, form.paymentType);
-    const amountLabel = isParty ? "Payment Received" : "Payment Paid";
-    const balanceLabel = isParty ? "Receivable" : "Payable";
-    const flowText = isParty
-      ? `${selectedAccount?.name || "Party"} → ${form.settlementAccount || (form.paymentType === "BANK" ? "Bank Account" : "Cash")}`
-      : `${form.settlementAccount || (form.paymentType === "BANK" ? "Bank Account" : "Cash")} → ${selectedAccount?.name || "Vendor"}`;
+    const transactionKind = form.transactionKind;
+    const purpose = purposeForKind(transactionKind);
+    const docNoun = documentNoun(transactionKind);
+    const prefix = paymentDocumentPrefix(transactionKind, form.paymentType);
+    const amountLabel = amountActionLabel(transactionKind);
+    const balanceLabel = balanceLabelForKind(transactionKind);
+    const flowText = moneyFlowText(
+      transactionKind,
+      selectedAccount?.name || accountNoun,
+      form.settlementAccount,
+      form.paymentType,
+    );
     const documentPreview = form.documentNo || suggestedDocument || `${prefix}0001`;
     const isEditing = Boolean(editingId);
 
@@ -529,8 +635,8 @@ export function PaymentsModule({
             ← Back to Payment Types
           </button>
           <div className="payment-v2-toolbar-right">
-            <span className={`direction-badge ${isParty ? "sale" : "purchase"}`}>
-              {isParty ? "RECEIVE FROM PARTY" : "PAY TO VENDOR"}
+            <span className={`direction-badge ${purpose === "REFUND" ? "refund" : isParty ? "sale" : "purchase"}`}>
+              {directionBadge(transactionKind)}
             </span>
             <button type="button" className="booking-foundation-badge payment-register-button" onClick={openRegister}>
               Payment Register
@@ -540,14 +646,8 @@ export function PaymentsModule({
 
         <div className="payment-v2-title">
           <span className="eyebrow blue">{isParty ? "PARTY PAYMENTS" : "VENDOR PAYMENTS"}</span>
-          <h2>
-            {isEditing
-              ? `Edit ${documentNoun} — ${form.documentNo}`
-              : isParty
-                ? "New Party Receipt"
-                : "New Vendor Payment"}
-          </h2>
-          <p>Record the settlement in one step. Optional bank or cash details can be added below.</p>
+          <h2>{isEditing ? `Edit ${docNoun} — ${form.documentNo}` : `New ${docNoun}`}</h2>
+          <p>Choose payment or refund, complete the form, then save and download the receipt for your client.</p>
         </div>
 
         {message && <div className="alert success">{message}</div>}
@@ -556,8 +656,33 @@ export function PaymentsModule({
         <section className="payment-v2-form-card">
           <div className="payment-v2-form-section">
             <div className="payment-v2-section-label">
+              <b>Transaction type</b>
+              <small>{standardPurposeLabel(side)} is the default. Switch to refund only when returning money.</small>
+            </div>
+            <div className="payment-v2-purpose-tabs">
+              <button
+                type="button"
+                className={purpose === "STANDARD" ? "active standard" : ""}
+                disabled={isEditing}
+                onClick={() => setTransactionPurpose("STANDARD")}
+              >
+                {standardPurposeLabel(side)}
+              </button>
+              <button
+                type="button"
+                className={purpose === "REFUND" ? "active refund" : ""}
+                disabled={isEditing}
+                onClick={() => setTransactionPurpose("REFUND")}
+              >
+                {refundPurposeLabel(side)}
+              </button>
+            </div>
+          </div>
+
+          <div className="payment-v2-form-section">
+            <div className="payment-v2-section-label">
               <b>Account &amp; document</b>
-              <small>Party/Vendor, date, method, and voucher number</small>
+              <small>Account, date, method, and voucher number</small>
             </div>
             <div className="payment-v2-identity-grid">
               <label>
@@ -619,7 +744,7 @@ export function PaymentsModule({
                 </div>
               </div>
               <label>
-                {documentNoun} #
+                {docNoun} #
                 <input value={documentPreview} readOnly className="payment-v2-doc-readonly" />
                 <small>Auto-assigned on save</small>
               </label>
@@ -836,7 +961,12 @@ export function PaymentsModule({
           <div className="payment-v2-form-actions">
             {isEditing && (
               <button type="button" className="secondary" onClick={() => resetForSide(side)}>
-                + New {isParty ? "Party Receipt" : "Vendor Payment"}
+                + New {docNoun}
+              </button>
+            )}
+            {editingId && (
+              <button type="button" className="secondary" onClick={() => void downloadCurrentReceipt()}>
+                Download Receipt
               </button>
             )}
             {selectedAccount && (
@@ -850,7 +980,7 @@ export function PaymentsModule({
               disabled={busy || !canEdit}
               onClick={() => void savePayment()}
             >
-              {busy ? "Saving..." : isEditing ? `Update ${documentNoun} — ${form.documentNo}` : `Save ${documentNoun}`}
+              {busy ? "Saving..." : isEditing ? `Update ${docNoun} — ${form.documentNo}` : `Save ${docNoun}`}
             </button>
           </div>
         </section>
@@ -869,7 +999,7 @@ export function PaymentsModule({
             {canEdit && (
               <>
                 <button type="button" className="secondary" onClick={() => chooseSide("PARTY")}>
-                  + Party Receipt
+                  + Customer Payment
                 </button>
                 <button type="button" className="primary payment-v2-save" onClick={() => chooseSide("VENDOR")}>
                   + Vendor Payment
@@ -910,7 +1040,7 @@ export function PaymentsModule({
 
         <div className="payment-v2-register-controls">
           <div className="package-register-filter-tabs">
-            {(["ALL", "PARTY_RECEIPT", "VENDOR_PAYMENT", "VOID"] as RegisterFilter[]).map((item) => (
+            {(["ALL", "PARTY_RECEIPT", "VENDOR_PAYMENT", "REFUNDS", "VOID"] as RegisterFilter[]).map((item) => (
               <button
                 type="button"
                 key={item}
@@ -920,10 +1050,12 @@ export function PaymentsModule({
                 {item === "ALL"
                   ? "All Payments"
                   : item === "PARTY_RECEIPT"
-                    ? "Party Receipts"
+                    ? "Customer Receipts"
                     : item === "VENDOR_PAYMENT"
                       ? "Vendor Payments"
-                      : "Voided"}
+                      : item === "REFUNDS"
+                        ? "Refunds"
+                        : "Voided"}
               </button>
             ))}
           </div>

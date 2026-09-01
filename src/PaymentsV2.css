@@ -195,6 +195,51 @@
   color: #0d5d9d;
 }
 
+.payment-v2-purpose-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 44px;
+  overflow: hidden;
+  border: 1px solid #cfd7e3;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.payment-v2-purpose-tabs button {
+  border: 0;
+  background: transparent;
+  color: #667085;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 10px 12px;
+}
+
+.payment-v2-purpose-tabs button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.payment-v2-purpose-tabs button + button {
+  border-left: 1px solid #d9e0e8;
+}
+
+.payment-v2-purpose-tabs button.active.standard {
+  background: #edf6ff;
+  color: #0d5d9d;
+}
+
+.payment-v2-purpose-tabs button.active.refund {
+  background: #fff4e4;
+  color: #93651c;
+}
+
+.direction-badge.refund {
+  background: #fff4e4 !important;
+  color: #93651c !important;
+  border-color: #f0dfbf !important;
+}
+
 .payment-v2-document-number {
   color: #1b5b9c;
   letter-spacing: 0.03em;
