@@ -109,6 +109,12 @@
   font-size: 13px;
   line-height: 1.4;
 }
+.adj-intro-urdu {
+  margin: 6px 0 0 !important;
+  color: #0d5d9d !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
 .adj-choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -152,6 +158,14 @@
   color: #64748b;
   line-height: 1.35;
   font-size: 12px;
+}
+.adj-choice-urdu {
+  display: block;
+  margin-top: 6px;
+  color: #0d5d9d;
+  font-size: 11px;
+  line-height: 1.35;
+  font-style: normal;
 }
 .adj-choice strong {
   display: block;

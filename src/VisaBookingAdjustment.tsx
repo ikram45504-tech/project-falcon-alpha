@@ -8,6 +8,7 @@ import {
   type VisaAdjustmentType,
 } from "./VisaAdjustmentDb";
 import { bookingAccountTerms, bookingLifecycleConfigs } from "./BookingLifecycle";
+import { adjustmentSelectionIntro, adjustmentTypeLabel, buildAdjustmentChoices } from "./bookingAdjustmentCopy";
 import "./PackageBookingAdjustment.css";
 
 type Props = {
@@ -101,13 +102,6 @@ function newRow(): RowState {
   };
 }
 
-function adjustmentLabel(type: VisaAdjustmentType) {
-  if (type === "CORRECTION") return "Correction";
-  if (type === "AMENDMENT") return "Amendment";
-  if (type === "PARTIAL_CANCELLATION") return "Partial Cancellation";
-  return "Full Cancellation";
-}
-
 export default function VisaBookingAdjustment({
   companyId,
   booking,
@@ -183,7 +177,9 @@ export default function VisaBookingAdjustment({
   function chooseType(type: VisaAdjustmentType) {
     setAdjustmentType(type);
     setAdjustmentDate(today());
-    setCategory(type === "CORRECTION" ? "Data / Entry Correction" : type === "AMENDMENT" ? "" : adjustmentLabel(type));
+    setCategory(
+      type === "CORRECTION" ? "Data / Entry Correction" : type === "AMENDMENT" ? "" : adjustmentTypeLabel(type),
+    );
     setReason("");
     setReference("");
     setNotes("");
@@ -234,7 +230,7 @@ export default function VisaBookingAdjustment({
           userId,
         );
         await onSaved?.(
-          `${adjustmentLabel(adjustmentType)} saved for ${booking.ub_number}. ${accountNoun} adjustment: ${signedMoney(result.delta)}. Current Visa value: ${money(result.effectiveTotal)}.`,
+          `${adjustmentTypeLabel(adjustmentType)} saved for ${booking.ub_number}. ${accountNoun} adjustment: ${signedMoney(result.delta)}. Current Visa value: ${money(result.effectiveTotal)}.`,
         );
       } else {
         const result = await saveVisaCancellation(
@@ -255,7 +251,7 @@ export default function VisaBookingAdjustment({
           userId,
         );
         await onSaved?.(
-          `${adjustmentLabel(adjustmentType)} saved for ${booking.ub_number}. Account credit: ${money(result.accountCredit)}. Current Visa value: ${money(result.effectiveTotal)}.`,
+          `${adjustmentTypeLabel(adjustmentType)} saved for ${booking.ub_number}. Account credit: ${money(result.accountCredit)}. Current Visa value: ${money(result.effectiveTotal)}.`,
         );
       }
       onClose();
@@ -267,32 +263,10 @@ export default function VisaBookingAdjustment({
   }
 
   function renderSelection() {
-    const choices: Array<{ type: VisaAdjustmentType; title: string; text: string; badge: string }> = [
-      {
-        type: "CORRECTION",
-        title: "Correction",
-        text: "Fix staff typing / data mistakes only. No fee, not a chargeable revision, and does not appear on Statements.",
-        badge: "NO FEE · NOT A REVISION",
-      },
-      {
-        type: "AMENDMENT",
-        title: "Amendment",
-        text: "Record a genuine post-booking commercial change. The result may be an extra charge, a credit, or no financial change.",
-        badge: "COMMERCIAL",
-      },
-      {
-        type: "PARTIAL_CANCELLATION",
-        title: "Partial Cancellation",
-        text: "Cancel selected Visa rows / quantities and calculate cancellation charges and account credit.",
-        badge: "SELECT ITEMS",
-      },
-      {
-        type: "FULL_CANCELLATION",
-        title: "Full Cancellation",
-        text: "Cancel the complete Visa booking while retaining any applicable cancellation charge.",
-        badge: "FULL BOOKING",
-      },
-    ];
+    const choices = buildAdjustmentChoices(
+      bookingLifecycleConfigs.VISA.label,
+      bookingLifecycleConfigs.VISA.partialCancellationLabel,
+    );
     return (
       <div className="adj-choice-grid">
         {choices.map((choice) => (
@@ -306,6 +280,7 @@ export default function VisaBookingAdjustment({
             <span>{choice.badge}</span>
             <b>{choice.title}</b>
             <p>{choice.text}</p>
+            <em className="adj-choice-urdu">{choice.urdu}</em>
             <strong>Continue →</strong>
           </button>
         ))}
@@ -524,7 +499,7 @@ export default function VisaBookingAdjustment({
               <span>REV {item.revision_no}</span>
               <div>
                 <small>{item.adjustment_date}</small>
-                <h4>{adjustmentLabel(item.adjustment_type)}</h4>
+                <h4>{adjustmentTypeLabel(item.adjustment_type)}</h4>
                 <p>
                   {item.category || "Booking adjustment"} — {item.reason}
                 </p>
@@ -623,11 +598,9 @@ export default function VisaBookingAdjustment({
               {!adjustmentType ? (
                 <>
                   <div className="adj-intro">
-                    <h3>What do you want to do?</h3>
-                    <p>
-                      Every option preserves the original UB and records a revision in Booking History. Refunds remain a
-                      separate cash/bank movement in Payments.
-                    </p>
+                    <h3>{adjustmentSelectionIntro.title}</h3>
+                    <p>{adjustmentSelectionIntro.text}</p>
+                    <p className="adj-intro-urdu">{adjustmentSelectionIntro.urdu}</p>
                   </div>
                   {renderSelection()}
                 </>
@@ -647,7 +620,7 @@ export default function VisaBookingAdjustment({
                     <div className="adj-section-title">
                       <span>01</span>
                       <div>
-                        <b>{adjustmentLabel(adjustmentType).toUpperCase()} DETAILS</b>
+                        <b>{adjustmentTypeLabel(adjustmentType).toUpperCase()} DETAILS</b>
                         <small>The genuine UB, Party/Vendor and original booking identity remain locked.</small>
                       </div>
                     </div>
@@ -860,7 +833,7 @@ export default function VisaBookingAdjustment({
               <span>Current value after save: {money(previewTotal)}</span>
             </div>
             <button type="button" className="primary" disabled={busy || !canEdit} onClick={() => void save()}>
-              {busy ? "Saving Adjustment..." : `Save ${adjustmentLabel(adjustmentType)}`}
+              {busy ? "Saving Adjustment..." : `Save ${adjustmentTypeLabel(adjustmentType)}`}
             </button>
           </div>
         ) : null}
