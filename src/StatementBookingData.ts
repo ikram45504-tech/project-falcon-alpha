@@ -1,10 +1,11 @@
 import type { HotelBooking, PackageBooking, Party, TransportBooking, VisaBooking } from "./db";
 import { getHotelBookings, getPackageBookings, getTransportBookings, getVisaBookings } from "./db";
 import { getTicketCommercialBookings, type TicketCommercialBooking } from "./TicketFlowDb";
-import { getHotelOperationalDetails } from "./HotelOperationalDb";
+import { getHotelGuestRefsByBookingIds } from "./HotelOperationalDb";
 import { getMiscBookings, type MiscBooking } from "./miscDb";
-import { getMiscOperationalDetails } from "./MiscOperationalDb";
+import { getMiscFamilyHeadsByBookingIds } from "./MiscOperationalDb";
 import { loadSegmentAdjustmentsForStatements, type StatementSegmentAdjustmentRow } from "./SegmentAdjustmentRecord";
+import type { BookingListScope } from "./bookingListScope";
 import type { BookingServiceName } from "./BookingLifecycle";
 
 export type StatementAdjustmentRecord = StatementSegmentAdjustmentRow;
@@ -51,20 +52,6 @@ function relevantDirection(accountType: Party["account_type"]) {
   if (accountType === "PARTY") return "SALE" as const;
   if (accountType === "VENDOR") return "PURCHASE" as const;
   return null;
-}
-
-function matchesAccount<
-  T extends {
-    counterparty_id: string;
-    transaction_type: "SALE" | "PURCHASE";
-    status: "ACTIVE" | "VOID";
-  },
->(row: T, counterpartyId: string, direction: "SALE" | "PURCHASE" | null) {
-  return (
-    row.status === "ACTIVE" &&
-    row.counterparty_id === counterpartyId &&
-    (!direction || row.transaction_type === direction)
-  );
 }
 
 function byDate<T extends { transaction_date: string; created_at: string }>(a: T, b: T) {
@@ -165,19 +152,44 @@ export async function getStatementBookingSections(
   accountType: Party["account_type"],
 ): Promise<StatementBookingSections> {
   const direction = relevantDirection(accountType);
-  const [packages, tickets, hotels, visas, transports, misc, adjustmentRows] = await Promise.all([
-    getPackageBookings(companyId, ""),
-    getTicketCommercialBookings(companyId, ""),
-    getHotelBookings(companyId, ""),
-    getVisaBookings(companyId, ""),
-    getTransportBookings(companyId, ""),
-    getMiscBookings(companyId, ""),
-    loadSegmentAdjustmentsForStatements(companyId),
+  const scope: BookingListScope = {
+    counterpartyId,
+    status: "ACTIVE",
+    ...(direction ? { transactionType: direction } : {}),
+  };
+
+  const [packages, tickets, hotels, visas, transports, misc] = await Promise.all([
+    getPackageBookings(companyId, "", scope),
+    getTicketCommercialBookings(companyId, "", scope),
+    getHotelBookings(companyId, "", scope),
+    getVisaBookings(companyId, "", scope),
+    getTransportBookings(companyId, "", scope),
+    getMiscBookings(companyId, "", scope),
+  ]);
+
+  const bookingIds = [
+    ...packages.map((row) => row.id),
+    ...tickets.map((row) => row.id),
+    ...hotels.map((row) => row.id),
+    ...visas.map((row) => row.id),
+    ...transports.map((row) => row.id),
+    ...misc.map((row) => row.id),
+  ];
+
+  const [adjustmentRows, hotelGuestRefs, miscFamilyHeads] = await Promise.all([
+    loadSegmentAdjustmentsForStatements(companyId, bookingIds),
+    getHotelGuestRefsByBookingIds(
+      companyId,
+      hotels.map((row) => row.id),
+    ),
+    getMiscFamilyHeadsByBookingIds(
+      companyId,
+      misc.map((row) => row.id),
+    ),
   ]);
   const adjustments = groupAdjustments(adjustmentRows);
 
   const packageBookings = packages
-    .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
     .map((row) =>
       enrichBooking(
@@ -189,30 +201,22 @@ export async function getStatementBookingSections(
     );
 
   const ticketBookings = tickets
-    .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
     .map((row) =>
       enrichBooking("TICKET", row, statementVisibleAdjustments(adjustments[adjustmentKey("TICKET", row.id)] || []), 0),
     );
 
-  const matchedHotels = hotels.filter((row) => matchesAccount(row, counterpartyId, direction)).sort(byDate);
-  const hotelBookings = await Promise.all(
-    matchedHotels.map(async (booking) => {
-      const details = await getHotelOperationalDetails(companyId, booking.id);
-      return {
-        ...enrichBooking(
-          "HOTEL",
-          booking,
-          statementVisibleAdjustments(adjustments[adjustmentKey("HOTEL", booking.id)] || []),
-          Number(booking.unconverted_sar || 0),
-        ),
-        guestRefs: details.guestRefs,
-      };
-    }),
-  );
+  const hotelBookings = hotels.sort(byDate).map((booking) => ({
+    ...enrichBooking(
+      "HOTEL",
+      booking,
+      statementVisibleAdjustments(adjustments[adjustmentKey("HOTEL", booking.id)] || []),
+      Number(booking.unconverted_sar || 0),
+    ),
+    guestRefs: hotelGuestRefs.get(booking.id) || [],
+  }));
 
   const visaBookings = visas
-    .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
     .map((row) =>
       enrichBooking(
@@ -224,7 +228,6 @@ export async function getStatementBookingSections(
     );
 
   const transportBookings = transports
-    .filter((row) => matchesAccount(row, counterpartyId, direction))
     .sort(byDate)
     .map((row) =>
       enrichBooking(
@@ -235,21 +238,15 @@ export async function getStatementBookingSections(
       ),
     );
 
-  const matchedMisc = misc.filter((row) => matchesAccount(row, counterpartyId, direction)).sort(byDate);
-  const miscBookings = await Promise.all(
-    matchedMisc.map(async (booking) => {
-      const details = await getMiscOperationalDetails(companyId, booking.id);
-      return {
-        ...enrichBooking(
-          "MISC",
-          booking,
-          statementVisibleAdjustments(adjustments[adjustmentKey("MISC", booking.id)] || []),
-          Number(booking.unconverted_sar || 0),
-        ),
-        familyHeads: details.familyHeads,
-      };
-    }),
-  );
+  const miscBookings = misc.sort(byDate).map((booking) => ({
+    ...enrichBooking(
+      "MISC",
+      booking,
+      statementVisibleAdjustments(adjustments[adjustmentKey("MISC", booking.id)] || []),
+      Number(booking.unconverted_sar || 0),
+    ),
+    familyHeads: miscFamilyHeads.get(booking.id) || [],
+  }));
 
   return {
     packageBookings,

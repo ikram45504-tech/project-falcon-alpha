@@ -2,6 +2,7 @@ import Database from "@tauri-apps/plugin-sql";
 import type { BookingTransactionType, TicketPassengerType } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { isDesktopApp, syncTicketBookingBundle, syncTicketBookingVoid, flushDesktopSyncQueue } from "./cloudSync";
+import { applyBookingListScope, bookingListScopeSql, type BookingListScope } from "./bookingListScope";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -287,16 +288,18 @@ function lineStatements(bookingId: string, lines: CalculatedLine[], ids?: string
   }));
 }
 
-export async function getTicketCommercialBookings(companyId: string, search = "") {
+export async function getTicketCommercialBookings(companyId: string, search = "", scope?: BookingListScope) {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) {
-    const { supabase } = await import("./supabaseClient");
-    let query = supabase
-      .from("ticket_bookings")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false });
+    let query = applyBookingListScope(
+      supabase
+        .from("ticket_bookings")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("transaction_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+      scope,
+    );
 
     if (search.trim()) {
       const term = `%${search.trim()}%`;
@@ -307,8 +310,14 @@ export async function getTicketCommercialBookings(companyId: string, search = ""
     if (error) throw new Error(error.message);
     if (!data) return [];
 
-    const { data: parties } = await supabase.from("parties").select("id, name").eq("company_id", companyId);
-    const partyNames = new Map((parties || []).map((p) => [String(p.id), String(p.name || "")]));
+    const partyNames = scope?.counterpartyId
+      ? new Map<string, string>()
+      : new Map(
+          ((await supabase.from("parties").select("id, name").eq("company_id", companyId)).data || []).map((p) => [
+            String(p.id),
+            String(p.name || ""),
+          ]),
+        );
 
     const bookingIds = data.map((row) => String(row.id));
     const { data: lineRows, error: lineError } = bookingIds.length
@@ -335,6 +344,7 @@ export async function getTicketCommercialBookings(companyId: string, search = ""
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
+  const scopeFilter = bookingListScopeSql(scope, 3);
   const headers = await database.select<Array<Omit<TicketCommercialBooking, "lines">>>(
     `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name,'') AS counterparty_name,
             b.transaction_date,b.ub_number,b.airline_name,b.pnr,b.sector,b.departure_date,b.return_date,b.flight_no,b.departure_time,b.arrival_time,b.baggage,b.ticket_status,b.customer_contact,b.notes,b.total_pkr,b.status,b.created_at,b.updated_at
@@ -343,8 +353,9 @@ export async function getTicketCommercialBookings(companyId: string, search = ""
      WHERE b.company_id=$1 AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR EXISTS (
        SELECT 1 FROM ticket_booking_lines l WHERE l.booking_id=b.id AND (l.passenger_name LIKE $3 COLLATE NOCASE OR l.airline_name LIKE $3 COLLATE NOCASE OR l.pnr LIKE $3 COLLATE NOCASE OR l.ticket_route LIKE $3 COLLATE NOCASE)
      ))
+     ${scopeFilter.sql}
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term],
+    [companyId, clean, term, ...scopeFilter.params],
   );
   const lines = await database.select<
     Array<

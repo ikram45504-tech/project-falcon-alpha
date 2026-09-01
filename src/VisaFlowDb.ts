@@ -19,6 +19,7 @@ import {
   type VisaBookingSyncHeader,
 } from "./cloudSync";
 import { fetchCounterpartyNameMap, validateBookingCounterparty } from "./CounterpartyDb";
+import { applyBookingListScope, bookingListScopeSql, type BookingListScope } from "./bookingListScope";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -429,16 +430,19 @@ function buildVisaHeader(
   };
 }
 
-export async function getVisaBookings(companyId: string, search = "") {
+export async function getVisaBookings(companyId: string, search = "", scope?: BookingListScope) {
   const clean = search.trim();
 
   if (!isDesktopApp()) {
-    let query = supabase
-      .from("visa_bookings")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false });
+    let query = applyBookingListScope(
+      supabase
+        .from("visa_bookings")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("transaction_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+      scope,
+    );
 
     if (clean) {
       const term = `%${clean}%`;
@@ -450,7 +454,7 @@ export async function getVisaBookings(companyId: string, search = "") {
     if (!data?.length) return [] as VisaBooking[];
 
     const bookingIds = data.map((row) => String(row.id));
-    const partyNames = await fetchCounterpartyNameMap(companyId);
+    const partyNames = scope?.counterpartyId ? new Map<string, string>() : await fetchCounterpartyNameMap(companyId);
     const [lines, fleet, passports] = await Promise.all([
       fetchChildRowsByBookingIds("visa_booking_lines", bookingIds),
       fetchChildRowsByBookingIds("visa_transport_fleet", bookingIds),
@@ -471,6 +475,7 @@ export async function getVisaBookings(companyId: string, search = "") {
 
   const database = await db();
   const term = `%${clean}%`;
+  const scopeFilter = bookingListScopeSql(scope, 3);
 
   const headers = await database.select<Omit<VisaBooking, "lines" | "fleet" | "passports">[]>(
     `SELECT
@@ -500,8 +505,9 @@ export async function getVisaBookings(companyId: string, search = "") {
            WHERE f.booking_id=b.id AND f.vehicle_type LIKE $3 COLLATE NOCASE
          )
        )
+       ${scopeFilter.sql}
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term],
+    [companyId, clean, term, ...scopeFilter.params],
   );
 
   const lines = await database.select<VisaBookingLine[]>(

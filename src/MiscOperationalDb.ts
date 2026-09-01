@@ -187,6 +187,51 @@ export async function saveMiscFamilyHeads(companyId: string, bookingId: string, 
   if (isDesktopApp()) await flushDesktopSyncQueue();
 }
 
+export async function getMiscFamilyHeadsByBookingIds(
+  companyId: string,
+  bookingIds: string[],
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  const ids = bookingIds.filter(Boolean);
+  if (!ids.length) return map;
+
+  await ensureSchema();
+
+  if (!isDesktopApp()) {
+    const { data, error } = await supabase
+      .from("misc_commercial_family_refs")
+      .select("booking_id,family_head,sort_order")
+      .eq("company_id", companyId)
+      .in("booking_id", ids)
+      .order("sort_order", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    for (const row of data || []) {
+      const bookingId = String(row.booking_id);
+      const current = map.get(bookingId) || [];
+      current.push(String(row.family_head || ""));
+      map.set(bookingId, current);
+    }
+    return map;
+  }
+
+  const database = await db();
+  const placeholders = ids.map((_, index) => `$${index + 2}`).join(",");
+  const rows = await database.select<Array<{ booking_id: string; family_head: string; sort_order: number }>>(
+    `SELECT booking_id,family_head,sort_order FROM misc_commercial_family_refs
+     WHERE company_id=$1 AND booking_id IN (${placeholders})
+     ORDER BY booking_id,sort_order`,
+    [companyId, ...ids],
+  );
+  for (const row of rows) {
+    const bookingId = String(row.booking_id);
+    const current = map.get(bookingId) || [];
+    current.push(String(row.family_head || ""));
+    map.set(bookingId, current);
+  }
+  return map;
+}
+
 export async function getMiscOperationalDetails(companyId: string, bookingId: string): Promise<MiscOperationalDetails> {
   await ensureSchema();
 

@@ -16,6 +16,7 @@ import {
   type HotelBookingSyncLine,
 } from "./cloudSync";
 import { validateBookingCounterparty, fetchCounterpartyNameMap } from "./CounterpartyDb";
+import { applyBookingListScope, bookingListScopeSql, type BookingListScope } from "./bookingListScope";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -203,15 +204,18 @@ function groupRowsByBookingId(rows: Record<string, any>[]) {
   return grouped;
 }
 
-export async function getHotelBookings(companyId: string, search = "") {
+export async function getHotelBookings(companyId: string, search = "", scope?: BookingListScope) {
   const isTauri = "__TAURI_INTERNALS__" in window;
   if (!isTauri) {
-    let query = supabase
-      .from("hotel_bookings")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false });
+    let query = applyBookingListScope(
+      supabase
+        .from("hotel_bookings")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("transaction_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+      scope,
+    );
 
     if (search.trim()) {
       const term = `%${search.trim()}%`;
@@ -222,7 +226,7 @@ export async function getHotelBookings(companyId: string, search = "") {
     if (error) throw new Error(error.message);
     if (!data) return [];
 
-    const partyNames = await fetchCounterpartyNameMap(companyId);
+    const partyNames = scope?.counterpartyId ? new Map<string, string>() : await fetchCounterpartyNameMap(companyId);
     const lines = await fetchChildRowsByBookingIds(
       "hotel_booking_lines",
       data.map((row) => String(row.id)),
@@ -239,6 +243,7 @@ export async function getHotelBookings(companyId: string, search = "") {
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
+  const scopeFilter = bookingListScopeSql(scope, 3);
 
   const headers = await database.select<Omit<HotelBooking, "lines">[]>(
     `SELECT
@@ -267,8 +272,9 @@ export async function getHotelBookings(companyId: string, search = "") {
              AND (l.city LIKE $3 COLLATE NOCASE OR l.hotel_name LIKE $3 COLLATE NOCASE)
          )
        )
+       ${scopeFilter.sql}
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term],
+    [companyId, clean, term, ...scopeFilter.params],
   );
 
   const lines = await database.select<HotelBookingLine[]>(

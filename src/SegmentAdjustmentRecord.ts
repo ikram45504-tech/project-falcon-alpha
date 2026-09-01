@@ -148,17 +148,20 @@ export async function initAllSegmentAdjustmentTables() {
   await Promise.all(SEGMENT_ADJUSTMENT_TABLES.map(({ tableName }) => initSegmentAdjustmentTable(tableName)));
 }
 
-export async function loadSegmentAdjustmentsForStatements(companyId: string) {
+export async function loadSegmentAdjustmentsForStatements(companyId: string, bookingIds?: string[]) {
   if (!isDesktopApp()) {
     const selectColumns = `id,company_id,${STATEMENT_ADJUSTMENT_SELECT}`;
-    const rows: StatementSegmentAdjustmentRow[] = [];
+    const scopedBookingIds = bookingIds?.filter(Boolean) ?? null;
+    if (scopedBookingIds && scopedBookingIds.length === 0) return [];
 
-    for (const { serviceType, tableName } of SEGMENT_ADJUSTMENT_TABLES) {
-      const { data, error } = await supabase.from(tableName).select(selectColumns).eq("company_id", companyId);
-      if (error) throw new Error(error.message);
+    const tableRows = await Promise.all(
+      SEGMENT_ADJUSTMENT_TABLES.map(async ({ serviceType, tableName }) => {
+        let query = supabase.from(tableName).select(selectColumns).eq("company_id", companyId);
+        if (scopedBookingIds) query = query.in("booking_id", scopedBookingIds);
+        const { data, error } = await query;
+        if (error) throw new Error(error.message);
 
-      for (const row of data || []) {
-        rows.push({
+        return (data || []).map((row) => ({
           id: String(row.id),
           company_id: companyId,
           service_type: serviceType,
@@ -182,29 +185,38 @@ export async function loadSegmentAdjustmentsForStatements(companyId: string) {
           revision_no: Number(row.revision_no || 0),
           lifecycle_status: row.lifecycle_status as BookingLifecycleStatus,
           created_at: String(row.created_at || ""),
-        });
-      }
-    }
-
-    return rows.sort(
-      (a, b) =>
-        a.service_type.localeCompare(b.service_type) ||
-        a.booking_id.localeCompare(b.booking_id) ||
-        a.revision_no - b.revision_no ||
-        a.created_at.localeCompare(b.created_at),
+        })) as StatementSegmentAdjustmentRow[];
+      }),
     );
+
+    return tableRows
+      .flat()
+      .sort(
+        (a, b) =>
+          a.service_type.localeCompare(b.service_type) ||
+          a.booking_id.localeCompare(b.booking_id) ||
+          a.revision_no - b.revision_no ||
+          a.created_at.localeCompare(b.created_at),
+      );
   }
 
   await initAllSegmentAdjustmentTables();
+  const scopedBookingIds = bookingIds?.filter(Boolean) ?? null;
+  if (scopedBookingIds && scopedBookingIds.length === 0) return [];
+
   const database = await db();
+  const bookingFilter =
+    scopedBookingIds && scopedBookingIds.length
+      ? ` AND booking_id IN (${scopedBookingIds.map((_, index) => `$${index + 2}`).join(",")})`
+      : "";
   const unions = SEGMENT_ADJUSTMENT_TABLES.map(
     ({ serviceType, tableName }) =>
-      `SELECT id,company_id,'${serviceType}' AS service_type,${STATEMENT_ADJUSTMENT_SELECT} FROM ${tableName} WHERE company_id=$1`,
+      `SELECT id,company_id,'${serviceType}' AS service_type,${STATEMENT_ADJUSTMENT_SELECT} FROM ${tableName} WHERE company_id=$1${bookingFilter}`,
   );
   return select<StatementSegmentAdjustmentRow[]>(
     database,
     `${unions.join(" UNION ALL ")} ORDER BY service_type,booking_id,revision_no,created_at`,
-    [companyId],
+    scopedBookingIds && scopedBookingIds.length ? [companyId, ...scopedBookingIds] : [companyId],
   );
 }
 

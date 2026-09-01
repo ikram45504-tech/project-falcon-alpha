@@ -3,6 +3,7 @@ import type { BookingTransactionType, PackageBookingLineInput, PackageBooking, P
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { isDesktopApp, queueSync, syncPackageBookingBundle, syncPackageBookingVoid } from "./cloudSync";
 
+import { applyBookingListScope, bookingListScopeSql, type BookingListScope } from "./bookingListScope";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -199,17 +200,20 @@ function groupRowsByBookingId(rows: Record<string, unknown>[]) {
   return grouped;
 }
 
-export async function getPackageBookings(companyId: string, search = "") {
+export async function getPackageBookings(companyId: string, search = "", scope?: BookingListScope) {
   const isTauri = "__TAURI_INTERNALS__" in window;
   const clean = search.trim();
 
   if (!isTauri) {
-    let query = supabase
-      .from("package_bookings")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false });
+    let query = applyBookingListScope(
+      supabase
+        .from("package_bookings")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("transaction_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+      scope,
+    );
 
     if (clean) {
       query = query.or(
@@ -221,7 +225,7 @@ export async function getPackageBookings(companyId: string, search = "") {
     if (error) throw new Error(error.message);
 
     const headers = data || [];
-    const partyNames = await fetchPartyNameMap(companyId);
+    const partyNames = scope?.counterpartyId ? new Map<string, string>() : await fetchPartyNameMap(companyId);
     const lines = await fetchChildRowsByBookingIds(
       "package_booking_lines",
       headers.map((row) => String(row.id)),
@@ -239,6 +243,7 @@ export async function getPackageBookings(companyId: string, search = "") {
 
   const database = await db();
   const term = `%${clean}%`;
+  const scopeFilter = bookingListScopeSql(scope, 3);
 
   const headers = await database.select<Omit<PackageBooking, "lines">[]>(
     `SELECT
@@ -263,8 +268,9 @@ export async function getPackageBookings(companyId: string, search = "") {
            WHERE l.booking_id=b.id AND (l.package_type LIKE $3 COLLATE NOCASE OR l.passenger_name LIKE $3 COLLATE NOCASE)
          )
        )
+       ${scopeFilter.sql}
      ORDER BY b.transaction_date DESC, b.created_at DESC`,
-    [companyId, clean, term],
+    [companyId, clean, term, ...scopeFilter.params],
   );
 
   const lines = await database.select<PackageBookingLine[]>(
@@ -409,10 +415,7 @@ function calculateLines(lines: PackageBookingLineInput[]) {
   return { calculated, totalPkr: calculated.reduce((sum, line) => sum + line.lineTotalPkr, 0) };
 }
 
-function insertLineStatements(
-  bookingId: string,
-  lines: Array<CalculatedLine & { id: string }>,
-): AtomicSqlStatement[] {
+function insertLineStatements(bookingId: string, lines: Array<CalculatedLine & { id: string }>): AtomicSqlStatement[] {
   return lines.map((line) => ({
     sql: `INSERT INTO package_booking_lines
       (id,booking_id,passenger_type,passenger_name,package_type,rate_per_person,person_count,qty_is_explicit,line_total_pkr,sort_order)
@@ -534,8 +537,14 @@ export async function updatePackageCommercialBooking(
   const { calculated, totalPkr } = calculateLines(input.lines);
   const now = new Date().toISOString();
 
-  let current: { ub_number: string; status: string; created_at: string; transaction_type: string; counterparty_id: string } | null =
-    null;
+  type CurrentBooking = {
+    ub_number: string;
+    status: string;
+    created_at: string;
+    transaction_type: string;
+    counterparty_id: string;
+  };
+  let current: CurrentBooking | null;
 
   if (isDesktopApp()) {
     const database = await db();

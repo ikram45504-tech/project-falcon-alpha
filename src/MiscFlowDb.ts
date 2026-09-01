@@ -9,6 +9,7 @@ import {
   type MiscBookingSyncLine,
 } from "./cloudSync";
 import { fetchCounterpartyNameMap, validateBookingCounterparty } from "./CounterpartyDb";
+import { applyBookingListScope, bookingListScopeSql, type BookingListScope } from "./bookingListScope";
 import { supabase } from "./supabaseClient";
 import {
   initMiscDatabase,
@@ -186,14 +187,17 @@ async function insertMiscLinesLocal(database: Database, bookingId: string, lineR
   }
 }
 
-export async function getMiscBookings(companyId: string, search = "") {
+export async function getMiscBookings(companyId: string, search = "", scope?: BookingListScope) {
   if (!isDesktopApp()) {
-    let query = supabase
-      .from("misc_bookings")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false });
+    let query = applyBookingListScope(
+      supabase
+        .from("misc_bookings")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("transaction_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+      scope,
+    );
 
     if (search.trim()) {
       const term = `%${search.trim()}%`;
@@ -204,7 +208,7 @@ export async function getMiscBookings(companyId: string, search = "") {
     if (error) throw new Error(error.message);
     if (!data) return [];
 
-    const partyNames = await fetchCounterpartyNameMap(companyId);
+    const partyNames = scope?.counterpartyId ? new Map<string, string>() : await fetchCounterpartyNameMap(companyId);
     const bookingIds = data.map((row) => String(row.id));
     const { data: lineRows, error: lineError } = bookingIds.length
       ? await supabase.from("misc_booking_lines").select("*").in("booking_id", bookingIds)
@@ -230,6 +234,7 @@ export async function getMiscBookings(companyId: string, search = "") {
   const database = await db();
   const clean = search.trim();
   const term = `%${clean}%`;
+  const scopeFilter = bookingListScopeSql(scope, 3);
   const headers = await database.select<Omit<MiscBooking, "lines">[]>(
     `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name,'') AS counterparty_name,
             b.transaction_date,b.ub_number,b.total_sar,b.total_pkr,b.unconverted_sar,b.status,
@@ -239,8 +244,9 @@ export async function getMiscBookings(companyId: string, search = "") {
      WHERE b.company_id=$1
        AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR
             EXISTS (SELECT 1 FROM misc_booking_lines l WHERE l.booking_id=b.id AND l.service_name LIKE $3 COLLATE NOCASE))
+       ${scopeFilter.sql}
      ORDER BY b.transaction_date DESC,b.created_at DESC`,
-    [companyId, clean, term],
+    [companyId, clean, term, ...scopeFilter.params],
   );
   const lines = await database.select<MiscBookingLine[]>(
     `SELECT l.id,l.booking_id,l.service_name,l.pax_count,l.rate_per_person,l.roe,l.currency_mode,l.line_total_sar,l.line_total_pkr,l.sort_order
