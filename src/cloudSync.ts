@@ -455,6 +455,10 @@ export async function syncPaymentVoid(paymentId: string, updatedAt: string, upda
   });
 }
 
+export async function syncPaymentCorrection(record: Record<string, unknown>) {
+  await queueSync("UPSERT", "payment_corrections", String(record.id), record);
+}
+
 /** Clear all known child rows for a booking in the cloud (used by permanent delete). */
 export async function syncClearBookingChildren(bookingId: string, childTables: string[]) {
   for (const table of childTables) {

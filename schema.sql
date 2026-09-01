@@ -685,6 +685,20 @@ CREATE TABLE IF NOT EXISTS payment_v2_meta (
       updated_at TEXT NOT NULL
     );
 
+CREATE TABLE IF NOT EXISTS payment_corrections (
+      id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL,
+      payment_id TEXT NOT NULL,
+      correction_no INTEGER NOT NULL DEFAULT 1,
+      action TEXT NOT NULL DEFAULT 'CORRECTION',
+      reason TEXT NOT NULL DEFAULT '',
+      before_snapshot_json TEXT NOT NULL DEFAULT '{}',
+      after_snapshot_json TEXT NOT NULL DEFAULT '{}',
+      changed_fields_json TEXT NOT NULL DEFAULT '[]',
+      corrected_by_user_id TEXT NOT NULL DEFAULT '',
+      corrected_at TEXT NOT NULL
+    );
+
 CREATE TABLE IF NOT EXISTS misc_booking_details (
     booking_id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,

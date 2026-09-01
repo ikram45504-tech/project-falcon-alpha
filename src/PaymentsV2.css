@@ -257,6 +257,61 @@
   align-items: start;
 }
 
+.payment-v2-amount-row {
+  margin-bottom: 4px;
+}
+
+.payment-v2-pkr-equiv {
+  font-weight: 700;
+  color: #1b5b9c !important;
+  background: #f4f8fc !important;
+}
+
+.payment-v2-movement-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.payment-v2-movement-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.payment-v2-movement-grid input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #cfd7e3;
+  border-radius: 9px;
+  background: #fff;
+  color: #26384d;
+  padding: 9px 11px;
+  font: inherit;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.payment-v2-movement-grid input:read-only {
+  background: #f4f8fc;
+  color: #1b5b9c;
+}
+
+.payment-v2-movement-arrow {
+  align-self: end;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  color: #1b5b9c;
+  font-size: 18px;
+  font-weight: 700;
+  padding-bottom: 10px;
+}
+
 .payment-v2-settlement-field {
   grid-column: span 2;
 }
@@ -603,6 +658,16 @@
 
   .payment-v2-settlement-field {
     grid-column: 1 / -1;
+  }
+
+  .payment-v2-movement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-v2-movement-arrow {
+    justify-content: center;
+    padding: 0;
+    min-height: auto;
   }
 }
 

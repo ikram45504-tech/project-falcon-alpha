@@ -107,9 +107,11 @@ async function withBusyRetry<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 export async function initPaymentV2Database() {
-  if (!isDesktopApp()) return;
   if (initializationPromise) return initializationPromise;
   initializationPromise = (async () => {
+    const { initPaymentCorrectionDatabase } = await import("./PaymentCorrectionDb");
+    await initPaymentCorrectionDatabase();
+    if (!isDesktopApp()) return;
     const database = await db();
     await database.execute("PRAGMA busy_timeout = 5000");
     await withBusyRetry(() =>
@@ -214,6 +216,30 @@ export async function getNextPaymentDocumentNumber(
     max = Math.max(max, Number(match[1]) || 0);
   }
   return `${prefix}${String(max + 1).padStart(4, "0")}`;
+}
+
+export async function getPaymentEntryById(companyId: string, paymentId: string) {
+  if (!isDesktopApp()) {
+    const { data, error } = await supabase
+      .from("payment_entries")
+      .select("*")
+      .eq("company_id", companyId)
+      .eq("id", paymentId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data as import("./db").PaymentEntry | null) ?? null;
+  }
+
+  const database = await ready();
+  const rows = await database.select<import("./db").PaymentEntry[]>(
+    `SELECT id,company_id,party_id,transaction_date,receipt_no,from_account,to_account,
+            description,payment_type,currency,amount_entered,sar,roe,paid_amount,status,created_at,updated_at
+     FROM payment_entries
+     WHERE company_id=$1 AND id=$2
+     LIMIT 1`,
+    [companyId, paymentId],
+  );
+  return rows[0] ?? null;
 }
 
 export async function getPaymentV2Meta(companyId: string, paymentId: string) {

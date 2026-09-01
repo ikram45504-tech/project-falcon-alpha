@@ -38,6 +38,8 @@ function LedgerRoute({
       companyId={companyId}
       party={party}
       parties={parties}
+      userId={session?.userId}
+      canEditPayments={can("edit_payments")}
       onBack={() => navigate(`/parties/${party.account_type === "UNASSIGNED" ? "UNASSIGNED" : party.account_type}`)}
       onEditParty={() => {}}
       onGenerateStatement={(ledgerParty: Party) => {
@@ -45,6 +47,7 @@ function LedgerRoute({
         setStatementPartyId(ledgerParty.id);
         navigate("/statements");
       }}
+      onOpenPayments={() => navigate("/payments")}
       onChanged={onChanged}
     />
   );
@@ -118,6 +121,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
               parties={parties}
               userId={session?.userId}
               preparedByName={session?.fullName}
+              canEdit={can("edit_payments")}
               onOpenLedger={(party) => navigate(`/parties/ledger/${party.id}`)}
               onChanged={loadFinancialTotals}
             />

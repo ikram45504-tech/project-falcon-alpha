@@ -21,6 +21,8 @@ import type {
   PaymentV2Meta,
 } from "./PaymentV2Db";
 import "./PaymentsV2.css";
+import { formatAmountInput, parseFormattedAmount, pkrEquivalent } from "./paymentFormatUtils";
+import { fromReceivingLabels, movementFieldState, settlementSideForKind } from "./paymentMovement";
 
 type PaymentSide = "PARTY" | "VENDOR";
 type PaymentPurpose = "STANDARD" | "REFUND";
@@ -129,20 +131,6 @@ function balanceLabelForKind(kind: PaymentTransactionKind) {
   return kind === "PARTY_RECEIPT" || kind === "PARTY_REFUND" ? "Receivable" : "Payable";
 }
 
-function moneyFlowText(
-  kind: PaymentTransactionKind,
-  accountName: string,
-  settlement: string,
-  paymentType: PaymentMethod,
-) {
-  const settlementLabel = settlement || (paymentType === "BANK" ? "Bank Account" : "Cash");
-  const account = accountName || "Account";
-  if (kind === "PARTY_RECEIPT") return `${account} → ${settlementLabel}`;
-  if (kind === "PARTY_REFUND") return `${settlementLabel} → ${account}`;
-  if (kind === "VENDOR_PAYMENT") return `${settlementLabel} → ${account}`;
-  return `${account} → ${settlementLabel}`;
-}
-
 function standardPurposeLabel(side: PaymentSide) {
   return side === "PARTY" ? "Receive Payment" : "Send Payment";
 }
@@ -193,8 +181,8 @@ function entryToForm(entry: PaymentEntry, meta: PaymentV2Meta | undefined, parti
     documentNo: entry.receipt_no,
     paymentType: entry.payment_type,
     currency: entry.currency,
-    amount: String(entry.amount_entered || ""),
-    roe: entry.currency === "SAR" ? String(entry.roe || "") : "",
+    amount: formatAmountInput(String(entry.amount_entered || "")),
+    roe: entry.currency === "SAR" ? formatAmountInput(String(entry.roe || "")) : "",
     settlementAccount,
     reference: meta?.reference || "",
     description: entry.description || "",
@@ -211,8 +199,8 @@ function entryToForm(entry: PaymentEntry, meta: PaymentV2Meta | undefined, parti
 }
 
 function paymentPreview(form: PaymentFormState) {
-  const amount = Math.max(0, Number(form.amount) || 0);
-  const roe = form.currency === "SAR" ? Math.max(0, Number(form.roe) || 0) : 0;
+  const amount = Math.max(0, parseFormattedAmount(form.amount));
+  const roe = form.currency === "SAR" ? Math.max(0, parseFormattedAmount(form.roe)) : 0;
   return {
     amount,
     roe,
@@ -233,8 +221,8 @@ function toInput(form: PaymentFormState): PaymentV2Input {
     documentNo: form.documentNo,
     paymentType: form.paymentType,
     currency: form.currency,
-    amount: Number(form.amount) || 0,
-    roe: form.currency === "SAR" ? Number(form.roe) || 0 : 0,
+    amount: parseFormattedAmount(form.amount),
+    roe: form.currency === "SAR" ? parseFormattedAmount(form.roe) : 0,
     settlementAccount: form.settlementAccount,
     description: form.description,
     reference: form.reference,
@@ -538,6 +526,23 @@ export function PaymentsModule({
     }
   }
 
+  function patchMovement(side: "from" | "receiving", value: string) {
+    const settlementSide = settlementSideForKind(form.transactionKind);
+    if (side === settlementSide) patch("settlementAccount", value);
+  }
+
+  function patchAmount(value: string) {
+    patch("amount", value);
+  }
+
+  function patchAmountBlur() {
+    setForm((current) => ({ ...current, amount: formatAmountInput(current.amount) }));
+  }
+
+  function patchRoeBlur() {
+    setForm((current) => ({ ...current, roe: formatAmountInput(current.roe) }));
+  }
+
   function renderRegisterEntryActions(entry: PaymentEntry, account: Party | null) {
     return (
       <div className="row-actions compact-actions payment-v2-card-actions">
@@ -619,12 +624,8 @@ export function PaymentsModule({
     const prefix = paymentDocumentPrefix(transactionKind, form.paymentType);
     const amountLabel = amountActionLabel(transactionKind);
     const balanceLabel = balanceLabelForKind(transactionKind);
-    const flowText = moneyFlowText(
-      transactionKind,
-      selectedAccount?.name || accountNoun,
-      form.settlementAccount,
-      form.paymentType,
-    );
+    const movementLabels = fromReceivingLabels(form.paymentType);
+    const movement = movementFieldState(transactionKind, selectedAccount?.name || accountNoun, form.settlementAccount);
     const documentPreview = form.documentNo || suggestedDocument || `${prefix}0001`;
     const isEditing = Boolean(editingId);
 
@@ -754,9 +755,9 @@ export function PaymentsModule({
           <div className="payment-v2-form-section">
             <div className="payment-v2-section-label">
               <b>Amount &amp; settlement</b>
-              <small>Currency, amount, and cash/bank account</small>
+              <small>Currency, amount, and movement between accounts</small>
             </div>
-            <div className="payment-v2-setup-grid">
+            <div className="payment-v2-setup-grid payment-v2-amount-row">
               <label>
                 Currency *
                 <select
@@ -776,43 +777,51 @@ export function PaymentsModule({
               <label>
                 Amount ({form.currency}) *
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
                   value={form.amount}
-                  onChange={(e) => patch("amount", e.target.value)}
-                  placeholder="0.00"
+                  onChange={(e) => patchAmount(e.target.value)}
+                  onBlur={patchAmountBlur}
+                  inputMode="decimal"
+                  placeholder="0"
                 />
               </label>
               <label className={form.currency === "PKR" ? "payment-v2-muted-field" : ""}>
                 ROE {form.currency === "SAR" ? "*" : ""}
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
                   value={form.roe}
                   onChange={(e) => patch("roe", e.target.value)}
+                  onBlur={patchRoeBlur}
                   disabled={form.currency === "PKR"}
                   placeholder={form.currency === "SAR" ? "e.g. 76.50" : "Not required"}
                 />
               </label>
               <label>
                 PKR Equivalent
-                <input value={money(preview.pkr)} readOnly />
-              </label>
-              <label className="payment-v2-settlement-field">
-                {form.paymentType === "BANK" ? "Bank / Settlement Account" : "Cash / Settlement Account"} *
-                <input
-                  value={form.settlementAccount}
-                  onChange={(e) => patch("settlementAccount", e.target.value)}
-                  placeholder={form.paymentType === "BANK" ? "e.g. HBL, Meezan, ABL" : "e.g. Cash in Hand, Office Cash"}
-                />
+                <input value={pkrEquivalent(preview.pkr)} readOnly className="payment-v2-pkr-equiv" />
               </label>
             </div>
 
-            <div className="payment-v2-flow">
-              <small>MONEY FLOW</small>
-              <b>{flowText}</b>
+            <div className="payment-v2-movement-grid">
+              <label>
+                {movementLabels.from} *
+                <input
+                  value={movement.fromValue}
+                  readOnly={movement.fromLocked}
+                  onChange={(e) => patchMovement("from", e.target.value)}
+                  placeholder={form.paymentType === "BANK" ? "Bank account" : "Person / account"}
+                />
+              </label>
+              <span className="payment-v2-movement-arrow" aria-hidden="true">
+                →
+              </span>
+              <label>
+                {movementLabels.receiving} *
+                <input
+                  value={movement.receivingValue}
+                  readOnly={movement.receivingLocked}
+                  onChange={(e) => patchMovement("receiving", e.target.value)}
+                  placeholder={form.paymentType === "BANK" ? "e.g. HBL, Meezan, ABL" : "e.g. Cash in Hand, Office Cash"}
+                />
+              </label>
             </div>
 
             <div className="payment-v2-balance-preview">
@@ -850,7 +859,7 @@ export function PaymentsModule({
               onClick={() => setDetailsOpen((value) => !value)}
             >
               <div>
-                <b>Optional payment details</b>
+                <b>Additional Transaction Detail</b>
                 <small>
                   {form.paymentType === "BANK" ? "Bank transfer" : "Cash handling"} reference, description, and notes
                 </small>

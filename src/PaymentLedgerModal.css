@@ -1,0 +1,196 @@
+.payment-ledger-modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.payment-ledger-modal .modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.payment-ledger-modal .modal-head h3 {
+  margin: 4px 0;
+  color: #1b5b9c;
+}
+
+.payment-ledger-modal .modal-head p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+}
+
+.payment-ledger-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.payment-ledger-modal-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #dbe5ef;
+  border-radius: 10px;
+  background: #f7fafc;
+  color: #4a6178;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.payment-ledger-amount-row {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+}
+
+.payment-v2-movement-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.payment-v2-movement-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.payment-v2-movement-grid input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #cfd7e3;
+  border-radius: 9px;
+  background: #fff;
+  color: #26384d;
+  padding: 9px 11px;
+  font: inherit;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.payment-v2-movement-grid input:read-only {
+  background: #f4f8fc;
+  color: #1b5b9c;
+}
+
+.payment-v2-movement-arrow {
+  align-self: end;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  color: #1b5b9c;
+  font-size: 18px;
+  font-weight: 700;
+  padding-bottom: 10px;
+}
+
+.payment-ledger-correction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.payment-ledger-correction-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.payment-ledger-correction-grid label.wide {
+  grid-column: 1 / -1;
+}
+
+.payment-ledger-correction-grid input,
+.payment-ledger-correction-grid textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #cfd7e3;
+  border-radius: 9px;
+  background: #fff;
+  color: #26384d;
+  padding: 9px 11px;
+  font: inherit;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.payment-ledger-correction-grid textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.payment-correction-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-correction-card {
+  border: 1px solid #dbe5ef;
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px 14px;
+}
+
+.payment-correction-card.void {
+  border-color: #f1c7c7;
+  background: #fff8f8;
+}
+
+.payment-correction-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.payment-correction-card-head b {
+  color: #1b5b9c;
+}
+
+.payment-correction-card-head span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.payment-correction-card p {
+  margin: 4px 0 0;
+  color: #344054;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ledger-payment-table .ledger-payment-actions {
+  white-space: nowrap;
+}
+
+.ledger-payment-table .row-actions.compact-actions button {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .payment-ledger-amount-row,
+  .payment-ledger-correction-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-v2-movement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-v2-movement-arrow {
+    justify-content: center;
+    padding: 0;
+    min-height: auto;
+  }
+}

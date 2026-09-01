@@ -4,17 +4,28 @@ import { getPayments } from "./db";
 import { downloadExcel } from "./exportUtils";
 import { type BookingAccountingEntry, accountDirectionLabel, getBookingAccountingEntries } from "./BookingAccounting";
 import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
+import { recordPaymentVoidHistory } from "./PaymentCorrectionDb";
+import PaymentLedgerModal, { inferKind } from "./PaymentLedgerModal";
+import { getPaymentV2Meta, getPaymentV2MetaMap, voidPaymentV2, type PaymentV2Meta } from "./PaymentV2Db";
+import "./PaymentLedgerModal.css";
 
 type Props = {
   companyId: string;
   party: Party;
   parties?: Party[];
+  userId?: string;
+  canEditPayments?: boolean;
   onBack: () => void;
   onEditParty: (party: Party) => void;
   onGenerateStatement: (party: Party) => void;
   onOpenPayments?: () => void;
   onChanged?: () => void | Promise<void>;
 };
+
+type LedgerModalState =
+  | { mode: "correct"; entry: PaymentEntry; meta: PaymentV2Meta | null }
+  | { mode: "history"; entry: PaymentEntry; meta: PaymentV2Meta | null }
+  | null;
 
 function formatDate(value: string) {
   if (!value) return "—";
@@ -40,11 +51,18 @@ export default function PartyLedger({
   onEditParty,
   onGenerateStatement,
   onOpenPayments,
+  onChanged,
+  userId = "",
+  canEditPayments = false,
 }: Props) {
   const [bookings, setBookings] = useState<BookingAccountingEntry[]>([]);
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
+  const [metaMap, setMetaMap] = useState<Map<string, PaymentV2Meta>>(() => new Map());
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState("");
+  const [modal, setModal] = useState<LedgerModalState>(null);
 
   const direction = accountDirectionLabel(party.account_type);
   const isVendor = party.account_type === "VENDOR";
@@ -52,13 +70,15 @@ export default function PartyLedger({
   async function load() {
     setLoading(true);
     try {
-      const [bookingRows, paymentRows] = await Promise.all([
+      const [bookingRows, paymentRows, metadata] = await Promise.all([
         getBookingAccountingEntries(companyId, party.id),
         getPayments(companyId, "", party.id),
+        getPaymentV2MetaMap(companyId),
       ]);
       const relevant = party.account_type === "PARTY" ? "SALE" : party.account_type === "VENDOR" ? "PURCHASE" : null;
       setBookings(bookingRows.filter((row) => !relevant || row.transaction_type === relevant));
       setPayments(paymentRows);
+      setMetaMap(metadata);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -82,6 +102,38 @@ export default function PartyLedger({
     [activePayments],
   );
   const balance = bookingTotal - paymentTotal;
+
+  async function openModal(mode: "correct" | "history", entry: PaymentEntry) {
+    setError("");
+    setMessage("");
+    const meta = metaMap.get(entry.id) || (await getPaymentV2Meta(companyId, entry.id));
+    setModal({ mode, entry, meta });
+  }
+
+  async function voidPayment(entry: PaymentEntry) {
+    if (!canEditPayments || entry.status !== "ACTIVE" || busyId) return;
+    const reason = window.prompt(
+      `Void ${entry.receipt_no || "this payment"} for ${formatMoney(entry.paid_amount)}?\n\nEnter reason for office record:`,
+    );
+    if (!reason?.trim()) return;
+    if (!window.confirm(`Confirm void for ${entry.receipt_no || "this payment"}?`)) return;
+
+    setBusyId(entry.id);
+    setError("");
+    setMessage("");
+    try {
+      const meta = metaMap.get(entry.id) || (await getPaymentV2Meta(companyId, entry.id));
+      await voidPaymentV2(companyId, entry.id, userId);
+      await recordPaymentVoidHistory(companyId, entry.id, userId, reason, entry, meta);
+      await load();
+      await onChanged?.();
+      setMessage(`${entry.receipt_no || "Payment"} marked VOID.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId("");
+    }
+  }
 
   function handleExport() {
     const bookingData = bookings.map((b, i) => ({
@@ -130,6 +182,31 @@ export default function PartyLedger({
     );
   }
 
+  function renderPaymentActions(entry: PaymentEntry) {
+    return (
+      <div className="row-actions compact-actions ledger-payment-actions">
+        <button type="button" onClick={() => void openModal("history", entry)}>
+          History
+        </button>
+        {canEditPayments && (
+          <button type="button" onClick={() => void openModal("correct", entry)} disabled={entry.status !== "ACTIVE"}>
+            Correct
+          </button>
+        )}
+        {canEditPayments && (
+          <button
+            type="button"
+            className="danger-action"
+            onClick={() => void voidPayment(entry)}
+            disabled={entry.status !== "ACTIVE" || busyId === entry.id}
+          >
+            Void
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <section className="ledger-page">
       <div className="ledger-top">
@@ -157,6 +234,7 @@ export default function PartyLedger({
         </div>
       </div>
 
+      {message && <div className="alert success ledger-alert">{message}</div>}
       {error && <div className="alert error ledger-alert">{error}</div>}
       {loading && <div className="alert info ledger-alert">Loading booking ledger...</div>}
 
@@ -266,6 +344,7 @@ export default function PartyLedger({
                   <th>SAR</th>
                   <th>ROE</th>
                   <th>PKR AMOUNT</th>
+                  <th>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
@@ -284,6 +363,7 @@ export default function PartyLedger({
                     <td className="right">{entry.currency === "SAR" ? formatNumber(entry.sar) : "—"}</td>
                     <td className="right">{entry.currency === "SAR" ? formatNumber(entry.roe) : "—"}</td>
                     <td className="right payment-paid-amount">{formatMoney(entry.paid_amount)}</td>
+                    <td>{renderPaymentActions(entry)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -294,8 +374,27 @@ export default function PartyLedger({
 
       <div className="bf-note">
         <b>Accounting source:</b> bookings remain the commercial source and Payments is the only settlement-entry
-        workspace. Payment records are account-based and are not allocated to individual UBs.
+        workspace. Use <strong>Correct</strong> to fix mistakes with office history, or <strong>Void</strong> to cancel
+        a payment while keeping the audit trail.
       </div>
+
+      {modal && (
+        <PaymentLedgerModal
+          mode={modal.mode}
+          companyId={companyId}
+          userId={userId}
+          accountName={party.name}
+          entry={modal.entry}
+          meta={modal.meta}
+          transactionKind={inferKind(modal.meta, party.account_type === "VENDOR" ? "VENDOR" : "PARTY")}
+          onClose={() => setModal(null)}
+          onSaved={async () => {
+            await load();
+            await onChanged?.();
+            setMessage(`${modal.entry.receipt_no || "Payment"} corrected successfully.`);
+          }}
+        />
+      )}
     </section>
   );
 }
