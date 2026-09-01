@@ -194,7 +194,15 @@ async function openExternalUrl(url: string) {
   }
 
   const popup = window.open(url, "_blank", "noopener,noreferrer");
-  if (!popup) window.location.assign(url);
+  if (popup) return;
+
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
 }
 
 async function openWhatsAppChat(
