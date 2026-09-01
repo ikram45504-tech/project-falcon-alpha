@@ -16,6 +16,7 @@ const PAGE_W = 210;
 const PAGE_H = 297;
 /** Receipt zone height on A4 portrait — top third, for print on standard A4 paper. */
 export const PAYMENT_RECEIPT_HEIGHT_MM = 99;
+export const PAYMENT_RECEIPT_PAGE_WIDTH_MM = PAGE_W;
 export const PAYMENT_RECEIPT_PAGE_HEIGHT_MM = PAGE_H;
 const RECEIPT_H = PAYMENT_RECEIPT_HEIGHT_MM;
 const RX = 10;

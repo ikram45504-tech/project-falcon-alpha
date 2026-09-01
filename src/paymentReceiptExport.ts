@@ -1,7 +1,19 @@
 import type { jsPDF } from "jspdf";
 import type { Company, Party, PaymentEntry } from "./db";
-import { PAYMENT_RECEIPT_HEIGHT_MM, PAYMENT_RECEIPT_PAGE_HEIGHT_MM, receiptDocumentTitle } from "./PaymentReceiptPdf";
+import {
+  PAYMENT_RECEIPT_HEIGHT_MM,
+  PAYMENT_RECEIPT_PAGE_HEIGHT_MM,
+  PAYMENT_RECEIPT_PAGE_WIDTH_MM,
+  receiptDocumentTitle,
+} from "./PaymentReceiptPdf";
 import type { PaymentTransactionKind } from "./PaymentV2Db";
+
+function isMobilePrintShell() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPod|iPad|Android/i.test(ua)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
 
 export function safeFileName(text: string) {
   return String(text || "document")
@@ -102,6 +114,8 @@ export async function downloadPaymentReceiptJpg(doc: jsPDF, fileName: string) {
 }
 
 export function shouldPreferImagePrint() {
+  if (typeof window === "undefined") return false;
+  if (isMobilePrintShell()) return true;
   if (typeof window.matchMedia !== "function") return false;
   return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
 }
@@ -119,11 +133,41 @@ export async function blobToDataUrl(blob: Blob) {
 }
 
 export function buildReceiptPrintHtml(imageDataUrl: string) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title><style>
-@page { margin: 8mm; }
-html, body { margin: 0; padding: 0; background: #fff; }
-img { display: block; width: 100%; height: auto; }
-</style></head><body><img src="${imageDataUrl}" alt="Receipt" /></body></html>`;
+  const pageW = PAYMENT_RECEIPT_PAGE_WIDTH_MM;
+  const pageH = PAYMENT_RECEIPT_PAGE_HEIGHT_MM;
+  const receiptH = PAYMENT_RECEIPT_HEIGHT_MM;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=${pageW}, initial-scale=1.0"><title>Receipt</title><style>
+*, *::before, *::after { box-sizing: border-box; }
+@page { size: ${pageW}mm ${pageH}mm; margin: 0; }
+@page { size: A4 portrait; margin: 0; }
+html, body {
+  margin: 0;
+  padding: 0;
+  width: ${pageW}mm;
+  min-height: ${pageH}mm;
+  background: #fff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.receipt-sheet {
+  width: ${pageW}mm;
+  height: ${pageH}mm;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+  page-break-after: avoid;
+  page-break-inside: avoid;
+}
+.receipt-sheet img {
+  display: block;
+  width: ${pageW}mm;
+  height: ${receiptH}mm;
+  margin: 0;
+  object-fit: contain;
+  object-position: top center;
+}
+</style></head><body><div class="receipt-sheet"><img src="${imageDataUrl}" alt="Receipt" /></div></body></html>`;
 }
 
 function waitForNextFrame() {
@@ -183,7 +227,9 @@ function printPdfViaIframe(url: string) {
 function printReceiptImageInIsolatedDocument(imageDataUrl: string) {
   return new Promise<void>((resolve, reject) => {
     const iframe = document.createElement("iframe");
-    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    const pageW = PAYMENT_RECEIPT_PAGE_WIDTH_MM;
+    const pageH = PAYMENT_RECEIPT_PAGE_HEIGHT_MM;
+    iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${pageW}mm;height:${pageH}mm;border:0;visibility:hidden`;
     iframe.title = "Print receipt";
 
     const cleanup = () => {

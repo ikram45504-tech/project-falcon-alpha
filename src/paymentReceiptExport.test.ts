@@ -59,5 +59,10 @@ describe("paymentReceiptExport WhatsApp", () => {
     expect(html).toContain("data:image/jpeg;base64,abc123");
     expect(html).toContain('<img src="data:image/jpeg;base64,abc123"');
     expect(html).toContain("@page");
+    expect(html).toContain("210mm");
+    expect(html).toContain("297mm");
+    expect(html).toContain("99mm");
+    expect(html).toContain("size: A4 portrait");
+    expect(html).toContain("margin: 0");
   });
 });
