@@ -182,11 +182,6 @@ export async function getBookingAccountingEntries(companyId: string, counterpart
   );
 }
 
-export async function getActiveBookingAccountingEntries(companyId: string, counterpartyId = "") {
-  const rows = await getBookingAccountingEntries(companyId, counterpartyId);
-  return rows.filter((row) => row.status === "ACTIVE");
-}
-
 export async function getPartyBookingTotals(companyId: string) {
   const database = await ready();
   return database.select<PartyBookingTotal[]>(

@@ -163,17 +163,6 @@ CREATE TABLE IF NOT EXISTS app_migrations (
     applied_at TEXT NOT NULL
   );
 
-CREATE TABLE IF NOT EXISTS package_booking_lines_v2 (
-      id TEXT PRIMARY KEY,
-      booking_id TEXT NOT NULL,
-      passenger_type TEXT NOT NULL,
-      package_type TEXT NOT NULL DEFAULT '',
-      rate_per_person REAL NOT NULL DEFAULT 0,
-      person_count INTEGER NOT NULL DEFAULT 0,
-      line_total_pkr REAL NOT NULL DEFAULT 0,
-      sort_order INTEGER NOT NULL DEFAULT 0
-    );
-
 CREATE TABLE IF NOT EXISTS ticket_bookings (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,

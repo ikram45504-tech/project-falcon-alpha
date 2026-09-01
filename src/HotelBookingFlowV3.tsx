@@ -480,14 +480,11 @@ export default function HotelBookingFlowV3({
           ubDigits={ubDigits}
           onUbDigitsChange={setUbDigits}
           ubNumber={ubNumber}
-          assigned={false}
           saved={saved}
-          onAssign={() => {}}
           onAccountsChanged={onChanged}
           onError={setError}
           onMessage={setMessage}
           serviceLabel="Hotel"
-          variant="unified"
           headerGridClass="hotel10-header-grid"
           unifiedHint="Party, date, and UB are saved together with hotel rates when you click Save Booking."
           embedded

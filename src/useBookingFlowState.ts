@@ -30,7 +30,6 @@ export function useBookingFlowState<T extends CommonEntry>(
   const [bookingDate, setBookingDate] = useState(localDate());
   const [ubDigits, setUbDigits] = useState("");
   const [ubNumber, setUbNumber] = useState("");
-  const [assigned, setAssigned] = useState(false);
   const [saved, setSaved] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -48,7 +47,6 @@ export function useBookingFlowState<T extends CommonEntry>(
     setBookingDate(localDate());
     setUbDigits("");
     setUbNumber("");
-    setAssigned(false);
     setSaved(false);
     setDetailsOpen(false);
     setEditingId(null);
@@ -109,19 +107,6 @@ export function useBookingFlowState<T extends CommonEntry>(
     return true;
   }
 
-  async function assignUb(formatted: string) {
-    const ok = await validateBookingUb(formatted);
-    if (!ok) return false;
-
-    setUbNumber(formatted);
-    setAssigned(true);
-    let detailedMsg = `${formatted} is ready. Enter ${serviceLabel} Details & Rates below.`;
-    if (serviceLabel === "Misc") detailedMsg = `${formatted} is ready. Enter Misc Service Details & Rates below.`;
-    if (serviceLabel === "Visa") detailedMsg = `${formatted} is ready. Enter Visa Services & Rates below.`;
-    setMessage(detailedMsg);
-    return true;
-  }
-
   return {
     mode,
     setMode,
@@ -135,8 +120,6 @@ export function useBookingFlowState<T extends CommonEntry>(
     setUbDigits,
     ubNumber,
     setUbNumber,
-    assigned,
-    setAssigned,
     saved,
     setSaved,
     detailsOpen,
@@ -149,7 +132,6 @@ export function useBookingFlowState<T extends CommonEntry>(
     setError,
     message,
     setMessage,
-    assignUb,
     validateBookingUb,
     resetState,
   };

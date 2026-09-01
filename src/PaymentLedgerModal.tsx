@@ -2,12 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { PaymentEntry } from "./db";
 import { formatAmountInput, parseFormattedAmount, pkrEquivalent } from "./paymentFormatUtils";
 import { fromReceivingLabels, movementFieldState, settlementSideForKind } from "./paymentMovement";
-import {
-  buildPaymentSnapshot,
-  correctPaymentV2,
-  getPaymentCorrections,
-  type PaymentCorrectionRecord,
-} from "./PaymentCorrectionDb";
+import { correctPaymentV2, getPaymentCorrections, type PaymentCorrectionRecord } from "./PaymentCorrectionDb";
 import {
   getPaymentV2Meta,
   type PaymentCurrency,
@@ -352,4 +347,4 @@ export default function PaymentLedgerModal({
   );
 }
 
-export { inferKind, buildPaymentSnapshot };
+export { inferKind };

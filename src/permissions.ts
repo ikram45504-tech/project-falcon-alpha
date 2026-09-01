@@ -78,7 +78,3 @@ export function roleDescription(role: UserRole) {
       return "Read-only access to permitted business information and statements.";
   }
 }
-
-export function permissionsForRole(role: UserRole) {
-  return [...ROLE_PERMISSIONS[role]];
-}

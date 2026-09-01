@@ -1,5 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
-import type { PackageBookingLineInput, PackagePassengerType } from "./db";
+import type { PackagePassengerType } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { isDesktopApp, syncPackageAdjustmentBundle, flushDesktopSyncQueue } from "./cloudSync";
 import { supabase } from "./supabaseClient";
@@ -745,15 +745,4 @@ export async function getPackageAdjustmentSummaryMap(companyId: string) {
     };
   }
   return result;
-}
-
-export function toPackageLineInputs(lines: PackageLineRow[]): PackageBookingLineInput[] {
-  return lines.map((line) => ({
-    passengerType: line.passenger_type,
-    passengerName: line.passenger_name,
-    packageType: line.package_type,
-    ratePerPerson: Number(line.rate_per_person || 0),
-    personCount: Number(line.person_count || 0),
-    qtyIsExplicit: true,
-  }));
 }

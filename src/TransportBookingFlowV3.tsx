@@ -425,14 +425,11 @@ export default function TransportBookingFlowV3({
           ubDigits={ubDigits}
           onUbDigitsChange={setUbDigits}
           ubNumber={ubNumber}
-          assigned={false}
           saved={saved}
-          onAssign={() => {}}
           onAccountsChanged={onChanged}
           onError={setError}
           onMessage={setMessage}
           serviceLabel="Transport"
-          variant="unified"
           headerGridClass="transport12a-header-grid"
           unifiedHint="Party, date, and UB are saved together with transport rates when you click Save Booking."
           embedded

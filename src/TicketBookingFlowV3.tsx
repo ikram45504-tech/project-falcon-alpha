@@ -286,14 +286,11 @@ export default function TicketBookingFlowV2({
           ubDigits={ubDigits}
           onUbDigitsChange={setUbDigits}
           ubNumber={ubNumber}
-          assigned={false}
           saved={saved}
-          onAssign={() => {}}
           onAccountsChanged={onChanged}
           onError={setError}
           onMessage={setMessage}
           serviceLabel="Ticket"
-          variant="unified"
           headerGridClass="ticket9-header-grid"
           unifiedHint="Party, date, and UB are saved together with ticket fares when you click Save Booking."
           embedded

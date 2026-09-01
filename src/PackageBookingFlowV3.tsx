@@ -447,14 +447,11 @@ export default function PackageBookingFlowV2({
             ubDigits={ubDigits}
             onUbDigitsChange={setUbDigits}
             ubNumber={ubNumber}
-            assigned={false}
             saved={commercialSaved}
-            onAssign={() => {}}
             onAccountsChanged={onChanged}
             onError={setError}
             onMessage={setMessage}
             serviceLabel={serviceLabel}
-            variant="unified"
             headerGridClass="package14-identity-grid"
             unifiedHint={`Party, date, and UB are saved together with ${serviceLabel.toLowerCase()} rates when you click Save Booking.`}
             embedded

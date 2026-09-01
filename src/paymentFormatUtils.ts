@@ -24,8 +24,3 @@ export function formatAmountInput(value: string | number): string {
 export function pkrEquivalent(value: number) {
   return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}/=`;
 }
-
-/** Standard ledger/card money display without /= suffix. */
-export function formatMoneyPkr(value: number) {
-  return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
-}

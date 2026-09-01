@@ -332,14 +332,11 @@ export default function MiscBookingFlowV3({
           ubDigits={ubDigits}
           onUbDigitsChange={setUbDigits}
           ubNumber={ubNumber}
-          assigned={false}
           saved={saved}
-          onAssign={() => {}}
           onAccountsChanged={onChanged}
           onError={setError}
           onMessage={setMessage}
           serviceLabel="Misc"
-          variant="unified"
           headerGridClass="package14-identity-grid"
           unifiedHint="Party, date, and UB are saved together with misc service rates when you click Save Booking."
           embedded

@@ -250,11 +250,6 @@ export const TRANSPORT_VEHICLE_CAPACITIES: Record<TransportVehicleType, number |
   OTHER: null,
 };
 
-export function transportVehicleCapacity(type: TransportVehicleType, count = 1): number | null {
-  const each = TRANSPORT_VEHICLE_CAPACITIES[type];
-  return each ? each * Math.max(1, count) : null;
-}
-
 export function transportRowCalc(row: TransportRowPricing) {
   const rate = num(row.rateSar),
     pax = whole(row.paxCount),

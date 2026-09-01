@@ -17,17 +17,12 @@ type Props = {
   ubDigits: string;
   onUbDigitsChange: (value: string) => void;
   ubNumber: string;
-  assigned: boolean;
   saved: boolean;
-  onAssign: (formattedUb: string) => void;
-  onEditHeader?: () => void;
   canQuickCreate?: boolean;
   onAccountsChanged?: () => void | Promise<void>;
   onError?: (message: string) => void;
   onMessage?: (message: string) => void;
   serviceLabel: string;
-  /** progressive = assign UB then unlock commercial; unified = single-save header (Phase 2) */
-  variant?: "progressive" | "unified";
   headerGridClass?: string;
   embedded?: boolean;
   unifiedHint?: string;
@@ -41,7 +36,6 @@ function IdentityCompleteBanner({
   accountNoun,
   bookingDate,
   transactionType,
-  onEditHeader,
 }: {
   saved: boolean;
   serviceLabel: string;
@@ -50,7 +44,6 @@ function IdentityCompleteBanner({
   accountNoun: string;
   bookingDate: string;
   transactionType: BookingTransactionType;
-  onEditHeader?: () => void;
 }) {
   return (
     <section className={`package14-identity-complete ${saved ? "saved" : "ready"}`}>
@@ -72,13 +65,7 @@ function IdentityCompleteBanner({
         <small>STATUS</small>
         <b>{saved ? "ACTIVE" : "READY"}</b>
       </div>
-      {!saved && onEditHeader ? (
-        <button type="button" className="secondary" onClick={onEditHeader}>
-          Edit Booking Header
-        </button>
-      ) : (
-        <span className="package14-lock">Identity locked after save</span>
-      )}
+      <span className="package14-lock">Identity locked after save</span>
     </section>
   );
 }
@@ -170,16 +157,12 @@ export default function ProgressiveBookingIdentity({
   ubDigits,
   onUbDigitsChange,
   ubNumber,
-  assigned,
   saved,
-  onAssign,
-  onEditHeader,
   canQuickCreate = true,
   onAccountsChanged,
   onError,
   onMessage,
   serviceLabel,
-  variant = "progressive",
   headerGridClass = "ticket9-header-grid",
   embedded = false,
   unifiedHint = "Party, date, and UB are saved together with commercial details when you click Save Booking.",
@@ -195,7 +178,6 @@ export default function ProgressiveBookingIdentity({
   );
   const selected = useMemo(() => parties.find((item) => item.id === counterpartyId) || null, [parties, counterpartyId]);
   const preview = bookingUbFromDigits(ubDigits);
-  const isUnified = variant === "unified";
 
   async function saveQuick() {
     const input = normalizePartyInput({ ...quick, accountType, status: quick.status || "ACTIVE" });
@@ -224,7 +206,7 @@ export default function ProgressiveBookingIdentity({
     onError?.("");
   }
 
-  if (isUnified && saved) {
+  if (saved) {
     return (
       <IdentityCompleteBanner
         saved
@@ -238,22 +220,7 @@ export default function ProgressiveBookingIdentity({
     );
   }
 
-  if (!isUnified && assigned) {
-    return (
-      <IdentityCompleteBanner
-        saved={saved}
-        serviceLabel={serviceLabel}
-        ubNumber={ubNumber}
-        selectedName={selected?.name || ""}
-        accountNoun={accountNoun}
-        bookingDate={bookingDate}
-        transactionType={transactionType}
-        onEditHeader={onEditHeader}
-      />
-    );
-  }
-
-  const unifiedHeader = isUnified ? (
+  const header = (
     <>
       <div className="ticket9-section-head booking-identity-head">
         <span className="booking-identity-step">1</span>
@@ -278,58 +245,11 @@ export default function ProgressiveBookingIdentity({
         headerGridClass={headerGridClass}
       />
     </>
-  ) : null;
-
-  const progressiveHeader = !isUnified ? (
-    <section className="package14-identity">
-      <div className="package14-section-heading">
-        <span>01</span>
-        <div>
-          <b>CREATE / ASSIGN BOOKING UB</b>
-          <small>Select the account, booking date and a 1–4 digit booking number.</small>
-        </div>
-      </div>
-      <IdentityFieldGrid
-        accountNoun={accountNoun}
-        transactionType={transactionType}
-        eligible={eligible}
-        counterpartyId={counterpartyId}
-        onCounterpartyChange={onCounterpartyChange}
-        bookingDate={bookingDate}
-        onBookingDateChange={onBookingDateChange}
-        ubDigits={ubDigits}
-        onUbDigitsChange={onUbDigitsChange}
-        preview={preview}
-        canQuickCreate={canQuickCreate}
-        onQuickCreate={openQuickCreate}
-        headerGridClass="package14-identity-grid"
-      />
-      <div className="package14-ub-preview">
-        <div>
-          <small>BOOKING UB PREVIEW</small>
-          <b>{preview || "UB-0000"}</b>
-          <span>{preview ? "Ready to create / assign" : "Enter a booking number"}</span>
-        </div>
-        <button type="button" className="primary" onClick={() => onAssign(preview)}>
-          Create / Assign {preview || "UB"}
-        </button>
-      </div>
-    </section>
-  ) : null;
+  );
 
   return (
     <>
-      {embedded ? (
-        <>
-          {unifiedHeader}
-          {progressiveHeader}
-        </>
-      ) : (
-        <>
-          {unifiedHeader && <section className="package14-identity-unified">{unifiedHeader}</section>}
-          {progressiveHeader}
-        </>
-      )}
+      {embedded ? header : <section className="package14-identity-unified">{header}</section>}
 
       {quickOpen && (
         <AccountFormModal

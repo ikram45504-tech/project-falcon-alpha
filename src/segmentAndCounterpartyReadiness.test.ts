@@ -113,7 +113,6 @@ describe("six-segment booking readiness", () => {
     for (const segment of SEGMENTS) {
       const ui = read(SEGMENT_MODULES[segment].flowUi);
       expect(ui).toContain("ProgressiveBookingIdentity");
-      expect(ui).toContain('variant="unified"');
       expect(ui).toContain("validateBookingUb");
     }
   });
