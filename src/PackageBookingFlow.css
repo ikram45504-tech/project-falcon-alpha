@@ -1,6 +1,23 @@
 @import "./PackageBookingFlow.dark-overrides.css";
+@import "./BookingIdentity.css";
 
-@import "./PackageBookingFlow.dark-overrides.css";
+.package14-unified-form .package14-commercial-head {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid #dbe6f1;
+}
+
+.package14-unified-form .package14-identity-grid {
+  padding: 0 20px 10px;
+}
+
+.package14-unified-form .package14-identity-complete {
+  margin: 0 20px 8px;
+}
+
+.package14-unified-form .booking-identity-head {
+  padding: 17px 20px 0;
+}
 
 /* Progressive Package booking flow — UB → accounting → optional details */
 .package14-page {

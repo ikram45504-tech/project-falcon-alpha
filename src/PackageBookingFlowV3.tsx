@@ -5,17 +5,16 @@ import type {
   PackageBookingLineInput,
   PackagePassengerType,
   Party,
-  PartyInput,
 } from "./db";
-import { blankPartyInput, createParty, getPackageBookings, normalizePartyInput, voidPackageBooking } from "./db";
-import AccountForm from "./AccountForm";
-import AccountFormModal from "./AccountFormModal";
+import { getPackageBookings, voidPackageBooking } from "./db";
+import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
 import { createPackageCommercialBooking } from "./PackageFlowDb";
 import PackageOperationalDetails from "./PackageOperationalDetails";
 import PackageBookingAdjustment from "./PackageBookingAdjustment";
 import { useBookingFlowState } from "./useBookingFlowState";
 import { getPackageAdjustmentSummaryMap, type PackageAdjustmentSummary } from "./PackageAdjustmentDb";
 import { packageEffectiveCount, packageRowHasData, packageRowTotal, calculatePackageSummary } from "./pricingEngines";
+import { bookingDigitsFromUb, bookingUbFromDigits } from "./bookingUb";
 import { bookingLifecycleConfigs } from "./BookingLifecycle";
 import "./PackageBookingFlow.css";
 
@@ -61,20 +60,6 @@ function newRow(passengerType: PackagePassengerType): PackageRowState {
 function money(value: number) {
   return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
-function cleanDigits(value: string) {
-  return value.replace(/\D/g, "").slice(0, 4);
-}
-function ubFromDigits(value: string) {
-  const digits = cleanDigits(value);
-  return digits ? `UB-${digits.padStart(4, "0")}` : "";
-}
-function normalized(value: string) {
-  return value.trim().toUpperCase();
-}
-function digitsFromUb(value: string) {
-  const match = normalized(value).match(/^UB-(\d{1,4})$/);
-  return match ? String(Number(match[1])) : "";
-}
 
 export default function PackageBookingFlowV2({
   companyId,
@@ -101,8 +86,6 @@ export default function PackageBookingFlowV2({
     setUbDigits,
     ubNumber,
     setUbNumber,
-    assigned: ubAssigned,
-    setAssigned: setUbAssigned,
     saved: commercialSaved,
     setSaved: setCommercialSaved,
     detailsOpen,
@@ -115,18 +98,13 @@ export default function PackageBookingFlowV2({
     setError,
     message,
     setMessage,
-    assignUb: hookAssign,
+    validateBookingUb,
     resetState,
   } = useBookingFlowState(companyId, transactionType, entries, serviceLabel);
 
   const [rows, setRows] = useState<PackageRowState[]>([newRow("ADULT")]);
   const [registerFilter, setRegisterFilter] = useState<RegisterFilter>("ALL");
   const [search, setSearch] = useState("");
-  const [quickAccountOpen, setQuickAccountOpen] = useState(false);
-  const [quickAccount, setQuickAccount] = useState<PartyInput>(() =>
-    blankPartyInput(activeTransactionType === "SALE" ? "PARTY" : "VENDOR"),
-  );
-  const [quickAccountBusy, setQuickAccountBusy] = useState(false);
   const [adjustmentSummaries, setAdjustmentSummaries] = useState<Record<string, PackageAdjustmentSummary>>({});
   const [adjustmentBooking, setAdjustmentBooking] = useState<PackageBooking | null>(null);
   const [historyBooking, setHistoryBooking] = useState<PackageBooking | null>(null);
@@ -135,14 +113,6 @@ export default function PackageBookingFlowV2({
     void loadEntries("");
   }, [companyId]);
 
-  const eligibleAccounts = useMemo(() => {
-    const type = activeTransactionType === "SALE" ? "PARTY" : "VENDOR";
-    return parties.filter((item) => item.status === "ACTIVE" && item.account_type === type);
-  }, [parties, activeTransactionType]);
-  const selectedAccount = useMemo(
-    () => parties.find((item) => item.id === counterpartyId) || null,
-    [parties, counterpartyId],
-  );
   const packageTypeSuggestions = useMemo(() => {
     const values = new Set(packageTypeDefaults);
     entries.forEach((entry) =>
@@ -188,12 +158,6 @@ export default function PackageBookingFlowV2({
     setRows([newRow("ADULT")]);
   }
 
-  async function assignUb() {
-    if (!ubDigits) return setError("Enter a booking number using 1 to 4 digits.");
-    const formatted = ubFromDigits(ubDigits);
-    hookAssign(formatted);
-  }
-
   function buildLines(): PackageBookingLineInput[] {
     return rows.filter(packageRowHasData).map((row) => ({
       passengerType: row.passengerType,
@@ -206,7 +170,6 @@ export default function PackageBookingFlowV2({
   }
 
   async function saveCommercial() {
-    if (!ubAssigned) return setError("Create / Assign the Booking UB first.");
     if (editingId)
       return setError(
         "Saved Package commercial values are changed through Booking Adjustment so every correction/amendment keeps history.",
@@ -216,13 +179,17 @@ export default function PackageBookingFlowV2({
     setError("");
     setMessage("");
     try {
+      const formatted = bookingUbFromDigits(ubDigits);
+      const valid = await validateBookingUb(formatted);
+      if (!valid) return;
+      setUbNumber(formatted);
       const id = await createPackageCommercialBooking(
         companyId,
         {
           transactionType: activeTransactionType,
           counterpartyId,
           transactionDate: bookingDate,
-          ubNumber,
+          ubNumber: formatted,
           lines: buildLines(),
         },
         userId,
@@ -230,7 +197,7 @@ export default function PackageBookingFlowV2({
       setEditingId(id);
       setCommercialSaved(true);
       setMessage(
-        `${serviceLabel} booking ${ubNumber} saved successfully. Commercial values are now locked; use Booking Adjustment for future corrections, amendments or cancellations.`,
+        `${serviceLabel} booking ${formatted} saved. Additional booking details are available below. Commercial changes use Booking Adjustment.`,
       );
       await loadEntries(search);
       await onChanged?.();
@@ -260,33 +227,12 @@ export default function PackageBookingFlowV2({
     setRows((current) => current.filter((row) => row.rowId !== rowId));
   }
 
-  async function saveQuickAccount() {
-    const accountType = activeTransactionType === "SALE" ? "PARTY" : "VENDOR";
-    const input = normalizePartyInput({ ...quickAccount, accountType, status: quickAccount.status || "ACTIVE" });
-    if (!input.name) return setError(`${activeTransactionType === "SALE" ? "Party" : "Vendor"} name is required.`);
-    setQuickAccountBusy(true);
-    setError("");
-    try {
-      const id = await createParty(companyId, input, userId);
-      setCounterpartyId(id);
-      setQuickAccountOpen(false);
-      setQuickAccount(blankPartyInput(accountType));
-      await onChanged?.();
-      setMessage(`${activeTransactionType === "SALE" ? "Party" : "Vendor"} created and selected for this booking.`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setQuickAccountBusy(false);
-    }
-  }
-
   function openEntry(entry: PackageBooking) {
     setActiveTransactionType(entry.transaction_type);
     setCounterpartyId(entry.counterparty_id);
     setBookingDate(entry.transaction_date);
     setUbNumber(entry.ub_number);
-    setUbDigits(digitsFromUb(entry.ub_number));
-    setUbAssigned(true);
+    setUbDigits(bookingDigitsFromUb(entry.ub_number));
     setCommercialSaved(true);
     setDetailsOpen(false);
     setRows(
@@ -447,11 +393,9 @@ export default function PackageBookingFlowV2({
   }
 
   function renderForm() {
-    const previewUb = ubFromDigits(ubDigits);
-    const accountNoun = activeTransactionType === "SALE" ? "Party / Customer" : "Vendor / Supplier";
+    const previewUb = bookingUbFromDigits(ubDigits);
     const openedSummary = editingId ? adjustmentSummaries[editingId] : undefined;
     const openedLifecycle = openedSummary?.lifecycleStatus || "ACTIVE";
-    const openedRevision = openedSummary?.revisionNo || 1;
     return (
       <section className="booking-entry-screen package14-page">
         <div className="booking-screen-toolbar package14-toolbar">
@@ -483,211 +427,132 @@ export default function PackageBookingFlowV2({
             <p>
               {editingId
                 ? `Review the current effective ${serviceLabel} booking. Commercial changes are protected by Booking Adjustment history.`
-                : `Create the UB first, save the accounting ${serviceLabel} values second, then complete optional passenger/travel operations when required.`}
+                : `Complete account, UB, and ${serviceLabel.toLowerCase()} rates on one form, then save once. Additional booking details are optional.`}
             </p>
           </div>
         </div>
         {message && <div className="alert success">{message}</div>}
         {error && <div className="alert error">{error}</div>}
 
-        {!ubAssigned ? (
-          <section className="package14-identity">
-            <div className="package14-section-heading">
-              <span>01</span>
-              <div>
-                <b>CREATE / ASSIGN BOOKING UB</b>
-                <small>Select the account, booking date and a 1–4 digit booking number.</small>
+        <section className="package14-commercial-card package14-unified-form">
+          <ProgressiveBookingIdentity
+            companyId={companyId}
+            userId={userId}
+            transactionType={activeTransactionType}
+            parties={parties}
+            counterpartyId={counterpartyId}
+            onCounterpartyChange={setCounterpartyId}
+            bookingDate={bookingDate}
+            onBookingDateChange={setBookingDate}
+            ubDigits={ubDigits}
+            onUbDigitsChange={setUbDigits}
+            ubNumber={ubNumber}
+            assigned={false}
+            saved={commercialSaved}
+            onAssign={() => {}}
+            onAccountsChanged={onChanged}
+            onError={setError}
+            onMessage={setMessage}
+            serviceLabel={serviceLabel}
+            variant="unified"
+            headerGridClass="package14-identity-grid"
+            unifiedHint={`Party, date, and UB are saved together with ${serviceLabel.toLowerCase()} rates when you click Save Booking.`}
+            embedded
+          />
+
+          <div className="package14-section-heading package14-commercial-head">
+            <span>2</span>
+            <div>
+              <b>{serviceLabel.toUpperCase()} DETAILS &amp; RATES</b>
+              <small>
+                {editingId
+                  ? "Current effective commercial rows — use Booking Adjustment to change them."
+                  : "Enter package rows below, then save the full booking in one step."}
+              </small>
+            </div>
+          </div>
+          <datalist id="package14-type-options">
+            {packageTypeSuggestions.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
+          <div className="package14-passenger-stack">
+            {renderPassengerSection("ADULT")}
+            {renderPassengerSection("CHILD")}
+            {renderPassengerSection("INFANT")}
+          </div>
+          <div className="package14-summary">
+            <div className="package14-summary-title">
+              <span>{serviceLabel.toUpperCase()} BOOKING SUMMARY</span>
+              <small>
+                {editingId
+                  ? "Current row base. Register total may also include amendment/cancellation charges or credits."
+                  : `These totals form the ${serviceLabel} accounting value saved with the booking.`}
+              </small>
+            </div>
+            <div className="package14-summary-body">
+              <div className="package14-breakdown">
+                <div>
+                  <span>Adults</span>
+                  <b>{totals.qty.ADULT}</b>
+                  <strong>{money(totals.amount.ADULT)}</strong>
+                </div>
+                <div>
+                  <span>Children</span>
+                  <b>{totals.qty.CHILD}</b>
+                  <strong>{money(totals.amount.CHILD)}</strong>
+                </div>
+                <div>
+                  <span>Infants</span>
+                  <b>{totals.qty.INFANT}</b>
+                  <strong>{money(totals.amount.INFANT)}</strong>
+                </div>
+              </div>
+              <div className="package14-grand">
+                <div>
+                  <small>TOTAL ACTIVE PAX</small>
+                  <b>{totals.totalPax}</b>
+                </div>
+                <div>
+                  <small>ACTIVE ROW BASE</small>
+                  <strong>{money(totals.grandTotal)}</strong>
+                </div>
               </div>
             </div>
-            <div className="package14-identity-grid">
-              <label className="package14-account-field">
-                {accountNoun} *
-                <div className="package14-account-select">
-                  <select value={counterpartyId} onChange={(e) => setCounterpartyId(e.target.value)}>
-                    <option value="">Select {accountNoun}</option>
-                    {eligibleAccounts.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuickAccount(blankPartyInput(activeTransactionType === "SALE" ? "PARTY" : "VENDOR"));
-                      setQuickAccountOpen(true);
-                      setError("");
-                    }}
-                  >
-                    + Create {activeTransactionType === "SALE" ? "Party" : "Vendor"}
-                  </button>
-                </div>
-                <small>Quick-create keeps you inside this booking screen.</small>
-              </label>
-              <label>
-                Date of Booking *
-                <input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} />
-                <small>Accounting date for the {serviceLabel} booking.</small>
-              </label>
-              <label>
-                Booking Number *
-                <div className="package14-ub-input">
-                  <span>UB-</span>
-                  <input
-                    inputMode="numeric"
-                    maxLength={4}
-                    value={ubDigits}
-                    onChange={(e) => setUbDigits(cleanDigits(e.target.value))}
-                    placeholder="1234"
-                  />
-                </div>
-                <small>Numbers only. Example: 7 becomes UB-0007.</small>
-              </label>
-            </div>
-            <div className="package14-ub-preview">
-              <div>
-                <small>BOOKING UB PREVIEW</small>
-                <b>{previewUb || "UB-0000"}</b>
-                <span>{previewUb ? "Ready to create / assign" : "Enter a booking number"}</span>
-              </div>
-              <button type="button" className="primary" onClick={assignUb}>
-                Create / Assign {previewUb || "UB"}
+          </div>
+          <div className="package14-commercial-actions">
+            {commercialSaved && (
+              <button type="button" className="secondary" onClick={resetForm}>
+                + New {serviceLabel} Booking
               </button>
-            </div>
-          </section>
-        ) : (
-          <section className={`package14-identity-complete ${commercialSaved ? "saved" : "ready"}`}>
-            <span className="package14-check">✓</span>
-            <div className="package14-identity-main">
-              <small>{commercialSaved ? `${serviceLabel.toUpperCase()} BOOKING` : "BOOKING UB READY"}</small>
-              <b>{ubNumber}</b>
-              <span>{selectedAccount?.name || accountNoun}</span>
-            </div>
-            <div>
-              <small>BOOKING DATE</small>
-              <b>{bookingDate}</b>
-            </div>
-            <div>
-              <small>TRANSACTION</small>
-              <b>{activeTransactionType}</b>
-            </div>
-            <div>
-              <small>LIFECYCLE</small>
-              <b>{commercialSaved ? `${openedLifecycle} · REV ${openedRevision}` : "READY"}</b>
-            </div>
-            {!commercialSaved ? (
+            )}
+            {!editingId && canCreate && (
               <button
                 type="button"
-                className="secondary"
+                className="primary package14-save"
+                disabled={busy}
+                onClick={() => void saveCommercial()}
+              >
+                {busy ? "Saving..." : `Save ${serviceLabel} Booking — ${previewUb || "UB-0000"}`}
+              </button>
+            )}
+            {editingId && canEdit && openedLifecycle !== "CANCELLED" && (
+              <button
+                type="button"
+                className="primary package14-save"
                 onClick={() => {
-                  setUbAssigned(false);
-                  setMessage("");
+                  const entry = entries.find((item) => item.id === editingId);
+                  if (entry) {
+                    setAdjustmentBooking(entry);
+                    setMode("REGISTER");
+                  }
                 }}
               >
-                Edit Booking Header
+                Open Booking Adjustment
               </button>
-            ) : (
-              <span className="package14-lock">UB/account identity locked</span>
             )}
-          </section>
-        )}
-
-        {ubAssigned && (
-          <section className="package14-commercial-card">
-            <div className="package14-section-heading">
-              <span>02</span>
-              <div>
-                <b>{serviceLabel.toUpperCase()} DETAILS & RATES</b>
-                <small>
-                  {editingId
-                    ? "Current effective commercial rows — use Booking Adjustment to change them."
-                    : `Commercial / accounting data saved under ${ubNumber}.`}
-                </small>
-              </div>
-            </div>
-            <datalist id="package14-type-options">
-              {packageTypeSuggestions.map((item) => (
-                <option key={item} value={item} />
-              ))}
-            </datalist>
-            <div className="package14-passenger-stack">
-              {renderPassengerSection("ADULT")}
-              {renderPassengerSection("CHILD")}
-              {renderPassengerSection("INFANT")}
-            </div>
-            <div className="package14-summary">
-              <div className="package14-summary-title">
-                <span>{serviceLabel.toUpperCase()} BOOKING SUMMARY</span>
-                <small>
-                  {editingId
-                    ? "Current row base. Register total may also include amendment/cancellation charges or credits."
-                    : `Part of Section 02 — these totals form the ${serviceLabel} accounting value.`}
-                </small>
-              </div>
-              <div className="package14-summary-body">
-                <div className="package14-breakdown">
-                  <div>
-                    <span>Adults</span>
-                    <b>{totals.qty.ADULT}</b>
-                    <strong>{money(totals.amount.ADULT)}</strong>
-                  </div>
-                  <div>
-                    <span>Children</span>
-                    <b>{totals.qty.CHILD}</b>
-                    <strong>{money(totals.amount.CHILD)}</strong>
-                  </div>
-                  <div>
-                    <span>Infants</span>
-                    <b>{totals.qty.INFANT}</b>
-                    <strong>{money(totals.amount.INFANT)}</strong>
-                  </div>
-                </div>
-                <div className="package14-grand">
-                  <div>
-                    <small>TOTAL ACTIVE PAX</small>
-                    <b>{totals.totalPax}</b>
-                  </div>
-                  <div>
-                    <small>ACTIVE ROW BASE</small>
-                    <strong>{money(totals.grandTotal)}</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="package14-commercial-actions">
-              {commercialSaved && (
-                <button type="button" className="secondary" onClick={resetForm}>
-                  + New {serviceLabel} Booking
-                </button>
-              )}
-              {!editingId && canCreate && (
-                <button
-                  type="button"
-                  className="primary package14-save"
-                  disabled={busy}
-                  onClick={() => void saveCommercial()}
-                >
-                  {busy ? "Saving..." : `Save ${serviceLabel} Booking — ${ubNumber}`}
-                </button>
-              )}
-              {editingId && canEdit && openedLifecycle !== "CANCELLED" && (
-                <button
-                  type="button"
-                  className="primary package14-save"
-                  onClick={() => {
-                    const entry = entries.find((item) => item.id === editingId);
-                    if (entry) {
-                      setAdjustmentBooking(entry);
-                      setMode("REGISTER");
-                    }
-                  }}
-                >
-                  Open Booking Adjustment
-                </button>
-              )}
-            </div>
-          </section>
-        )}
+          </div>
+        </section>
 
         {commercialSaved && editingId && (
           <section className={`package14-additional package15-shell ${detailsOpen ? "open" : "closed"}`}>
@@ -696,15 +561,11 @@ export default function PackageBookingFlowV2({
               className="package14-additional-toggle"
               onClick={() => setDetailsOpen((value) => !value)}
             >
-              <span className="package14-step-purple">03</span>
               <div>
-                <b>
-                  {serviceLabel.toUpperCase()} TRAVEL & PASSENGER DETAILS — {ubNumber}
-                </b>
-                <small>Operational details remain separate from accounting values.</small>
+                <b>ADDITIONAL BOOKING DETAILS — {ubNumber}</b>
+                <small>Travel and passenger operations remain separate from accounting values.</small>
               </div>
-              <span className="package14-optional">OPTIONAL</span>
-              <strong>{detailsOpen ? "Close Details ▲" : "+ Open Details ▼"}</strong>
+              <strong>{detailsOpen ? "Hide ▲" : "Show ▼"}</strong>
             </button>
             {detailsOpen && (
               <PackageOperationalDetails
@@ -721,29 +582,6 @@ export default function PackageBookingFlowV2({
               />
             )}
           </section>
-        )}
-
-        {!ubAssigned && (
-          <div className="package14-next-step">
-            Create / Assign a Booking UB to unlock {serviceLabel} Details & Rates.
-          </div>
-        )}
-        {ubAssigned && !commercialSaved && (
-          <div className="package14-next-step">Save Section 02 to activate the {serviceLabel} booking.</div>
-        )}
-
-        {quickAccountOpen && (
-          <AccountFormModal
-            title={`Add New ${activeTransactionType === "SALE" ? "Party" : "Vendor"}`}
-            busy={quickAccountBusy}
-            busyLabel="Creating..."
-            primaryLabel={`Create ${activeTransactionType === "SALE" ? "Party" : "Vendor"}`}
-            backdropClassName="package14-modal-backdrop"
-            onClose={() => setQuickAccountOpen(false)}
-            onSubmit={() => void saveQuickAccount()}
-          >
-            <AccountForm value={quickAccount} onChange={setQuickAccount} />
-          </AccountFormModal>
         )}
       </section>
     );
