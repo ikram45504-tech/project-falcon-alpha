@@ -85,14 +85,26 @@
 }
 
 @media print {
+  @page {
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
   body.printing-receipt > *:not(.payment-receipt-print-layer) {
     display: none !important;
   }
 
   .payment-receipt-print-layer {
     display: block !important;
-    position: fixed;
-    inset: 0;
+    position: static;
+    inset: auto;
+    width: 100%;
     margin: 0;
     padding: 0;
     background: #fff;
@@ -100,8 +112,10 @@
 
   .payment-receipt-print-layer img {
     display: block;
-    width: 100%;
-    max-width: 210mm;
-    margin: 0 auto;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0;
+    object-fit: contain;
   }
 }

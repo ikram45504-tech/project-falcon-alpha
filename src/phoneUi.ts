@@ -36,6 +36,25 @@ export function isInstalledStandalone() {
   );
 }
 
+export function isIosDevice() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPod|iPad/i.test(ua)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
+/** Chrome, Firefox, Edge, etc. on iOS — cannot install PWAs. */
+export function isIosInAppBrowser() {
+  if (!isIosDevice()) return false;
+  const ua = navigator.userAgent || "";
+  return /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+}
+
+export function isIosSafariBrowser() {
+  if (!isIosDevice() || isIosInAppBrowser()) return false;
+  return /Safari/i.test(navigator.userAgent || "");
+}
+
 export function isPhoneViewport() {
   if (typeof window === "undefined") return false;
   if (isTauriShell()) return false;

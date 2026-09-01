@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { isPhoneViewport, isTauriShell } from "./phoneUi";
+import {
+  isIosDevice,
+  isIosInAppBrowser,
+  isIosSafariBrowser,
+  isMobileDevice,
+  isPhoneViewport,
+  isTauriShell,
+} from "./phoneUi";
 import { usePwaUpdatePending } from "./usePwaUpdate";
 
 type BeforeInstallPromptEvent = Event & {
@@ -20,6 +27,7 @@ function isStandaloneDisplay() {
 export function PwaChrome() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installDismissed, setInstallDismissed] = useState(() => sessionStorage.getItem(INSTALL_DISMISS_KEY) === "1");
+  const [showIosInstallGuide, setShowIosInstallGuide] = useState(false);
   const { updatePending, setUpdatePending } = usePwaUpdatePending();
   const [bannerVisible, setBannerVisible] = useState(false);
   const [offline, setOffline] = useState(() => !navigator.onLine);
@@ -43,6 +51,12 @@ export function PwaChrome() {
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
   }, []);
+
+  useEffect(() => {
+    if (isTauriShell() || isStandaloneDisplay() || installDismissed) return;
+    if (!isMobileDevice() || !isIosDevice()) return;
+    setShowIosInstallGuide(true);
+  }, [installDismissed]);
 
   useEffect(() => {
     const onOnline = () => setOffline(false);
@@ -100,6 +114,7 @@ export function PwaChrome() {
     sessionStorage.setItem(INSTALL_DISMISS_KEY, "1");
     setInstallDismissed(true);
     setInstallEvent(null);
+    setShowIosInstallGuide(false);
   }
 
   function dismissUpdateBanner() {
@@ -114,7 +129,13 @@ export function PwaChrome() {
   if (isTauriShell()) return null;
 
   const showInstall = Boolean(installEvent) && !installDismissed && !isStandaloneDisplay();
+  const showIosInstall = showIosInstallGuide && !installDismissed && !isStandaloneDisplay() && !showInstall;
   const showUpdate = isMobileShell && updatePending && bannerVisible;
+  const iosInstallMessage = isIosInAppBrowser()
+    ? "Install on iPhone works in Safari only. Open travelhisab.vercel.app in Safari, tap Share, then Add to Home Screen."
+    : isIosSafariBrowser()
+      ? "Install Travel Hisab: tap Share at the bottom of Safari, then Add to Home Screen."
+      : "Install Travel Hisab on iPhone: open this site in Safari, tap Share, then Add to Home Screen.";
 
   return (
     <div className="pwa-chrome" aria-live="polite">
@@ -147,6 +168,17 @@ export function PwaChrome() {
             </button>
             <button type="button" className="pwa-banner-ghost" onClick={dismissInstall}>
               Not now
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showIosInstall ? (
+        <div className="pwa-banner pwa-banner-install" role="dialog" aria-label="Install Travel Hisab on iPhone">
+          <span>{iosInstallMessage}</span>
+          <div className="pwa-banner-actions">
+            <button type="button" className="pwa-banner-ghost" onClick={dismissInstall}>
+              Got it
             </button>
           </div>
         </div>
