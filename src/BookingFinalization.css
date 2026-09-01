@@ -10,6 +10,16 @@
   margin: 0 0 8px;
 }
 
+.visa-unified-form .visa-commercial-head {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid #d2deeb;
+}
+
+.visa-unified-form .package14-identity-complete {
+  margin: 0 0 8px;
+}
+
 .bf-page {
   display: grid;
   gap: 16px;
