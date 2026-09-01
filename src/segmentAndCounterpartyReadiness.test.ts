@@ -109,13 +109,13 @@ describe("six-segment booking readiness", () => {
     }
   });
 
-  it("uses ProgressiveBookingIdentity for five segments and Package quick account modal", () => {
-    for (const segment of ["TICKET", "HOTEL", "VISA", "TRANSPORT", "MISC"] as const) {
-      expect(read(SEGMENT_MODULES[segment].flowUi)).toContain("ProgressiveBookingIdentity");
+  it("uses ProgressiveBookingIdentity unified Phase 2 flow across all six segments", () => {
+    for (const segment of SEGMENTS) {
+      const ui = read(SEGMENT_MODULES[segment].flowUi);
+      expect(ui).toContain("ProgressiveBookingIdentity");
+      expect(ui).toContain('variant="unified"');
+      expect(ui).toContain("validateBookingUb");
     }
-    const packageUi = read(SEGMENT_MODULES.PACKAGE.flowUi);
-    expect(packageUi).toContain("AccountFormModal");
-    expect(packageUi).toContain('blankPartyInput(activeTransactionType === "SALE" ? "PARTY" : "VENDOR")');
   });
 });
 
