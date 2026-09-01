@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregatePartyBookingTotals, type BookingAccountingEntry } from "./BookingAccounting";
+import { aggregatePartyBookingTotals, webBookingSelectColumns, type BookingAccountingEntry } from "./BookingAccounting";
 import { aggregatePartyPaymentTotals } from "./db";
 
 function bookingEntry(
@@ -23,6 +23,14 @@ function bookingEntry(
 }
 
 describe("web financial totals aggregation", () => {
+  it("uses SAR columns only for hotel/visa/transport/misc web queries", () => {
+    expect(webBookingSelectColumns(false)).toBe(
+      "id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at",
+    );
+    expect(webBookingSelectColumns(true)).toContain("total_sar");
+    expect(webBookingSelectColumns(false)).not.toContain("total_sar");
+  });
+
   it("sums active sale and purchase totals per counterparty", () => {
     const totals = aggregatePartyBookingTotals([
       bookingEntry({ counterparty_id: "p1", transaction_type: "SALE", total_pkr: 10000 }),

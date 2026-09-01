@@ -120,22 +120,30 @@ const WEB_BOOKING_SOURCES: Array<{
   { table: "misc_bookings", service_type: "MISC", includeSar: true },
 ];
 
-async function fetchWebBookingAccountingEntries(companyId: string, counterpartyId = "") {
-  const { data: parties, error: partyError } = await supabase
-    .from("parties")
-    .select("id,name")
-    .eq("company_id", companyId);
-  if (partyError) throw new Error(partyError.message);
+const WEB_BOOKING_BASE_SELECT =
+  "id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at";
 
-  const partyNames = new Map((parties || []).map((row) => [String(row.id), String(row.name || "")]));
+export function webBookingSelectColumns(includeSar: boolean) {
+  return includeSar ? `${WEB_BOOKING_BASE_SELECT},total_sar,unconverted_sar` : WEB_BOOKING_BASE_SELECT;
+}
+
+async function fetchWebBookingAccountingEntries(companyId: string, counterpartyId = "") {
+  const [{ data: parties, error: partyError }, { data: vendors, error: vendorError }] = await Promise.all([
+    supabase.from("parties").select("id,name").eq("company_id", companyId),
+    supabase.from("vendors").select("id,name").eq("company_id", companyId),
+  ]);
+  if (partyError) throw new Error(partyError.message);
+  if (vendorError) throw new Error(vendorError.message);
+
+  const counterpartyNames = new Map<string, string>();
+  for (const row of parties || []) counterpartyNames.set(String(row.id), String(row.name || ""));
+  for (const row of vendors || []) counterpartyNames.set(String(row.id), String(row.name || ""));
   const entries: BookingAccountingEntry[] = [];
 
   for (const source of WEB_BOOKING_SOURCES) {
     let query = supabase
       .from(source.table)
-      .select(
-        "id,company_id,transaction_type,counterparty_id,transaction_date,ub_number,total_pkr,status,created_at,total_sar,unconverted_sar",
-      )
+      .select(webBookingSelectColumns(source.includeSar))
       .eq("company_id", companyId);
     if (counterpartyId) query = query.eq("counterparty_id", counterpartyId);
     const { data, error } = await query;
@@ -148,7 +156,7 @@ async function fetchWebBookingAccountingEntries(companyId: string, counterpartyI
         service_type: source.service_type,
         transaction_type: row.transaction_type as BookingAccountingDirection,
         counterparty_id: String(row.counterparty_id),
-        counterparty_name: partyNames.get(String(row.counterparty_id)) || "",
+        counterparty_name: counterpartyNames.get(String(row.counterparty_id)) || "",
         transaction_date: String(row.transaction_date),
         ub_number: String(row.ub_number || ""),
         total_sar: source.includeSar ? Number(row.total_sar || 0) : 0,

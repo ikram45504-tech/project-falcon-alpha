@@ -2,6 +2,7 @@ import Database from "@tauri-apps/plugin-sql";
 import { initMiscDatabase } from "./miscDb";
 import type { Party } from "./db";
 import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
+import { getBookingAccountingEntries } from "./BookingAccounting";
 import { isDesktopApp } from "./cloudSync";
 import { supabase } from "./supabaseClient";
 
@@ -74,68 +75,136 @@ const bookingUnion = `
   FROM misc_bookings b
 `;
 
+function sortLedgerTransactions(transactions: LedgerTransaction[]) {
+  return [...transactions].sort((a, b) => {
+    const dateCmp = String(a.transaction_date).localeCompare(String(b.transaction_date));
+    if (dateCmp !== 0) return dateCmp;
+    return String(a.created_at).localeCompare(String(b.created_at));
+  });
+}
+
+export function buildLedgerRows(transactions: LedgerTransaction[], party: Party): LedgerRow[] {
+  const isVendor = party.account_type === "VENDOR";
+  let running_balance = 0;
+
+  return transactions.map((tx) => {
+    let debit = 0;
+    let credit = 0;
+    let description = tx.description;
+    if (tx.kind === "SALE_BOOKING" || tx.kind === "PURCHASE_BOOKING") {
+      const service = tx.service_type as BookingServiceName;
+      description = `${bookingServiceDisplayLabel(service)} Booking`;
+    }
+
+    if (tx.status === "ACTIVE") {
+      if (isVendor) {
+        if (tx.kind === "PURCHASE_BOOKING") {
+          credit = tx.total_pkr;
+          running_balance += credit;
+        } else if (tx.kind === "PAYMENT") {
+          if (tx.payment_kind === "VENDOR_REFUND") {
+            credit = tx.total_pkr;
+            running_balance += credit;
+          } else {
+            debit = tx.total_pkr;
+            running_balance -= debit;
+          }
+        } else if (tx.kind === "SALE_BOOKING") {
+          debit = tx.total_pkr;
+          running_balance -= debit;
+          description = `${tx.description} [Cross-type: SALE on VENDOR]`;
+        }
+      } else if (tx.kind === "SALE_BOOKING") {
+        debit = tx.total_pkr;
+        running_balance += debit;
+      } else if (tx.kind === "PAYMENT") {
+        if (tx.payment_kind === "PARTY_REFUND") {
+          debit = tx.total_pkr;
+          running_balance += debit;
+        } else {
+          credit = tx.total_pkr;
+          running_balance -= credit;
+        }
+      } else if (tx.kind === "PURCHASE_BOOKING") {
+        credit = tx.total_pkr;
+        running_balance -= credit;
+        description = `${tx.description} [Cross-type: PURCHASE on PARTY]`;
+      }
+    }
+
+    return {
+      ...tx,
+      description,
+      debit,
+      credit,
+      running_balance,
+    };
+  });
+}
+
+async function fetchWebPaymentLedgerTransactions(companyId: string, partyId: string) {
+  const { data: payments, error: paymentError } = await supabase
+    .from("payment_entries")
+    .select("id,transaction_date,created_at,payment_type,receipt_no,description,paid_amount,status")
+    .eq("company_id", companyId)
+    .eq("party_id", partyId);
+  if (paymentError) throw new Error(paymentError.message);
+
+  const paymentIds = (payments || []).map((p) => p.id);
+  const metaByPayment = new Map<string, string>();
+  if (paymentIds.length) {
+    const { data: metas, error: metaError } = await supabase
+      .from("payment_v2_meta")
+      .select("payment_id,transaction_kind")
+      .in("payment_id", paymentIds);
+    if (metaError) throw new Error(metaError.message);
+    for (const meta of metas || []) {
+      metaByPayment.set(meta.payment_id, meta.transaction_kind);
+    }
+  }
+
+  return (payments || []).map((row): LedgerTransaction => ({
+    id: row.id,
+    transaction_date: row.transaction_date,
+    created_at: row.created_at,
+    kind: "PAYMENT",
+    service_type: row.payment_type,
+    ref_no: row.receipt_no,
+    description: row.description || "Payment",
+    total_pkr: Number(row.paid_amount) || 0,
+    status: row.status as "ACTIVE" | "VOID",
+    payment_kind: metaByPayment.get(row.id),
+  }));
+}
+
+async function fetchWebLedgerTransactions(companyId: string, partyId: string) {
+  const [bookings, payments] = await Promise.all([
+    getBookingAccountingEntries(companyId, partyId),
+    fetchWebPaymentLedgerTransactions(companyId, partyId),
+  ]);
+
+  const bookingTransactions: LedgerTransaction[] = bookings.map((row) => ({
+    id: row.id,
+    transaction_date: row.transaction_date,
+    created_at: row.created_at,
+    kind: (row.transaction_type === "SALE" ? "SALE_BOOKING" : "PURCHASE_BOOKING") as LedgerTransaction["kind"],
+    service_type: row.service_type,
+    ref_no: row.ub_number,
+    description: `${bookingServiceDisplayLabel(row.service_type)} Booking`,
+    total_pkr: Number(row.total_pkr) || 0,
+    status: row.status,
+  }));
+
+  return sortLedgerTransactions([...bookingTransactions, ...payments]);
+}
+
 export async function getChronologicalLedger(companyId: string, party: Party): Promise<LedgerRow[]> {
   await initMiscDatabase();
 
   let transactions: LedgerTransaction[];
 
   if (!isDesktopApp()) {
-    // Phase-1 web ledger: package bookings + payments (synced tables).
-    const { data: packages, error: packageError } = await supabase
-      .from("package_bookings")
-      .select("id,transaction_date,created_at,transaction_type,ub_number,total_pkr,status")
-      .eq("company_id", companyId)
-      .eq("counterparty_id", party.id);
-    if (packageError) throw new Error(packageError.message);
-
-    const { data: payments, error: paymentError } = await supabase
-      .from("payment_entries")
-      .select("id,transaction_date,created_at,payment_type,receipt_no,description,paid_amount,status")
-      .eq("company_id", companyId)
-      .eq("party_id", party.id);
-    if (paymentError) throw new Error(paymentError.message);
-
-    const paymentIds = (payments || []).map((p) => p.id);
-    const metaByPayment = new Map<string, string>();
-    if (paymentIds.length) {
-      const { data: metas } = await supabase
-        .from("payment_v2_meta")
-        .select("payment_id,transaction_kind")
-        .in("payment_id", paymentIds);
-      for (const meta of metas || []) {
-        metaByPayment.set(meta.payment_id, meta.transaction_kind);
-      }
-    }
-
-    transactions = [
-      ...(packages || []).map((row) => ({
-        id: row.id,
-        transaction_date: row.transaction_date,
-        created_at: row.created_at,
-        kind: (row.transaction_type === "SALE" ? "SALE_BOOKING" : "PURCHASE_BOOKING") as LedgerTransaction["kind"],
-        service_type: "PACKAGE",
-        ref_no: row.ub_number,
-        description: `${bookingServiceDisplayLabel("PACKAGE")} Booking`,
-        total_pkr: Number(row.total_pkr) || 0,
-        status: row.status as "ACTIVE" | "VOID",
-      })),
-      ...(payments || []).map((row) => ({
-        id: row.id,
-        transaction_date: row.transaction_date,
-        created_at: row.created_at,
-        kind: "PAYMENT" as const,
-        service_type: row.payment_type,
-        ref_no: row.receipt_no,
-        description: row.description || "Payment",
-        total_pkr: Number(row.paid_amount) || 0,
-        status: row.status as "ACTIVE" | "VOID",
-        payment_kind: metaByPayment.get(row.id),
-      })),
-    ].sort((a, b) => {
-      const dateCmp = String(a.transaction_date).localeCompare(String(b.transaction_date));
-      if (dateCmp !== 0) return dateCmp;
-      return String(a.created_at).localeCompare(String(b.created_at));
-    });
+    transactions = await fetchWebLedgerTransactions(companyId, party.id);
   } else {
     const database = await db();
     transactions = await database.select<LedgerTransaction[]>(
@@ -178,72 +247,21 @@ export async function getChronologicalLedger(companyId: string, party: Party): P
     );
   }
 
-  const isVendor = party.account_type === "VENDOR";
-  let running_balance = 0;
-
-  return transactions.map((tx) => {
-    let debit = 0;
-    let credit = 0;
-    let description = tx.description;
-    if (tx.kind === "SALE_BOOKING" || tx.kind === "PURCHASE_BOOKING") {
-      const service = tx.service_type as BookingServiceName;
-      description = `${bookingServiceDisplayLabel(service)} Booking`;
-    }
-
-    if (tx.status === "ACTIVE") {
-      if (isVendor) {
-        // For VENDOR: Payable Balance
-        if (tx.kind === "PURCHASE_BOOKING") {
-          credit = tx.total_pkr; // Vendor provided service, they credit our account (we owe them)
-          running_balance += credit;
-        } else if (tx.kind === "PAYMENT") {
-          if (tx.payment_kind === "VENDOR_REFUND") {
-            credit = tx.total_pkr; // Vendor refunded us, increases what we owe them (reverses payment)
-            running_balance += credit;
-          } else {
-            debit = tx.total_pkr; // We paid vendor, reduces what we owe
-            running_balance -= debit;
-          }
-        } else if (tx.kind === "SALE_BOOKING") {
-          debit = tx.total_pkr; // VENDOR buys from us -> reduces payable
-          running_balance -= debit;
-          description = `${tx.description} [Cross-type: SALE on VENDOR]`;
-        }
-      } else {
-        // For PARTY (Customer): Receivable Balance
-        if (tx.kind === "SALE_BOOKING") {
-          debit = tx.total_pkr; // We provided service, we debit their account (they owe us)
-          running_balance += debit;
-        } else if (tx.kind === "PAYMENT") {
-          if (tx.payment_kind === "PARTY_REFUND") {
-            debit = tx.total_pkr; // We refunded customer, increases what they owe us (reverses receipt)
-            running_balance += debit;
-          } else {
-            credit = tx.total_pkr; // They paid us, reduces what they owe
-            running_balance -= credit;
-          }
-        } else if (tx.kind === "PURCHASE_BOOKING") {
-          credit = tx.total_pkr; // WE buy from PARTY -> reduces receivable
-          running_balance -= credit;
-          description = `${tx.description} [Cross-type: PURCHASE on PARTY]`;
-        }
-      }
-    }
-
-    return {
-      ...tx,
-      description,
-      debit,
-      credit,
-      running_balance,
-    };
-  });
+  return buildLedgerRows(transactions, party);
 }
 
 export async function getGlobalUbSaleOwner(
   companyId: string,
   ubNumber: string,
 ): Promise<{ partyId: string; service: string } | null> {
+  if (!isDesktopApp()) {
+    const entries = await getBookingAccountingEntries(companyId);
+    const owner = entries.find(
+      (row) => row.ub_number === ubNumber && row.transaction_type === "SALE" && row.status === "ACTIVE",
+    );
+    return owner ? { partyId: owner.counterparty_id, service: owner.service_type } : null;
+  }
+
   const database = await db();
   const owners = await database.select<{ party_id: string; service: string }[]>(
     `SELECT counterparty_id AS party_id, service_type AS service

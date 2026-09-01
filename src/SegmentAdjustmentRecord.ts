@@ -149,6 +149,52 @@ export async function initAllSegmentAdjustmentTables() {
 }
 
 export async function loadSegmentAdjustmentsForStatements(companyId: string) {
+  if (!isDesktopApp()) {
+    const selectColumns = `id,company_id,${STATEMENT_ADJUSTMENT_SELECT}`;
+    const rows: StatementSegmentAdjustmentRow[] = [];
+
+    for (const { serviceType, tableName } of SEGMENT_ADJUSTMENT_TABLES) {
+      const { data, error } = await supabase.from(tableName).select(selectColumns).eq("company_id", companyId);
+      if (error) throw new Error(error.message);
+
+      for (const row of data || []) {
+        rows.push({
+          id: String(row.id),
+          company_id: companyId,
+          service_type: serviceType,
+          booking_id: String(row.booking_id),
+          adjustment_type: row.adjustment_type as BookingAdjustmentKind,
+          adjustment_date: String(row.adjustment_date),
+          category: String(row.category || ""),
+          reason: String(row.reason || ""),
+          reference: String(row.reference || ""),
+          notes: String(row.notes || ""),
+          previous_total_pkr: Number(row.previous_total_pkr || 0),
+          previous_base_pkr: Number(row.previous_base_pkr || 0),
+          revised_base_pkr: Number(row.revised_base_pkr || 0),
+          charge_pkr: Number(row.charge_pkr || 0),
+          credit_pkr: Number(row.credit_pkr || 0),
+          account_delta_pkr: Number(row.account_delta_pkr || 0),
+          effective_total_pkr: Number(row.effective_total_pkr || 0),
+          before_snapshot_json: String(row.before_snapshot_json || ""),
+          after_snapshot_json: String(row.after_snapshot_json || ""),
+          cancelled_lines_json: String(row.cancelled_lines_json || ""),
+          revision_no: Number(row.revision_no || 0),
+          lifecycle_status: row.lifecycle_status as BookingLifecycleStatus,
+          created_at: String(row.created_at || ""),
+        });
+      }
+    }
+
+    return rows.sort(
+      (a, b) =>
+        a.service_type.localeCompare(b.service_type) ||
+        a.booking_id.localeCompare(b.booking_id) ||
+        a.revision_no - b.revision_no ||
+        a.created_at.localeCompare(b.created_at),
+    );
+  }
+
   await initAllSegmentAdjustmentTables();
   const database = await db();
   const unions = SEGMENT_ADJUSTMENT_TABLES.map(
