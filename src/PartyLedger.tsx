@@ -10,7 +10,7 @@ import PaymentLedgerModal, { inferKind } from "./PaymentLedgerModal";
 import {
   deletePaymentV2,
   getPaymentV2Meta,
-  getPaymentV2MetaMap,
+  getPaymentV2MetaForPayments,
   voidPaymentV2,
   type PaymentTransactionKind,
   type PaymentV2Meta,
@@ -89,11 +89,14 @@ export default function PartyLedger({
   async function load() {
     setLoading(true);
     try {
-      const [bookingRows, paymentRows, metadata] = await Promise.all([
+      const [bookingRows, paymentRows] = await Promise.all([
         getBookingAccountingEntries(companyId, party.id),
         getPayments(companyId, "", party.id),
-        getPaymentV2MetaMap(companyId),
       ]);
+      const metadata = await getPaymentV2MetaForPayments(
+        companyId,
+        paymentRows.map((row) => row.id),
+      );
       const relevant = party.account_type === "PARTY" ? "SALE" : party.account_type === "VENDOR" ? "PURCHASE" : null;
       setBookings(bookingRows.filter((row) => !relevant || row.transaction_type === relevant));
       setPayments(paymentRows);

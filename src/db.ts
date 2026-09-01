@@ -2568,6 +2568,10 @@ export async function getPayments(companyId: string, search = "", partyId = "") 
     if (error) throw new Error(error.message);
     if (!data) return [];
 
+    if (partyId) {
+      return data as PaymentEntry[];
+    }
+
     const partyNames = await fetchPartyNameMap(companyId);
     return data.map((pay: any) => ({
       ...pay,

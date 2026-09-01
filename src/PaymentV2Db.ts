@@ -291,6 +291,36 @@ export async function getPaymentV2MetaMap(companyId: string) {
   return new Map(rows.map((row) => [row.payment_id, row]));
 }
 
+const PAYMENT_V2_META_SELECT = `payment_id,company_id,transaction_kind,settlement_account,reference,
+            bank_name,bank_transaction_reference,account_title,account_last_digits,
+            cheque_no,transfer_date,handled_by,location,internal_notes,
+            created_by_user_id,updated_by_user_id,created_at,updated_at`;
+
+export async function getPaymentV2MetaForPayments(companyId: string, paymentIds: string[]) {
+  const uniqueIds = [...new Set(paymentIds.filter(Boolean))];
+  if (!uniqueIds.length) return new Map<string, PaymentV2Meta>();
+
+  if (!isDesktopApp()) {
+    const { data, error } = await supabase
+      .from("payment_v2_meta")
+      .select("*")
+      .eq("company_id", companyId)
+      .in("payment_id", uniqueIds);
+    if (error) throw new Error(error.message);
+    return new Map((data as PaymentV2Meta[] | null)?.map((row) => [row.payment_id, row]) || []);
+  }
+
+  const database = await ready();
+  const placeholders = uniqueIds.map((_, index) => `$${index + 2}`).join(",");
+  const rows = await database.select<PaymentV2Meta[]>(
+    `SELECT ${PAYMENT_V2_META_SELECT}
+     FROM payment_v2_meta
+     WHERE company_id=$1 AND payment_id IN (${placeholders})`,
+    [companyId, ...uniqueIds],
+  );
+  return new Map(rows.map((row) => [row.payment_id, row]));
+}
+
 function expectedAccountType(kind: PaymentTransactionKind) {
   return kind === "PARTY_RECEIPT" || kind === "PARTY_REFUND" ? "PARTY" : "VENDOR";
 }

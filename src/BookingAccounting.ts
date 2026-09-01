@@ -163,22 +163,28 @@ async function fetchWebBookingsForTable(table: WebBookingTableName, companyId: s
 }
 
 async function fetchWebBookingAccountingEntries(companyId: string, counterpartyId = "") {
-  const [{ data: parties, error: partyError }, { data: vendors, error: vendorError }] = await Promise.all([
-    supabase.from("parties").select("id,name").eq("company_id", companyId),
-    supabase.from("vendors").select("id,name").eq("company_id", companyId),
-  ]);
-  if (partyError) throw new Error(partyError.message);
-  if (vendorError) throw new Error(vendorError.message);
-
   const counterpartyNames = new Map<string, string>();
-  for (const row of parties || []) counterpartyNames.set(String(row.id), String(row.name || ""));
-  for (const row of vendors || []) counterpartyNames.set(String(row.id), String(row.name || ""));
+  if (!counterpartyId) {
+    const [{ data: parties, error: partyError }, { data: vendors, error: vendorError }] = await Promise.all([
+      supabase.from("parties").select("id,name").eq("company_id", companyId),
+      supabase.from("vendors").select("id,name").eq("company_id", companyId),
+    ]);
+    if (partyError) throw new Error(partyError.message);
+    if (vendorError) throw new Error(vendorError.message);
+
+    for (const row of parties || []) counterpartyNames.set(String(row.id), String(row.name || ""));
+    for (const row of vendors || []) counterpartyNames.set(String(row.id), String(row.name || ""));
+  }
+
+  const bookingRows = await Promise.all(
+    WEB_BOOKING_SOURCES.map((source) =>
+      fetchWebBookingsForTable(source.table as WebBookingTableName, companyId, counterpartyId),
+    ),
+  );
+
   const entries: BookingAccountingEntry[] = [];
-
-  for (const source of WEB_BOOKING_SOURCES) {
-    const rows = await fetchWebBookingsForTable(source.table as WebBookingTableName, companyId, counterpartyId);
-
-    for (const row of rows) {
+  WEB_BOOKING_SOURCES.forEach((source, index) => {
+    for (const row of bookingRows[index]) {
       const sarRow = row as WebBookingRow;
       entries.push({
         id: String(row.id),
@@ -196,7 +202,7 @@ async function fetchWebBookingAccountingEntries(companyId: string, counterpartyI
         created_at: String(row.created_at || ""),
       });
     }
-  }
+  });
 
   return entries.sort(
     (a, b) =>
