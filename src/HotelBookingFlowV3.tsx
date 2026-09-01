@@ -11,7 +11,7 @@ import { createHotelBooking, getHotelBookings } from "./db";
 import ProgressiveBookingIdentity from "./ProgressiveBookingIdentity";
 import HotelRegister from "./HotelRegister";
 import { useBookingFlowState } from "./useBookingFlowState";
-import { bookingDigitsFromUb } from "./bookingUb";
+import { bookingDigitsFromUb, bookingUbFromDigits } from "./bookingUb";
 import {
   getHotelOperationalDetails,
   saveHotelGuestRefs,
@@ -22,6 +22,7 @@ import {
 } from "./HotelOperationalDb";
 import { hotelCountNights, hotelRowHasData, hotelRowSar, hotelRowPkr, calculateHotelSummary } from "./pricingEngines";
 import "./BookingFinalization.css";
+import "./BookingIdentity.css";
 
 type Props = {
   companyId: string;
@@ -143,8 +144,6 @@ export default function HotelBookingFlowV3({
     setUbDigits,
     ubNumber,
     setUbNumber,
-    assigned,
-    setAssigned,
     saved,
     setSaved,
     detailsOpen,
@@ -157,7 +156,7 @@ export default function HotelBookingFlowV3({
     setError,
     message,
     setMessage,
-    assignUb: assign,
+    validateBookingUb,
     resetState,
   } = useBookingFlowState(companyId, transactionType, entries, "Hotel");
 
@@ -176,6 +175,7 @@ export default function HotelBookingFlowV3({
 
   const summary = useMemo(() => calculateHotelSummary(rows), [rows]);
   const commercialLocked = Boolean(editingId);
+  const ubPreview = bookingUbFromDigits(ubDigits);
 
   async function loadEntries() {
     try {
@@ -273,17 +273,20 @@ export default function HotelBookingFlowV3({
       return setError(
         "Commercial Hotel values are locked after saving. Use Hotel Booking Register → Booking Adjustment for Correction, Amendment or Cancellation.",
       );
-    if (!assigned) return setError("Create / Assign the Booking UB first.");
     if (!rows.some(hotelRowHasData)) return setError("Add at least one Hotel row.");
     if (rows.some((row) => hotelRowHasData(row) && !row.guestName.trim()))
       return setError("Guest Name / Family Head is required for each Hotel row.");
     setBusy(true);
     setError("");
     try {
-      const bookingId = await createHotelBooking(companyId, commercialInput(), userId);
+      const formatted = ubPreview;
+      const valid = await validateBookingUb(formatted);
+      if (!valid) return;
+      setUbNumber(formatted);
+      const bookingId = await createHotelBooking(companyId, { ...commercialInput(), ubNumber: formatted }, userId);
       setEditingId(bookingId);
       setSaved(true);
-      setMessage(`Hotel booking ${ubNumber} saved. Optional reservation and rooming details are now available.`);
+      setMessage(`Hotel booking ${formatted} saved. Additional booking details are available below.`);
       await saveHotelGuestRefs(
         companyId,
         bookingId,
@@ -339,7 +342,6 @@ export default function HotelBookingFlowV3({
     setBookingDate(entry.transaction_date);
     setUbNumber(entry.ub_number);
     setUbDigits(bookingDigitsFromUb(entry.ub_number));
-    setAssigned(true);
     setSaved(true);
     setDetailsOpen(false);
     setEditingId(entry.id);
@@ -458,228 +460,224 @@ export default function HotelBookingFlowV3({
           <p>
             {editingId
               ? "Review the current effective Hotel booking. Commercial changes are protected by Booking Adjustment history."
-              : "Create the UB first, save Hotel accounting second, then add optional reservation / voucher details."}
+              : "Complete account, UB, and hotel stays on one form, then save once. Additional booking details are optional."}
           </p>
         </div>
       </div>
       {message && <div className="alert success">{message}</div>}
       {error && <div className="alert error">{error}</div>}
 
-      <ProgressiveBookingIdentity
-        companyId={companyId}
-        userId={userId}
-        transactionType={tx}
-        parties={parties}
-        counterpartyId={counterpartyId}
-        onCounterpartyChange={setCounterpartyId}
-        bookingDate={bookingDate}
-        onBookingDateChange={setBookingDate}
-        ubDigits={ubDigits}
-        onUbDigitsChange={setUbDigits}
-        ubNumber={ubNumber}
-        assigned={assigned}
-        saved={saved}
-        onAssign={assign}
-        onEditHeader={() => {
-          if (!editingId) {
-            setAssigned(false);
-            setMessage("");
-          }
-        }}
-        onAccountsChanged={onChanged}
-        onError={setError}
-        onMessage={setMessage}
-        serviceLabel="Hotel"
-      />
+      <section className="bf-card hotel10-card hotel-unified-form">
+        <ProgressiveBookingIdentity
+          companyId={companyId}
+          userId={userId}
+          transactionType={tx}
+          parties={parties}
+          counterpartyId={counterpartyId}
+          onCounterpartyChange={setCounterpartyId}
+          bookingDate={bookingDate}
+          onBookingDateChange={setBookingDate}
+          ubDigits={ubDigits}
+          onUbDigitsChange={setUbDigits}
+          ubNumber={ubNumber}
+          assigned={false}
+          saved={saved}
+          onAssign={() => {}}
+          onAccountsChanged={onChanged}
+          onError={setError}
+          onMessage={setMessage}
+          serviceLabel="Hotel"
+          variant="unified"
+          headerGridClass="hotel10-header-grid"
+          unifiedHint="Party, date, and UB are saved together with hotel rates when you click Save Booking."
+          embedded
+        />
 
-      {assigned && (
-        <section className="bf-card">
-          <div className="bf-section-head">
+        <div className="bf-section-head hotel10-section-head hotel-commercial-head">
+          <div>
+            <span>2</span>
             <div>
-              <span>02</span>
-              <div>
-                <b>HOTEL DETAILS & RATES</b>
-                <small>
-                  {commercialLocked
-                    ? "Current effective commercial rows — use Booking Adjustment to change them."
-                    : `Commercial / accounting hotel rows under ${ubNumber}`}
-                </small>
-              </div>
+              <b>HOTEL DETAILS &amp; RATES</b>
+              <small>
+                {commercialLocked
+                  ? "Current effective commercial rows — use Booking Adjustment to change them."
+                  : "Enter hotel stays below, then save the full booking in one step."}
+              </small>
             </div>
-            {!commercialLocked && (
-              <button className="primary small" onClick={addRow}>
-                + Hotel Row
-              </button>
-            )}
           </div>
-          <div className="bf-table-wrap">
-            <table className="bf-table hotel-v3-table">
-              <thead>
-                <tr>
-                  <th>SR</th>
-                  <th>GUEST NAME / FAMILY HEAD</th>
-                  <th>CITY</th>
-                  <th>HOTEL NAME</th>
-                  <th>CHECK-IN</th>
-                  <th>CHECK-OUT</th>
-                  <th>NIGHTS</th>
-                  <th>ROOM TYPE</th>
-                  <th>ROOMS / BEDS</th>
-                  <th>RATE / NIGHT SAR</th>
-                  <th>ROE</th>
-                  <th>TOTAL SAR</th>
-                  <th>TOTAL PKR</th>
-                  {!commercialLocked && <th>ACTION</th>}
+          {!commercialLocked && (
+            <button className="primary small" onClick={addRow}>
+              + Hotel Row
+            </button>
+          )}
+        </div>
+        <div className="bf-table-wrap">
+          <table className="bf-table hotel-v3-table">
+            <thead>
+              <tr>
+                <th>SR</th>
+                <th>GUEST NAME / FAMILY HEAD</th>
+                <th>CITY</th>
+                <th>HOTEL NAME</th>
+                <th>CHECK-IN</th>
+                <th>CHECK-OUT</th>
+                <th>NIGHTS</th>
+                <th>ROOM TYPE</th>
+                <th>ROOMS / BEDS</th>
+                <th>RATE / NIGHT SAR</th>
+                <th>ROE</th>
+                <th>TOTAL SAR</th>
+                <th>TOTAL PKR</th>
+                {!commercialLocked && <th>ACTION</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={row.rowId}>
+                  <td>{index + 1}</td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      value={row.guestName}
+                      onChange={(e) => updateRow(row.rowId, { guestName: e.target.value })}
+                      placeholder="Family / guest"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      value={row.city}
+                      onChange={(e) => updateRow(row.rowId, { city: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      value={row.hotelName}
+                      onChange={(e) => updateRow(row.rowId, { hotelName: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      type="date"
+                      value={row.checkIn}
+                      onChange={(e) => updateRow(row.rowId, { checkIn: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      type="date"
+                      value={row.checkOut}
+                      onChange={(e) => updateRow(row.rowId, { checkOut: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <b>{row.nights || "—"}</b>
+                  </td>
+                  <td>
+                    <select
+                      disabled={commercialLocked}
+                      value={row.roomType}
+                      onChange={(e) => updateRow(row.rowId, { roomType: e.target.value as HotelRoomType })}
+                    >
+                      <option value="">Select</option>
+                      {roomTypes.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      type="number"
+                      min="0"
+                      value={row.quantity}
+                      onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      type="number"
+                      min="0"
+                      value={row.rate}
+                      onChange={(e) => updateRow(row.rowId, { rate: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      disabled={commercialLocked}
+                      type="number"
+                      min="0"
+                      value={row.roe}
+                      onChange={(e) => updateRow(row.rowId, { roe: e.target.value })}
+                      placeholder="Riyal Rate"
+                    />
+                  </td>
+                  <td className="bf-money">{sar(hotelRowSar(row))}</td>
+                  <td className="bf-money">{num(row.roe) > 0 ? pkr(hotelRowPkr(row)) : "—"}</td>
+                  {!commercialLocked && (
+                    <td>
+                      <button className="bf-remove" onClick={() => removeRow(row.rowId)}>
+                        ×
+                      </button>
+                    </td>
+                  )}
                 </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => (
-                  <tr key={row.rowId}>
-                    <td>{index + 1}</td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        value={row.guestName}
-                        onChange={(e) => updateRow(row.rowId, { guestName: e.target.value })}
-                        placeholder="Family / guest"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        value={row.city}
-                        onChange={(e) => updateRow(row.rowId, { city: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        value={row.hotelName}
-                        onChange={(e) => updateRow(row.rowId, { hotelName: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        type="date"
-                        value={row.checkIn}
-                        onChange={(e) => updateRow(row.rowId, { checkIn: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        type="date"
-                        value={row.checkOut}
-                        onChange={(e) => updateRow(row.rowId, { checkOut: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <b>{row.nights || "—"}</b>
-                    </td>
-                    <td>
-                      <select
-                        disabled={commercialLocked}
-                        value={row.roomType}
-                        onChange={(e) => updateRow(row.rowId, { roomType: e.target.value as HotelRoomType })}
-                      >
-                        <option value="">Select</option>
-                        {roomTypes.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        type="number"
-                        min="0"
-                        value={row.quantity}
-                        onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        type="number"
-                        min="0"
-                        value={row.rate}
-                        onChange={(e) => updateRow(row.rowId, { rate: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        disabled={commercialLocked}
-                        type="number"
-                        min="0"
-                        value={row.roe}
-                        onChange={(e) => updateRow(row.rowId, { roe: e.target.value })}
-                        placeholder="Riyal Rate"
-                      />
-                    </td>
-                    <td className="bf-money">{sar(hotelRowSar(row))}</td>
-                    <td className="bf-money">{num(row.roe) > 0 ? pkr(hotelRowPkr(row)) : "—"}</td>
-                    {!commercialLocked && (
-                      <td>
-                        <button className="bf-remove" onClick={() => removeRow(row.rowId)}>
-                          ×
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="bf-summary six">
+          <div>
+            <small>HOTEL STAYS</small>
+            <b>{summary.stays}</b>
           </div>
-          <div className="bf-summary six">
-            <div>
-              <small>HOTEL STAYS</small>
-              <b>{summary.stays}</b>
-            </div>
-            <div>
-              <small>TOTAL NIGHTS</small>
-              <b>{summary.totalNights}</b>
-            </div>
-            <div>
-              <small>TOTAL ROOMS</small>
-              <b>{summary.rooms}</b>
-            </div>
-            <div>
-              <small>SHARING BEDS</small>
-              <b>{summary.beds}</b>
-            </div>
-            <div>
-              <small>TOTAL SAR</small>
-              <b>{sar(summary.totalSar)}</b>
-            </div>
-            <div className="grand">
-              <small>GRAND TOTAL PKR</small>
-              <b>{pkr(summary.totalPkr)}</b>
-              {summary.pendingSar > 0 && <span>{sar(summary.pendingSar)} pending ROE</span>}
-            </div>
+          <div>
+            <small>TOTAL NIGHTS</small>
+            <b>{summary.totalNights}</b>
           </div>
-          <div className="package14-commercial-actions">
-            {saved && (
-              <button className="secondary" onClick={reset}>
-                + New Hotel Booking
-              </button>
-            )}
-            {!editingId && (
-              <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>
-                {busy ? "Saving..." : `Save Hotel Booking — ${ubNumber}`}
-              </button>
-            )}
-            {editingId && (
-              <div className="adj-rule-note">
-                <b>Commercial values locked:</b> use Hotel Booking Register → Booking Adjustment for Correction,
-                Amendment, Partial Cancellation or Full Cancellation.
-              </div>
-            )}
+          <div>
+            <small>TOTAL ROOMS</small>
+            <b>{summary.rooms}</b>
           </div>
-        </section>
-      )}
+          <div>
+            <small>SHARING BEDS</small>
+            <b>{summary.beds}</b>
+          </div>
+          <div>
+            <small>TOTAL SAR</small>
+            <b>{sar(summary.totalSar)}</b>
+          </div>
+          <div className="grand">
+            <small>GRAND TOTAL PKR</small>
+            <b>{pkr(summary.totalPkr)}</b>
+            {summary.pendingSar > 0 && <span>{sar(summary.pendingSar)} pending ROE</span>}
+          </div>
+        </div>
+        <div className="package14-commercial-actions">
+          {saved && (
+            <button className="secondary" onClick={reset}>
+              + New Hotel Booking
+            </button>
+          )}
+          {!editingId && (
+            <button className="primary" disabled={busy || !canCreate} onClick={() => void saveCommercial()}>
+              {busy ? "Saving..." : `Save Hotel Booking — ${ubPreview || "UB-0000"}`}
+            </button>
+          )}
+          {editingId && (
+            <div className="adj-rule-note">
+              <b>Commercial values locked:</b> use Hotel Booking Register → Booking Adjustment for Correction,
+              Amendment, Partial Cancellation or Full Cancellation.
+            </div>
+          )}
+        </div>
+      </section>
 
       {saved && editingId && (
         <section className={`package14-additional ${detailsOpen ? "open" : "closed"}`}>
@@ -691,13 +689,11 @@ export default function HotelBookingFlowV3({
               if (next) syncReservationRows();
             }}
           >
-            <span className="package14-step-purple">03</span>
             <div>
-              <b>HOTEL BOOKING DETAILS — {ubNumber}</b>
+              <b>ADDITIONAL BOOKING DETAILS — {ubNumber}</b>
               <small>Optional reservation, voucher and rooming information. No effect on Hotel totals.</small>
             </div>
-            <span className="package14-optional">OPTIONAL</span>
-            <strong>{detailsOpen ? "Close Details ▲" : "+ Open Details ▼"}</strong>
+            <strong>{detailsOpen ? "Hide ▲" : "Show ▼"}</strong>
           </button>
           {detailsOpen && (
             <div className="package14-additional-body bf-operational-body">
@@ -887,15 +883,6 @@ export default function HotelBookingFlowV3({
             </div>
           )}
         </section>
-      )}
-
-      {!assigned && (
-        <div className="package14-next-step">Create / Assign a Booking UB to unlock Hotel Details & Rates.</div>
-      )}
-      {assigned && !saved && (
-        <div className="package14-next-step">
-          Save Section 02 to activate the Hotel booking and unlock Optional Hotel Booking Details.
-        </div>
       )}
     </section>
   );
