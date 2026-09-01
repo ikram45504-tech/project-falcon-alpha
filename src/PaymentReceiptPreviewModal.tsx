@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { jsPDF } from "jspdf";
 import type { Company, Party, PaymentEntry } from "./db";
 import { buildPaymentReceiptPdf, receiptDocumentTitle } from "./PaymentReceiptPdf";
@@ -8,6 +8,10 @@ import {
   paymentReceiptFileName,
   paymentReceiptJpgBlob,
   paymentReceiptJpgFileName,
+  normalizeWhatsAppPhone,
+  partyWhatsAppPhone,
+  printPaymentReceiptPdf,
+  sharePaymentReceiptWhatsApp,
 } from "./paymentReceiptExport";
 import type { PaymentTransactionKind, PaymentV2Meta } from "./PaymentV2Db";
 import "./PaymentReceiptPreviewModal.css";
@@ -34,9 +38,15 @@ export default function PaymentReceiptPreviewModal({
   const [previewUrl, setPreviewUrl] = useState("");
   const [doc, setDoc] = useState<jsPDF | null>(null);
   const [busy, setBusy] = useState(false);
-  const [downloadKind, setDownloadKind] = useState<"pdf" | "jpg" | null>(null);
+  const [downloadKind, setDownloadKind] = useState<"pdf" | "jpg" | "whatsapp" | null>(null);
   const [error, setError] = useState("");
+  const [hint, setHint] = useState("");
   const previewUrlRef = useRef("");
+
+  const canWhatsApp = useMemo(
+    () => Boolean(normalizeWhatsAppPhone(partyWhatsAppPhone(party))),
+    [party.phone, party.whatsapp],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +120,33 @@ export default function PaymentReceiptPreviewModal({
     }
   }
 
+  function handlePrint() {
+    if (!doc) return;
+    setError("");
+    void printPaymentReceiptPdf(doc).catch((e) => {
+      setError(e instanceof Error ? e.message : String(e));
+    });
+  }
+
+  function handleWhatsApp() {
+    if (!doc) return;
+    setError("");
+    setHint("");
+    setBusy(true);
+    setDownloadKind("whatsapp");
+    void sharePaymentReceiptWhatsApp(party, company, entry, transactionKind, doc, party.name)
+      .then((result) => {
+        if (result.hint) setHint(result.hint);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        setBusy(false);
+        setDownloadKind(null);
+      });
+  }
+
   return (
     <div
       className="modal-backdrop payment-receipt-preview-backdrop"
@@ -130,6 +167,7 @@ export default function PaymentReceiptPreviewModal({
         </div>
 
         {error && <div className="alert error">{error}</div>}
+        {hint && <div className="alert info">{hint}</div>}
 
         <div className="payment-receipt-preview-shell">
           {busy && !previewUrl ? (
@@ -142,14 +180,25 @@ export default function PaymentReceiptPreviewModal({
         </div>
 
         <div className="modal-buttons payment-receipt-preview-actions">
-          <button type="button" className="secondary" onClick={onClose}>
-            Close
+          <button type="button" className="secondary" disabled={!doc || busy} onClick={() => void handleDownloadPdf()}>
+            {busy && downloadKind === "pdf" ? "Saving PDF..." : "Download PDF"}
           </button>
           <button type="button" className="secondary" disabled={!doc || busy} onClick={() => void handleDownloadJpg()}>
             {busy && downloadKind === "jpg" ? "Saving JPG..." : "Download JPG"}
           </button>
-          <button type="button" className="primary" disabled={!doc || busy} onClick={() => void handleDownloadPdf()}>
-            {busy && downloadKind === "pdf" ? "Saving PDF..." : "Download PDF"}
+          <button type="button" className="primary" disabled={!doc || busy} onClick={handlePrint}>
+            Print
+          </button>
+          <button
+            type="button"
+            className="secondary payment-receipt-whatsapp-btn"
+            disabled={!doc || busy || !canWhatsApp}
+            title={
+              canWhatsApp ? "Share receipt JPG on WhatsApp with message" : "Add phone in Counterparties to use WhatsApp"
+            }
+            onClick={handleWhatsApp}
+          >
+            {busy && downloadKind === "whatsapp" ? "Preparing..." : "WhatsApp"}
           </button>
         </div>
       </section>

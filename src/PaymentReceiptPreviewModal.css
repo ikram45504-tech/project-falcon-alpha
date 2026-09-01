@@ -55,4 +55,22 @@
 
 .payment-receipt-preview-actions {
   margin-top: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.payment-receipt-preview-actions button {
+  flex: 0 1 auto;
+}
+
+.payment-receipt-whatsapp-btn:not(:disabled) {
+  border-color: #25d366;
+  color: #128c41;
+}
+
+.payment-receipt-whatsapp-btn:not(:disabled):hover {
+  background: #ecfdf3;
 }

@@ -1,6 +1,7 @@
 import type { jsPDF } from "jspdf";
-import type { Company, PaymentEntry } from "./db";
-import { PAYMENT_RECEIPT_HEIGHT_MM, PAYMENT_RECEIPT_PAGE_HEIGHT_MM } from "./PaymentReceiptPdf";
+import type { Company, Party, PaymentEntry } from "./db";
+import { PAYMENT_RECEIPT_HEIGHT_MM, PAYMENT_RECEIPT_PAGE_HEIGHT_MM, receiptDocumentTitle } from "./PaymentReceiptPdf";
+import type { PaymentTransactionKind } from "./PaymentV2Db";
 
 export function safeFileName(text: string) {
   return String(text || "document")
@@ -98,4 +99,231 @@ export async function downloadPaymentReceiptPdf(doc: jsPDF, fileName: string) {
 export async function downloadPaymentReceiptJpg(doc: jsPDF, fileName: string) {
   const blob = await paymentReceiptJpgBlob(doc);
   await downloadBlobFile(blob, fileName, { name: "JPEG Image", extensions: ["jpg", "jpeg"] });
+}
+
+export function printPaymentReceiptPdf(doc: jsPDF) {
+  return new Promise<void>((resolve, reject) => {
+    const url = URL.createObjectURL(paymentReceiptPdfBlob(doc));
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    iframe.title = "Print receipt";
+    iframe.src = url;
+
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+      iframe.remove();
+    };
+
+    iframe.onload = () => {
+      try {
+        const win = iframe.contentWindow;
+        if (!win) throw new Error("Could not open print dialog.");
+        win.addEventListener("afterprint", cleanup, { once: true });
+        win.focus();
+        win.print();
+        resolve();
+        window.setTimeout(cleanup, 120_000);
+      } catch (e) {
+        cleanup();
+        reject(e instanceof Error ? e : new Error(String(e)));
+      }
+    };
+
+    iframe.onerror = () => {
+      cleanup();
+      reject(new Error("Could not prepare receipt for printing."));
+    };
+    document.body.appendChild(iframe);
+  });
+}
+
+export function partyWhatsAppPhone(party: Pick<Party, "phone" | "whatsapp">) {
+  return String(party.whatsapp || party.phone || "").trim();
+}
+
+export function normalizeWhatsAppPhone(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("92") && digits.length >= 12) return digits;
+  if (digits.startsWith("0") && digits.length >= 10) return `92${digits.slice(1)}`;
+  if (digits.length === 10 && digits.startsWith("3")) return `92${digits}`;
+  return digits;
+}
+
+export function paymentReceiptWhatsAppMessage(
+  company: Company,
+  entry: PaymentEntry,
+  transactionKind: PaymentTransactionKind,
+) {
+  const title = receiptDocumentTitle(transactionKind);
+  const receiptNo = entry.receipt_no || "Receipt";
+  const amount = Number(entry.paid_amount || 0).toLocaleString("en-PK");
+  return `${title} ${receiptNo} from ${company.name} — Rs ${amount}. Thank you.`;
+}
+
+export function paymentReceiptWhatsAppUrl(
+  party: Pick<Party, "phone" | "whatsapp">,
+  company: Company,
+  entry: PaymentEntry,
+  transactionKind: PaymentTransactionKind,
+) {
+  const phone = normalizeWhatsAppPhone(partyWhatsAppPhone(party));
+  if (!phone) return null;
+  const message = paymentReceiptWhatsAppMessage(company, entry, transactionKind);
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+export function paymentReceiptWhatsAppDeepLink(
+  party: Pick<Party, "phone" | "whatsapp">,
+  company: Company,
+  entry: PaymentEntry,
+  transactionKind: PaymentTransactionKind,
+) {
+  const phone = normalizeWhatsAppPhone(partyWhatsAppPhone(party));
+  if (!phone) return null;
+  const message = paymentReceiptWhatsAppMessage(company, entry, transactionKind);
+  return `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
+}
+
+async function openExternalUrl(url: string) {
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (isTauri) {
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(url);
+    return;
+  }
+
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+  if (!popup) window.location.assign(url);
+}
+
+async function openWhatsAppChat(
+  party: Pick<Party, "phone" | "whatsapp">,
+  company: Company,
+  entry: PaymentEntry,
+  transactionKind: PaymentTransactionKind,
+) {
+  const webUrl = paymentReceiptWhatsAppUrl(party, company, entry, transactionKind);
+  if (!webUrl) {
+    throw new Error("Add a phone number for this account in Counterparties to use WhatsApp.");
+  }
+
+  const isTauri = "__TAURI_INTERNALS__" in window;
+  if (!isTauri) {
+    await openExternalUrl(webUrl);
+    return;
+  }
+
+  const deepLink = paymentReceiptWhatsAppDeepLink(party, company, entry, transactionKind);
+  const { openUrl } = await import("@tauri-apps/plugin-opener");
+  if (deepLink) {
+    try {
+      await openUrl(deepLink);
+      return;
+    } catch {
+      // Fall back to wa.me if the desktop protocol handler is unavailable.
+    }
+  }
+  await openUrl(webUrl);
+}
+
+async function tryShareReceiptViaWebShare(jpgBlob: Blob, fileName: string, message: string) {
+  if (typeof navigator.share !== "function") return false;
+
+  const file = new File([jpgBlob], fileName, { type: "image/jpeg" });
+  const payload: ShareData = { text: message, files: [file] };
+  if (typeof navigator.canShare === "function" && !navigator.canShare(payload)) return false;
+
+  try {
+    await navigator.share(payload);
+    return true;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") return true;
+    return false;
+  }
+}
+
+async function copyReceiptImageToClipboard(jpgBlob: Blob) {
+  if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) return false;
+  await navigator.clipboard.write([new ClipboardItem({ "image/jpeg": jpgBlob })]);
+  return true;
+}
+
+async function saveReceiptJpgForShare(jpgBlob: Blob, fileName: string) {
+  const bytes = new Uint8Array(await jpgBlob.arrayBuffer());
+  const isTauri = "__TAURI_INTERNALS__" in window;
+
+  if (isTauri) {
+    const { downloadDir, join } = await import("@tauri-apps/api/path");
+    const { writeFile } = await import("@tauri-apps/plugin-fs");
+    const filePath = await join(await downloadDir(), fileName);
+    await writeFile(filePath, bytes);
+    return filePath;
+  }
+
+  const url = URL.createObjectURL(jpgBlob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+  return fileName;
+}
+
+export function receiptWhatsAppShareHint(imageCopied: boolean, fileName: string) {
+  if (imageCopied) {
+    return "Receipt JPG copied. Press Ctrl+V in WhatsApp to paste the image, then send.";
+  }
+  return `Receipt JPG saved to Downloads as ${fileName}. Attach it in WhatsApp using the paperclip icon.`;
+}
+
+export async function sharePaymentReceiptWhatsApp(
+  party: Pick<Party, "phone" | "whatsapp">,
+  company: Company,
+  entry: PaymentEntry,
+  transactionKind: PaymentTransactionKind,
+  doc: jsPDF,
+  accountName: string,
+): Promise<{ hint?: string }> {
+  if (!paymentReceiptWhatsAppUrl(party, company, entry, transactionKind)) {
+    throw new Error("Add a phone number for this account in Counterparties to use WhatsApp.");
+  }
+
+  const message = paymentReceiptWhatsAppMessage(company, entry, transactionKind);
+  const fileName = paymentReceiptJpgFileName(company, entry, accountName);
+  const jpgBlob = await paymentReceiptJpgBlob(doc);
+
+  if (await tryShareReceiptViaWebShare(jpgBlob, fileName, message)) {
+    return {};
+  }
+
+  let imageCopied = false;
+  try {
+    imageCopied = await copyReceiptImageToClipboard(jpgBlob);
+  } catch {
+    // Clipboard image share is optional; fall back to saved file + WhatsApp chat.
+  }
+
+  await saveReceiptJpgForShare(jpgBlob, fileName);
+  await openWhatsAppChat(party, company, entry, transactionKind);
+
+  return { hint: receiptWhatsAppShareHint(imageCopied, fileName) };
+}
+
+/** @deprecated Use sharePaymentReceiptWhatsApp */
+export async function openPaymentReceiptWhatsApp(
+  party: Pick<Party, "phone" | "whatsapp">,
+  company: Company,
+  entry: PaymentEntry,
+  transactionKind: PaymentTransactionKind,
+  doc?: jsPDF,
+  accountName?: string,
+) {
+  if (doc && accountName) {
+    return sharePaymentReceiptWhatsApp(party, company, entry, transactionKind, doc, accountName);
+  }
+
+  await openWhatsAppChat(party, company, entry, transactionKind);
 }
