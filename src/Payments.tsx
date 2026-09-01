@@ -203,8 +203,6 @@ export function PaymentsModule({
   const [screen, setScreen] = useState<PaymentScreen>("DIRECTION");
   const [side, setSide] = useState<PaymentSide>("PARTY");
   const [form, setForm] = useState<PaymentFormState>(() => blankForm("PARTY"));
-  const [headerAssigned, setHeaderAssigned] = useState(false);
-  const [paymentSaved, setPaymentSaved] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [entries, setEntries] = useState<PaymentEntry[]>([]);
@@ -214,7 +212,6 @@ export function PaymentsModule({
   const [registerFilter, setRegisterFilter] = useState<RegisterFilter>("ALL");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
-  const [headerBusy, setHeaderBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -239,11 +236,14 @@ export function PaymentsModule({
   }, [companyId]);
 
   useEffect(() => {
-    if (screen !== "FORM" || headerAssigned || editingId) return;
+    if (screen !== "FORM" || editingId) return;
     let cancelled = false;
     void getNextPaymentDocumentNumber(companyId, form.transactionKind, form.paymentType)
       .then((value) => {
-        if (!cancelled) setSuggestedDocument(value);
+        if (!cancelled) {
+          setSuggestedDocument(value);
+          setForm((current) => (current.documentNo ? current : { ...current, documentNo: value }));
+        }
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -251,7 +251,7 @@ export function PaymentsModule({
     return () => {
       cancelled = true;
     };
-  }, [companyId, screen, headerAssigned, editingId, form.transactionKind, form.paymentType]);
+  }, [companyId, screen, editingId, form.transactionKind, form.paymentType]);
 
   const eligibleAccounts = useMemo(
     () => parties.filter((party) => party.status === "ACTIVE" && party.account_type === side),
@@ -340,8 +340,6 @@ export function PaymentsModule({
   function resetForSide(nextSide: PaymentSide) {
     setSide(nextSide);
     setForm(blankForm(nextSide));
-    setHeaderAssigned(false);
-    setPaymentSaved(false);
     setDetailsOpen(false);
     setEditingId(null);
     setSuggestedDocument("");
@@ -366,60 +364,29 @@ export function PaymentsModule({
     void load();
   }
 
-  async function assignHeader() {
+  async function savePayment() {
     if (!canEdit) return setError("Your role does not allow payment entry changes.");
     if (!form.partyId)
       return setError(side === "PARTY" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");
     if (!form.transactionDate) return setError("Payment date is required.");
-    setHeaderBusy(true);
-    setError("");
-    try {
-      const documentNo = await getNextPaymentDocumentNumber(companyId, form.transactionKind, form.paymentType);
-      setForm((current) => ({ ...current, documentNo }));
-      setSuggestedDocument(documentNo);
-      setHeaderAssigned(true);
-      setMessage(`${documentNo} is ready. Complete Payment Setup in Section 02.`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setHeaderBusy(false);
-    }
-  }
-
-  async function savePaymentSetup() {
-    if (!headerAssigned) return setError("Create the Receipt / Voucher in Section 01 first.");
-    if (!canEdit) return setError("Your role does not allow payment entry changes.");
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      if (editingId) {
-        await updatePaymentV2(companyId, editingId, toInput(form), userId);
-        setMessage(`Payment Setup for ${form.documentNo} updated successfully.`);
-      } else {
-        const id = await createPaymentV2(companyId, toInput(form), userId);
-        setEditingId(id);
-        setPaymentSaved(true);
-        setMessage(`${form.documentNo} saved successfully. Payment Information is now available in Section 03.`);
+      let documentNo = form.documentNo.trim();
+      if (!documentNo) {
+        documentNo = await getNextPaymentDocumentNumber(companyId, form.transactionKind, form.paymentType);
+        setForm((current) => ({ ...current, documentNo }));
       }
-      setPaymentSaved(true);
-      await load();
-      await onChanged();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function savePaymentInformation() {
-    if (!editingId || !paymentSaved) return setError("Save Payment Setup in Section 02 first.");
-    if (!canEdit) return setError("Your role does not allow payment entry changes.");
-    setBusy(true);
-    setError("");
-    try {
-      await updatePaymentV2(companyId, editingId, toInput(form), userId);
-      setMessage(`Payment Information for ${form.documentNo} saved successfully.`);
+      const payload = toInput({ ...form, documentNo });
+      if (editingId) {
+        await updatePaymentV2(companyId, editingId, payload, userId);
+        setMessage(`${documentNo} updated successfully.`);
+      } else {
+        const id = await createPaymentV2(companyId, payload, userId);
+        setEditingId(id);
+        setMessage(`${documentNo} saved successfully.`);
+      }
       await load();
       await onChanged();
     } catch (e) {
@@ -440,14 +407,10 @@ export function PaymentsModule({
     }
     setSide(sideForKind(nextKind));
     setForm(nextForm);
-    setHeaderAssigned(true);
-    setPaymentSaved(true);
     setDetailsOpen(true);
     setEditingId(entry.id);
     setScreen("FORM");
-    setMessage(
-      `Editing ${entry.receipt_no || "payment"}. Section 01 identity is locked; Sections 02 and 03 can be updated independently.`,
-    );
+    setMessage(`Editing ${entry.receipt_no || "payment"}. Account and document number are locked.`);
     setError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -473,6 +436,31 @@ export function PaymentsModule({
     } finally {
       setBusy(false);
     }
+  }
+
+  function renderRegisterEntryActions(entry: PaymentEntry, account: Party | null) {
+    return (
+      <div className="row-actions compact-actions payment-v2-card-actions">
+        <button type="button" onClick={() => account && onOpenLedger(account)} disabled={!account}>
+          Ledger
+        </button>
+        {canEdit && (
+          <button type="button" onClick={() => editEntry(entry)} disabled={entry.status !== "ACTIVE"}>
+            Edit
+          </button>
+        )}
+        {canEdit && (
+          <button
+            type="button"
+            className="danger-action"
+            onClick={() => void voidEntry(entry)}
+            disabled={entry.status !== "ACTIVE" || busy}
+          >
+            Void
+          </button>
+        )}
+      </div>
+    );
   }
 
   function renderDirectionScreen() {
@@ -531,57 +519,50 @@ export function PaymentsModule({
     const flowText = isParty
       ? `${selectedAccount?.name || "Party"} → ${form.settlementAccount || (form.paymentType === "BANK" ? "Bank Account" : "Cash")}`
       : `${form.settlementAccount || (form.paymentType === "BANK" ? "Bank Account" : "Cash")} → ${selectedAccount?.name || "Vendor"}`;
+    const documentPreview = form.documentNo || suggestedDocument || `${prefix}0001`;
+    const isEditing = Boolean(editingId);
 
     return (
-      <section className="booking-entry-screen package14-page payment-v2-form-page">
-        <div className="booking-screen-toolbar package14-toolbar">
+      <section className="booking-entry-screen payment-v2-form-page">
+        <div className="booking-screen-toolbar payment-v2-toolbar">
           <button type="button" className="booking-back-button" onClick={backToDirections}>
             ← Back to Payment Types
           </button>
-          <div className="package14-toolbar-right">
+          <div className="payment-v2-toolbar-right">
             <span className={`direction-badge ${isParty ? "sale" : "purchase"}`}>
               {isParty ? "RECEIVE FROM PARTY" : "PAY TO VENDOR"}
             </span>
-            <button type="button" className="package-register-button payment-register-button" onClick={openRegister}>
+            <button type="button" className="booking-foundation-badge payment-register-button" onClick={openRegister}>
               Payment Register
             </button>
           </div>
         </div>
-        <div className="package14-title payment-v2-title">
-          <div>
-            <span className="eyebrow blue">{isParty ? "PARTY PAYMENTS" : "VENDOR PAYMENTS"}</span>
-            <h2>
-              {paymentSaved
-                ? `${documentNoun} — ${form.documentNo}`
-                : isParty
-                  ? "New Party Receipt"
-                  : "New Vendor Payment"}
-            </h2>
-            <p>
-              Create the payment identity first, save the financial settlement second, then record optional supporting
-              information in Section 03.
-            </p>
-          </div>
+
+        <div className="payment-v2-title">
+          <span className="eyebrow blue">{isParty ? "PARTY PAYMENTS" : "VENDOR PAYMENTS"}</span>
+          <h2>
+            {isEditing
+              ? `Edit ${documentNoun} — ${form.documentNo}`
+              : isParty
+                ? "New Party Receipt"
+                : "New Vendor Payment"}
+          </h2>
+          <p>Record the settlement in one step. Optional bank or cash details can be added below.</p>
         </div>
+
         {message && <div className="alert success">{message}</div>}
         {error && <div className="alert error">{error}</div>}
 
-        {!headerAssigned ? (
-          <section className="package14-identity payment-v2-identity">
-            <div className="package14-section-heading payment-step-heading">
-              <span>01</span>
-              <div>
-                <b>CREATE {isParty ? "RECEIPT" : "PAYMENT VOUCHER"}</b>
-                <small>
-                  Select the account, payment date and Cash / Bank type. The system assigns the document number
-                  automatically.
-                </small>
-              </div>
+        <section className="payment-v2-form-card">
+          <div className="payment-v2-form-section">
+            <div className="payment-v2-section-label">
+              <b>Account &amp; document</b>
+              <small>Party/Vendor, date, method, and voucher number</small>
             </div>
             <div className="payment-v2-identity-grid">
               <label>
                 {accountNoun} *
-                <select value={form.partyId} onChange={(e) => patch("partyId", e.target.value)}>
+                <select value={form.partyId} disabled={isEditing} onChange={(e) => patch("partyId", e.target.value)}>
                   <option value="">Select {accountNoun}</option>
                   {eligibleAccounts.map((party) => (
                     <option key={party.id} value={party.id}>
@@ -589,7 +570,6 @@ export function PaymentsModule({
                     </option>
                   ))}
                 </select>
-                <small>Only active {isParty ? "Party" : "Vendor"} accounts are shown.</small>
               </label>
               <label>
                 Date of Payment *
@@ -598,7 +578,6 @@ export function PaymentsModule({
                   value={form.transactionDate}
                   onChange={(e) => patch("transactionDate", e.target.value)}
                 />
-                <small>Accounting date for this settlement.</small>
               </label>
               <div className="payment-v2-method-field">
                 <span>Payment Type *</span>
@@ -606,10 +585,12 @@ export function PaymentsModule({
                   <button
                     type="button"
                     className={form.paymentType === "CASH" ? "active cash" : ""}
+                    disabled={isEditing}
                     onClick={() =>
                       setForm((current) => ({
                         ...current,
                         paymentType: "CASH",
+                        documentNo: "",
                         settlementAccount:
                           current.settlementAccount && current.settlementAccount !== "Cash in Hand"
                             ? current.settlementAccount
@@ -622,10 +603,12 @@ export function PaymentsModule({
                   <button
                     type="button"
                     className={form.paymentType === "BANK" ? "active bank" : ""}
+                    disabled={isEditing}
                     onClick={() =>
                       setForm((current) => ({
                         ...current,
                         paymentType: "BANK",
+                        documentNo: "",
                         settlementAccount:
                           current.settlementAccount === "Cash in Hand" ? "" : current.settlementAccount,
                       }))
@@ -634,78 +617,19 @@ export function PaymentsModule({
                     BANK
                   </button>
                 </div>
-                <small>
-                  {form.paymentType === "BANK"
-                    ? "Bank documents use the BNK prefix."
-                    : "Cash documents use the CSH prefix."}
-                </small>
               </div>
+              <label>
+                {documentNoun} #
+                <input value={documentPreview} readOnly className="payment-v2-doc-readonly" />
+                <small>Auto-assigned on save</small>
+              </label>
             </div>
-            <div className="package14-ub-preview payment-v2-document-preview">
-              <div>
-                <small>{documentNoun.toUpperCase()} # PREVIEW</small>
-                <b>{suggestedDocument || `${prefix}0001`}</b>
-                <span>{form.paymentType === "BANK" ? "Bank transaction" : "Cash transaction"}</span>
-              </div>
-              <button
-                type="button"
-                className="primary payment-v2-create-document"
-                disabled={headerBusy || !canEdit}
-                onClick={() => void assignHeader()}
-              >
-                {headerBusy ? "Creating..." : `Create ${documentNoun}`}
-              </button>
-            </div>
-          </section>
-        ) : (
-          <section
-            className={`package14-identity-complete payment-v2-identity-complete ${paymentSaved ? "saved" : "ready"}`}
-          >
-            <span className="package14-check">✓</span>
-            <div className="package14-identity-main">
-              <small>
-                {paymentSaved ? `${documentNoun.toUpperCase()} SAVED` : `${documentNoun.toUpperCase()} READY`}
-              </small>
-              <b>{form.documentNo}</b>
-              <span>{selectedAccount?.name || accountNoun}</span>
-            </div>
-            <div>
-              <small>PAYMENT DATE</small>
-              <b>{formatDate(form.transactionDate)}</b>
-            </div>
-            <div>
-              <small>METHOD</small>
-              <b>{form.paymentType}</b>
-            </div>
-            <div>
-              <small>STATUS</small>
-              <b>{paymentSaved ? "ACTIVE" : "READY"}</b>
-            </div>
-            {!paymentSaved ? (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => {
-                  setHeaderAssigned(false);
-                  setMessage("");
-                }}
-              >
-                Edit Payment Header
-              </button>
-            ) : (
-              <span className="package14-lock">Identity locked after save</span>
-            )}
-          </section>
-        )}
+          </div>
 
-        {headerAssigned && (
-          <section className="package14-commercial-card payment-v2-setup-card">
-            <div className="package14-section-heading payment-step-heading">
-              <span>02</span>
-              <div>
-                <b>PAYMENT SETUP</b>
-                <small>Financial settlement saved under {form.documentNo}. No UB allocation is required.</small>
-              </div>
+          <div className="payment-v2-form-section">
+            <div className="payment-v2-section-label">
+              <b>Amount &amp; settlement</b>
+              <small>Currency, amount, and cash/bank account</small>
             </div>
             <div className="payment-v2-setup-grid">
               <label>
@@ -758,16 +682,14 @@ export function PaymentsModule({
                   onChange={(e) => patch("settlementAccount", e.target.value)}
                   placeholder={form.paymentType === "BANK" ? "e.g. HBL, Meezan, ABL" : "e.g. Cash in Hand, Office Cash"}
                 />
-                <small>This becomes the automatic {isParty ? "To" : "From"} account.</small>
               </label>
             </div>
+
             <div className="payment-v2-flow">
-              <small>AUTOMATIC MONEY FLOW</small>
+              <small>MONEY FLOW</small>
               <b>{flowText}</b>
-              <span>
-                The Party / Vendor side is fixed by the payment type; you do not enter manual From / To accounts.
-              </span>
             </div>
+
             <div className="payment-v2-balance-preview">
               <div>
                 <small>CURRENT {balanceLabel.toUpperCase()}</small>
@@ -794,45 +716,21 @@ export function PaymentsModule({
                 <span>Preview only — overpayments are allowed.</span>
               </div>
             </div>
-            <div className="package14-commercial-actions payment-v2-setup-actions">
-              {paymentSaved && (
-                <button type="button" className="secondary" onClick={() => resetForSide(side)}>
-                  + New {isParty ? "Party Receipt" : "Vendor Payment"}
-                </button>
-              )}
-              <button
-                type="button"
-                className="primary payment-v2-save"
-                disabled={busy || !canEdit}
-                onClick={() => void savePaymentSetup()}
-              >
-                {busy
-                  ? "Saving..."
-                  : editingId
-                    ? `Update Payment Setup — ${form.documentNo}`
-                    : `Save Payment — ${form.documentNo}`}
-              </button>
-            </div>
-          </section>
-        )}
+          </div>
 
-        {paymentSaved && editingId && (
-          <section className={`package14-additional payment-v2-information ${detailsOpen ? "open" : "closed"}`}>
+          <div className={`payment-v2-details ${detailsOpen ? "open" : "closed"}`}>
             <button
               type="button"
-              className="package14-additional-toggle payment-v2-information-toggle"
+              className="payment-v2-details-toggle"
               onClick={() => setDetailsOpen((value) => !value)}
             >
-              <span className="package14-step-purple">03</span>
               <div>
-                <b>PAYMENT INFORMATION — {form.documentNo}</b>
+                <b>Optional payment details</b>
                 <small>
-                  Supporting {form.paymentType === "BANK" ? "bank transfer" : "cash handling"} information. This section
-                  never changes booking totals.
+                  {form.paymentType === "BANK" ? "Bank transfer" : "Cash handling"} reference, description, and notes
                 </small>
               </div>
-              <span className="package14-optional">OPTIONAL</span>
-              <strong>{detailsOpen ? "Close Details ▲" : "+ Open Details ▼"}</strong>
+              <strong>{detailsOpen ? "Hide ▲" : "Show ▼"}</strong>
             </button>
             {detailsOpen && (
               <div className="payment-v2-information-body">
@@ -909,7 +807,7 @@ export function PaymentsModule({
                     <input
                       value={form.reference}
                       onChange={(e) => patch("reference", e.target.value)}
-                      placeholder="Optional account/payment reference; UB is not required"
+                      placeholder="Optional account/payment reference"
                     />
                   </label>
                   <label className="wide">
@@ -931,39 +829,39 @@ export function PaymentsModule({
                     />
                   </label>
                 </div>
-                <div className="payment-v2-info-actions">
-                  <button
-                    type="button"
-                    className="primary purple-primary"
-                    disabled={busy || !canEdit}
-                    onClick={() => void savePaymentInformation()}
-                  >
-                    {busy ? "Saving..." : `Save Payment Information — ${form.documentNo}`}
-                  </button>
-                </div>
               </div>
             )}
-          </section>
-        )}
+          </div>
 
-        {!headerAssigned && (
-          <div className="package14-next-step payment-v2-next-step">
-            Create the {documentNoun} in Section 01 to unlock Payment Setup.
+          <div className="payment-v2-form-actions">
+            {isEditing && (
+              <button type="button" className="secondary" onClick={() => resetForSide(side)}>
+                + New {isParty ? "Party Receipt" : "Vendor Payment"}
+              </button>
+            )}
+            {selectedAccount && (
+              <button type="button" className="secondary" onClick={() => onOpenLedger(selectedAccount)}>
+                Open Ledger
+              </button>
+            )}
+            <button
+              type="button"
+              className="primary payment-v2-save"
+              disabled={busy || !canEdit}
+              onClick={() => void savePayment()}
+            >
+              {busy ? "Saving..." : isEditing ? `Update ${documentNoun} — ${form.documentNo}` : `Save ${documentNoun}`}
+            </button>
           </div>
-        )}
-        {headerAssigned && !paymentSaved && (
-          <div className="package14-next-step payment-v2-next-step">
-            Save Section 02 to activate the payment and unlock optional Payment Information.
-          </div>
-        )}
+        </section>
       </section>
     );
   }
 
   function renderRegister() {
     return (
-      <section className="booking-entry-screen package14-page package14-register-page payment-v2-register-page">
-        <div className="booking-screen-toolbar package14-toolbar">
+      <section className="booking-entry-screen payment-v2-register-page">
+        <div className="booking-screen-toolbar payment-v2-toolbar">
           <button type="button" className="booking-back-button" onClick={backToDirections}>
             ← Back to Payments
           </button>
@@ -973,23 +871,21 @@ export function PaymentsModule({
                 <button type="button" className="secondary" onClick={() => chooseSide("PARTY")}>
                   + Party Receipt
                 </button>
-                <button type="button" className="primary purple-primary" onClick={() => chooseSide("VENDOR")}>
+                <button type="button" className="primary payment-v2-save" onClick={() => chooseSide("VENDOR")}>
                   + Vendor Payment
                 </button>
               </>
             )}
           </div>
         </div>
-        <div className="package14-register-title payment-v2-register-title">
+
+        <div className="payment-v2-register-title">
           <div>
             <span className="eyebrow blue">PAYMENT REGISTER</span>
             <h2>Payment Register</h2>
-            <p>
-              Account-based Party receipts and Vendor payments. Receipt / Voucher prefixes identify Cash versus Bank
-              transactions.
-            </p>
+            <p>Account-based Party receipts and Vendor payments with Cash and Bank vouchers.</p>
           </div>
-          <div className="package14-register-stats payment-v2-register-stats">
+          <div className="payment-v2-register-stats">
             <div>
               <small>ACTIVE</small>
               <b>{activeEntries.length}</b>
@@ -1008,9 +904,11 @@ export function PaymentsModule({
             </div>
           </div>
         </div>
+
         {message && <div className="alert success">{message}</div>}
         {error && <div className="alert error">{error}</div>}
-        <div className="package14-register-controls payment-v2-register-controls">
+
+        <div className="payment-v2-register-controls">
           <div className="package-register-filter-tabs">
             {(["ALL", "PARTY_RECEIPT", "VENDOR_PAYMENT", "VOID"] as RegisterFilter[]).map((item) => (
               <button
@@ -1038,6 +936,7 @@ export function PaymentsModule({
             />
           </div>
         </div>
+
         {visibleEntries.length === 0 ? (
           <div className="empty-state compact-empty">
             <div className="empty-icon payment-empty-icon">PM</div>
@@ -1045,114 +944,144 @@ export function PaymentsModule({
             <p>Create a Party receipt or Vendor payment, or change the register filter.</p>
           </div>
         ) : (
-          <div className="party-table-wrap package14-register-wrap payment-v2-register-wrap">
-            <table className="party-table payment-v2-register-table">
-              <thead>
-                <tr>
-                  <th>DATE</th>
-                  <th>RECEIPT / VOUCHER #</th>
-                  <th>TYPE</th>
-                  <th>PARTY / VENDOR</th>
-                  <th>METHOD</th>
-                  <th>CURRENCY</th>
-                  <th>SAR / ROE</th>
-                  <th>PKR AMOUNT</th>
-                  <th>SETTLEMENT ACCOUNT</th>
-                  <th>REFERENCE</th>
-                  <th>STATUS</th>
-                  <th>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleEntries.map((entry) => {
-                  const meta = metaMap.get(entry.id);
-                  const kind = inferKind(entry, meta, parties);
-                  const account = parties.find((party) => party.id === entry.party_id) || null;
-                  const settlement =
-                    meta?.settlement_account || (sideForKind(kind) === "PARTY" ? entry.to_account : entry.from_account);
-                  return (
-                    <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
-                      <td>{formatDate(entry.transaction_date)}</td>
-                      <td>
+          <>
+            <div className="party-table-wrap payment-v2-register-wrap payment-v2-register-desktop">
+              <table className="party-table payment-v2-register-table">
+                <thead>
+                  <tr>
+                    <th>DATE</th>
+                    <th>RECEIPT / VOUCHER #</th>
+                    <th>TYPE</th>
+                    <th>PARTY / VENDOR</th>
+                    <th>METHOD</th>
+                    <th>CURRENCY</th>
+                    <th>SAR / ROE</th>
+                    <th>PKR AMOUNT</th>
+                    <th>SETTLEMENT ACCOUNT</th>
+                    <th>REFERENCE</th>
+                    <th>STATUS</th>
+                    <th>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleEntries.map((entry) => {
+                    const meta = metaMap.get(entry.id);
+                    const kind = inferKind(entry, meta, parties);
+                    const account = parties.find((party) => party.id === entry.party_id) || null;
+                    const settlement =
+                      meta?.settlement_account ||
+                      (sideForKind(kind) === "PARTY" ? entry.to_account : entry.from_account);
+                    return (
+                      <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
+                        <td>{formatDate(entry.transaction_date)}</td>
+                        <td>
+                          <b className="payment-v2-document-number">{entry.receipt_no || "LEGACY"}</b>
+                          {!meta && <small className="table-note">Legacy payment</small>}
+                        </td>
+                        <td>
+                          <span
+                            className={`payment-v2-kind-chip ${kind === "PARTY_RECEIPT" ? "receipt" : kind === "VENDOR_PAYMENT" ? "vendor" : "refund"}`}
+                          >
+                            {kindLabel(kind)}
+                          </span>
+                        </td>
+                        <td>
+                          <b>{entry.ledger_party_name || account?.name || "—"}</b>
+                        </td>
+                        <td>
+                          <span className={`payment-v2-method-chip ${entry.payment_type.toLowerCase()}`}>
+                            {entry.payment_type}
+                          </span>
+                        </td>
+                        <td>{entry.currency}</td>
+                        <td>
+                          {entry.currency === "SAR" ? (
+                            <>
+                              <b>SAR {number(entry.sar)}</b>
+                              <small className="table-note">ROE {number(entry.roe)}</small>
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="amount">
+                          <b>{money(entry.paid_amount)}</b>
+                        </td>
+                        <td>
+                          {settlement || "—"}
+                          {meta?.bank_name && <small className="table-note">{meta.bank_name}</small>}
+                        </td>
+                        <td>{meta?.reference || entry.description || "—"}</td>
+                        <td>
+                          <span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span>
+                        </td>
+                        <td>{renderRegisterEntryActions(entry, account)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="payment-v2-register-cards">
+              {visibleEntries.map((entry) => {
+                const meta = metaMap.get(entry.id);
+                const kind = inferKind(entry, meta, parties);
+                const account = parties.find((party) => party.id === entry.party_id) || null;
+                const settlement =
+                  meta?.settlement_account || (sideForKind(kind) === "PARTY" ? entry.to_account : entry.from_account);
+                return (
+                  <article
+                    key={entry.id}
+                    className={`payment-v2-register-card ${entry.status === "VOID" ? "void" : ""}`}
+                  >
+                    <div className="payment-v2-card-head">
+                      <div>
                         <b className="payment-v2-document-number">{entry.receipt_no || "LEGACY"}</b>
-                        {!meta && <small className="table-note">Legacy payment</small>}
-                      </td>
-                      <td>
-                        <span
-                          className={`payment-v2-kind-chip ${kind === "PARTY_RECEIPT" ? "receipt" : kind === "VENDOR_PAYMENT" ? "vendor" : "refund"}`}
-                        >
-                          {kindLabel(kind)}
-                        </span>
-                      </td>
-                      <td>
+                        <span>{formatDate(entry.transaction_date)}</span>
+                      </div>
+                      <span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span>
+                    </div>
+                    <div className="payment-v2-card-chips">
+                      <span
+                        className={`payment-v2-kind-chip ${kind === "PARTY_RECEIPT" ? "receipt" : kind === "VENDOR_PAYMENT" ? "vendor" : "refund"}`}
+                      >
+                        {kindLabel(kind)}
+                      </span>
+                      <span className={`payment-v2-method-chip ${entry.payment_type.toLowerCase()}`}>
+                        {entry.payment_type}
+                      </span>
+                    </div>
+                    <div className="payment-v2-card-body">
+                      <div>
+                        <small>ACCOUNT</small>
                         <b>{entry.ledger_party_name || account?.name || "—"}</b>
-                      </td>
-                      <td>
-                        <span className={`payment-v2-method-chip ${entry.payment_type.toLowerCase()}`}>
-                          {entry.payment_type}
-                        </span>
-                      </td>
-                      <td>{entry.currency}</td>
-                      <td>
-                        {entry.currency === "SAR" ? (
-                          <>
-                            <b>SAR {number(entry.sar)}</b>
-                            <small className="table-note">ROE {number(entry.roe)}</small>
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="amount">
+                      </div>
+                      <div>
+                        <small>PKR AMOUNT</small>
                         <b>{money(entry.paid_amount)}</b>
-                      </td>
-                      <td>
-                        {settlement || "—"}
-                        {meta?.bank_name && <small className="table-note">{meta.bank_name}</small>}
-                      </td>
-                      <td>{meta?.reference || entry.description || "—"}</td>
-                      <td>
-                        <span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span>
-                      </td>
-                      <td>
-                        <div className="row-actions compact-actions">
-                          <button type="button" onClick={() => account && onOpenLedger(account)} disabled={!account}>
-                            Ledger
-                          </button>
-                          {canEdit && (
-                            <button type="button" onClick={() => editEntry(entry)} disabled={entry.status !== "ACTIVE"}>
-                              Edit
-                            </button>
-                          )}
-                          {canEdit && (
-                            <button
-                              type="button"
-                              className="danger-action"
-                              onClick={() => void voidEntry(entry)}
-                              disabled={entry.status !== "ACTIVE" || busy}
-                            >
-                              Void
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      <div>
+                        <small>SETTLEMENT</small>
+                        <b>{settlement || "—"}</b>
+                      </div>
+                      <div>
+                        <small>REFERENCE</small>
+                        <b>{meta?.reference || entry.description || "—"}</b>
+                      </div>
+                    </div>
+                    {renderRegisterEntryActions(entry, account)}
+                  </article>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
     );
   }
 
-  return screen === "DIRECTION" ? (
-    renderDirectionScreen()
-  ) : (
-    <section className="content-card payments-page payments-v2">
-      {screen === "FORM" && renderForm()}
-      {screen === "REGISTER" && renderRegister()}
-    </section>
-  );
+  if (screen === "DIRECTION") return renderDirectionScreen();
+  if (screen === "FORM") return renderForm();
+  return renderRegister();
 }

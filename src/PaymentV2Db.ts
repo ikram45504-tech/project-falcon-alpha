@@ -64,13 +64,6 @@ export type PaymentV2Input = {
   internalNotes: string;
 };
 
-type AccountRow = {
-  id: string;
-  name: string;
-  account_type: "PARTY" | "VENDOR" | "UNASSIGNED";
-  status: "ACTIVE" | "INACTIVE";
-};
-
 type ReceiptRow = { id: string; receipt_no: string };
 type CountRow = { count: number };
 
@@ -286,25 +279,8 @@ async function validateAndResolveAccount(companyId: string, input: PaymentV2Inpu
   const roe = input.currency === "SAR" ? Math.max(0, Number(input.roe) || 0) : 0;
   if (input.currency === "SAR" && roe <= 0) throw new Error("ROE is required for a SAR payment.");
 
-  let account: AccountRow | undefined;
-  if (isDesktopApp()) {
-    const database = await ready();
-    const accounts = await database.select<AccountRow[]>(
-      `SELECT id,name,account_type,status FROM parties
-       WHERE company_id=$1 AND id=$2 LIMIT 1`,
-      [companyId, input.partyId],
-    );
-    account = accounts[0];
-  } else {
-    const { data, error } = await supabase
-      .from("parties")
-      .select("id,name,account_type,status")
-      .eq("company_id", companyId)
-      .eq("id", input.partyId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    account = (data as AccountRow | null) || undefined;
-  }
+  const { getAccountById } = await import("./CounterpartyDb");
+  const account = await getAccountById(companyId, input.partyId);
 
   const expected = expectedAccountType(input.transactionKind);
   if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
@@ -329,9 +305,7 @@ async function ensureDocumentAvailable(companyId: string, documentNo: string, ex
     const { count, error } = await query;
     if (error) throw new Error(error.message);
     if ((count || 0) > 0) {
-      throw new Error(
-        `${documentNo.trim()} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
-      );
+      throw new Error(`${documentNo.trim()} already exists. Generate the next Receipt / Voucher number.`);
     }
     return;
   }
@@ -343,9 +317,7 @@ async function ensureDocumentAvailable(companyId: string, documentNo: string, ex
     [companyId, documentNo.trim(), excludePaymentId],
   );
   if (Number(rows[0]?.count || 0) > 0) {
-    throw new Error(
-      `${documentNo.trim()} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
-    );
+    throw new Error(`${documentNo.trim()} already exists. Generate the next Receipt / Voucher number.`);
   }
 }
 
@@ -541,9 +513,7 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
       const message = error instanceof Error ? error.message : String(error);
       if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
         // eslint-disable-next-line
-        throw new Error(
-          `${documentNo} was just used by another payment. Return to Section 01 and generate the next Receipt / Voucher number.`,
-        );
+        throw new Error(`${documentNo} was just used by another payment. Generate the next Receipt / Voucher number.`);
       }
       throw error;
     }
@@ -624,9 +594,7 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
       const message = error instanceof Error ? error.message : String(error);
       if (/unique constraint failed|idx_payment_receipt_company_number/i.test(message)) {
         // eslint-disable-next-line
-        throw new Error(
-          `${documentNo} already exists. Return to Section 01 and generate the next Receipt / Voucher number.`,
-        );
+        throw new Error(`${documentNo} already exists. Generate the next Receipt / Voucher number.`);
       }
       throw error;
     }
@@ -649,7 +617,6 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
 
 export async function voidPaymentV2(companyId: string, paymentId: string, userId = "") {
   const now = new Date().toISOString();
-  let record: { receipt_no: string; paid_amount: number } | null = null;
 
   if (isDesktopApp()) {
     const database = await ready();
@@ -657,7 +624,7 @@ export async function voidPaymentV2(companyId: string, paymentId: string, userId
       `SELECT receipt_no,paid_amount FROM payment_entries WHERE company_id=$1 AND id=$2 LIMIT 1`,
       [companyId, paymentId],
     );
-    record = rows[0] || null;
+    const record = rows[0] || null;
     const statements: AtomicSqlStatement[] = [
       {
         sql: `UPDATE payment_entries SET status='VOID',updated_at=$1,updated_by_user_id=$2
@@ -677,14 +644,6 @@ export async function voidPaymentV2(companyId: string, paymentId: string, userId
       if (audit) statements.push(audit);
     }
     await runAtomicTransaction(statements);
-  } else {
-    const { data } = await supabase
-      .from("payment_entries")
-      .select("receipt_no,paid_amount")
-      .eq("company_id", companyId)
-      .eq("id", paymentId)
-      .maybeSingle();
-    record = data;
   }
 
   await syncPaymentVoid(paymentId, now, userId);
