@@ -5,14 +5,14 @@ import { downloadExcel } from "./exportUtils";
 import { type BookingAccountingEntry, accountDirectionLabel, getBookingAccountingEntries } from "./BookingAccounting";
 import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
 import { recordPaymentVoidHistory } from "./PaymentCorrectionDb";
-import { buildPaymentReceiptPdf } from "./PaymentReceiptPdf";
-import { downloadPaymentReceiptPdf, paymentReceiptFileName } from "./paymentReceiptExport";
+import PaymentReceiptPreviewModal from "./PaymentReceiptPreviewModal";
 import PaymentLedgerModal, { inferKind } from "./PaymentLedgerModal";
 import {
   deletePaymentV2,
   getPaymentV2Meta,
   getPaymentV2MetaMap,
   voidPaymentV2,
+  type PaymentTransactionKind,
   type PaymentV2Meta,
 } from "./PaymentV2Db";
 import "./PaymentLedgerModal.css";
@@ -35,6 +35,12 @@ type LedgerModalState =
   | { mode: "correct"; entry: PaymentEntry; meta: PaymentV2Meta | null }
   | { mode: "history"; entry: PaymentEntry; meta: PaymentV2Meta | null }
   | null;
+
+type ReceiptPreviewState = {
+  entry: PaymentEntry;
+  meta: PaymentV2Meta | null;
+  transactionKind: PaymentTransactionKind;
+};
 
 function formatDate(value: string) {
   if (!value) return "—";
@@ -73,6 +79,7 @@ export default function PartyLedger({
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState("");
   const [modal, setModal] = useState<LedgerModalState>(null);
+  const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
 
   const direction = accountDirectionLabel(party.account_type);
   const isVendor = party.account_type === "VENDOR";
@@ -145,25 +152,15 @@ export default function PartyLedger({
     }
   }
 
-  async function downloadReceipt(entry: PaymentEntry) {
+  async function openReceiptPreview(entry: PaymentEntry) {
     setError("");
     setMessage("");
-    try {
-      const meta = metaMap.get(entry.id) || (await getPaymentV2Meta(companyId, entry.id));
-      const kind = inferKind(meta, party.account_type === "VENDOR" ? "VENDOR" : "PARTY");
-      const doc = buildPaymentReceiptPdf({
-        company,
-        party,
-        entry,
-        meta,
-        transactionKind: kind,
-        generatedOn: new Date().toISOString(),
-      });
-      await downloadPaymentReceiptPdf(doc, paymentReceiptFileName(company, entry, party.name));
-      setMessage(`Receipt ${entry.receipt_no || ""} downloaded.`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
+    const meta = metaMap.get(entry.id) || (await getPaymentV2Meta(companyId, entry.id));
+    setReceiptPreview({
+      entry,
+      meta,
+      transactionKind: inferKind(meta, party.account_type === "VENDOR" ? "VENDOR" : "PARTY"),
+    });
   }
 
   async function deletePayment(entry: PaymentEntry) {
@@ -242,7 +239,7 @@ export default function PartyLedger({
   function renderPaymentActions(entry: PaymentEntry) {
     return (
       <div className="row-actions compact-actions ledger-payment-actions">
-        <button type="button" onClick={() => void downloadReceipt(entry)}>
+        <button type="button" onClick={() => void openReceiptPreview(entry)}>
           Receipt
         </button>
         <button type="button" onClick={() => void openModal("history", entry)}>
@@ -464,6 +461,17 @@ export default function PartyLedger({
             await onChanged?.();
             setMessage(`${modal.entry.receipt_no || "Payment"} corrected successfully.`);
           }}
+        />
+      )}
+
+      {receiptPreview && (
+        <PaymentReceiptPreviewModal
+          company={company}
+          party={party}
+          entry={receiptPreview.entry}
+          meta={receiptPreview.meta}
+          transactionKind={receiptPreview.transactionKind}
+          onClose={() => setReceiptPreview(null)}
         />
       )}
     </section>

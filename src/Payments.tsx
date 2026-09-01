@@ -3,8 +3,7 @@ import type { Company, Party, PaymentEntry } from "./db";
 import { getPayments } from "./db";
 import { getPartyBookingTotals } from "./BookingAccounting";
 import type { PartyBookingTotal } from "./BookingAccounting";
-import { buildPaymentReceiptPdf } from "./PaymentReceiptPdf";
-import { downloadPaymentReceiptPdf, paymentReceiptFileName } from "./paymentReceiptExport";
+import PaymentReceiptPreviewModal from "./PaymentReceiptPreviewModal";
 import {
   createPaymentV2,
   getNextPaymentDocumentNumber,
@@ -33,6 +32,13 @@ type PaymentSide = "PARTY" | "VENDOR";
 type PaymentPurpose = "STANDARD" | "REFUND";
 type PaymentScreen = "DIRECTION" | "FORM" | "REGISTER";
 type RegisterFilter = "ALL" | "PARTY_RECEIPT" | "VENDOR_PAYMENT" | "REFUNDS" | "VOID";
+
+type ReceiptPreviewState = {
+  entry: PaymentEntry;
+  party: Party;
+  meta: PaymentV2Meta | null;
+  transactionKind: PaymentTransactionKind;
+};
 
 type PaymentFormState = {
   transactionKind: PaymentTransactionKind;
@@ -275,6 +281,7 @@ export function PaymentsModule({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
 
   async function load() {
     try {
@@ -455,34 +462,20 @@ export function PaymentsModule({
     });
   }
 
-  async function downloadReceipt(entry: PaymentEntry) {
+  function openReceiptPreview(entry: PaymentEntry) {
     const account = parties.find((party) => party.id === entry.party_id) || null;
     if (!account) return setError("Account not found for this receipt.");
-    const meta = metaMap.get(entry.id);
-    const kind = inferKind(entry, meta, parties);
+    const meta = metaMap.get(entry.id) || null;
+    const kind = inferKind(entry, meta || undefined, parties);
     setError("");
-    try {
-      const doc = buildPaymentReceiptPdf({
-        company,
-        party: account,
-        entry,
-        meta: meta || null,
-        transactionKind: kind,
-        preparedBy: preparedByName,
-        generatedOn: new Date().toISOString(),
-      });
-      await downloadPaymentReceiptPdf(doc, paymentReceiptFileName(company, entry, account.name));
-      setMessage(`Receipt ${entry.receipt_no || ""} downloaded.`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
+    setReceiptPreview({ entry, party: account, meta, transactionKind: kind });
   }
 
-  async function downloadCurrentReceipt() {
+  function viewCurrentReceipt() {
     if (!editingId) return;
     const entry = entries.find((row) => row.id === editingId);
-    if (!entry) return setError("Save the payment first, then download the receipt.");
-    await downloadReceipt(entry);
+    if (!entry) return setError("Save the payment first, then view the receipt.");
+    openReceiptPreview(entry);
   }
 
   async function savePayment() {
@@ -601,7 +594,7 @@ export function PaymentsModule({
   function renderRegisterEntryActions(entry: PaymentEntry, account: Party | null) {
     return (
       <div className="row-actions compact-actions payment-v2-card-actions">
-        <button type="button" onClick={() => void downloadReceipt(entry)}>
+        <button type="button" onClick={() => openReceiptPreview(entry)}>
           Receipt
         </button>
         <button type="button" onClick={() => account && onOpenLedger(account)} disabled={!account}>
@@ -1064,8 +1057,8 @@ export function PaymentsModule({
               </button>
             )}
             {editingId && (
-              <button type="button" className="secondary" onClick={() => void downloadCurrentReceipt()}>
-                Download Receipt
+              <button type="button" className="secondary" onClick={viewCurrentReceipt}>
+                View Receipt
               </button>
             )}
             {selectedAccount && (
@@ -1312,7 +1305,20 @@ export function PaymentsModule({
     );
   }
 
-  if (screen === "DIRECTION") return renderDirectionScreen();
-  if (screen === "FORM") return renderForm();
-  return renderRegister();
+  return (
+    <>
+      {screen === "DIRECTION" ? renderDirectionScreen() : screen === "FORM" ? renderForm() : renderRegister()}
+      {receiptPreview && (
+        <PaymentReceiptPreviewModal
+          company={company}
+          party={receiptPreview.party}
+          entry={receiptPreview.entry}
+          meta={receiptPreview.meta}
+          transactionKind={receiptPreview.transactionKind}
+          preparedBy={preparedByName}
+          onClose={() => setReceiptPreview(null)}
+        />
+      )}
+    </>
+  );
 }

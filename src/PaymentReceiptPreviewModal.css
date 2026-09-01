@@ -1,0 +1,58 @@
+.payment-receipt-preview-modal {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-receipt-preview-modal .modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.payment-receipt-preview-modal .modal-head h3 {
+  margin: 4px 0;
+  color: #1b5b9c;
+}
+
+.payment-receipt-preview-modal .modal-head p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+}
+
+.payment-receipt-preview-shell {
+  border: 1px solid #dbe5ef;
+  border-radius: 12px;
+  background: #eef2f6;
+  overflow: hidden;
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.payment-receipt-preview-image {
+  display: block;
+  width: min(100%, 640px);
+  height: auto;
+  border: 1px solid #dbe5ef;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(21, 63, 115, 0.08);
+}
+
+.payment-receipt-preview-loading {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 220px;
+  color: #667085;
+  font-size: 14px;
+}
+
+.payment-receipt-preview-actions {
+  margin-top: 0;
+}
