@@ -307,3 +307,212 @@
   color: var(--text-main) !important;
   background: rgba(255, 255, 255, 0.4) !important;
 }
+
+/* --- Payment form: dark card + readable labels (v1.0.15+) --- */
+:root[data-theme="midnight"] .payment-v2-form-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-section-label b,
+:root[data-theme="midnight"] .payment-v2-title h2,
+:root[data-theme="midnight"] .payment-v2-register-title h2,
+:root[data-theme="midnight"] .payment-v2-details-toggle b,
+:root[data-theme="midnight"] .payment-v2-details-toggle strong,
+:root[data-theme="midnight"] .payment-v2-document-number,
+:root[data-theme="midnight"] .payment-v2-movement-arrow {
+  color: #7dd3fc !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-title p,
+:root[data-theme="midnight"] .payment-v2-section-label small,
+:root[data-theme="midnight"] .payment-v2-identity-grid label small,
+:root[data-theme="midnight"] .payment-v2-method-field small,
+:root[data-theme="midnight"] .payment-v2-setup-grid label small,
+:root[data-theme="midnight"] .payment-v2-field-hint,
+:root[data-theme="midnight"] .payment-v2-flow small,
+:root[data-theme="midnight"] .payment-v2-balance-preview small,
+:root[data-theme="midnight"] .payment-v2-balance-preview span,
+:root[data-theme="midnight"] .payment-v2-details-toggle small,
+:root[data-theme="midnight"] .payment-v2-register-stats small,
+:root[data-theme="midnight"] .payment-v2-card-head span,
+:root[data-theme="midnight"] .payment-v2-card-body small {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-flow b,
+:root[data-theme="midnight"] .payment-v2-balance-preview b,
+:root[data-theme="midnight"] .payment-v2-register-stats b,
+:root[data-theme="midnight"] .payment-v2-card-body b {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-purpose-tabs {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-purpose-tabs button {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-purpose-tabs button + button {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-purpose-tabs button.active.standard {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #7dd3fc !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-purpose-tabs button.active.refund {
+  background: rgba(251, 191, 36, 0.15) !important;
+  color: #fbbf24 !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-method-tabs button {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-movement-grid label {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-movement-grid input {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-doc-readonly,
+:root[data-theme="midnight"] .payment-v2-pkr-equiv,
+:root[data-theme="midnight"] .payment-v2-movement-grid input:read-only {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(15, 23, 42, 0.5) !important;
+  color: #7dd3fc !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-details,
+:root[data-theme="midnight"] .payment-v2-information {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-details-toggle,
+:root[data-theme="midnight"] .payment-v2-information-toggle {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-information-body {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.25) !important;
+}
+
+:root[data-theme="midnight"] .payment-v2-register-stats > div,
+:root[data-theme="midnight"] .payment-v2-register-card {
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-form-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-section-label b,
+:root[data-theme="ocean"] .payment-v2-title h2,
+:root[data-theme="ocean"] .payment-v2-register-title h2,
+:root[data-theme="ocean"] .payment-v2-details-toggle b,
+:root[data-theme="ocean"] .payment-v2-details-toggle strong,
+:root[data-theme="ocean"] .payment-v2-document-number,
+:root[data-theme="ocean"] .payment-v2-movement-arrow {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-title p,
+:root[data-theme="ocean"] .payment-v2-section-label small,
+:root[data-theme="ocean"] .payment-v2-identity-grid label small,
+:root[data-theme="ocean"] .payment-v2-method-field small,
+:root[data-theme="ocean"] .payment-v2-setup-grid label small,
+:root[data-theme="ocean"] .payment-v2-field-hint,
+:root[data-theme="ocean"] .payment-v2-flow small,
+:root[data-theme="ocean"] .payment-v2-balance-preview small,
+:root[data-theme="ocean"] .payment-v2-balance-preview span,
+:root[data-theme="ocean"] .payment-v2-details-toggle small,
+:root[data-theme="ocean"] .payment-v2-register-stats small,
+:root[data-theme="ocean"] .payment-v2-card-head span,
+:root[data-theme="ocean"] .payment-v2-card-body small {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-flow b,
+:root[data-theme="ocean"] .payment-v2-balance-preview b,
+:root[data-theme="ocean"] .payment-v2-register-stats b,
+:root[data-theme="ocean"] .payment-v2-card-body b {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-purpose-tabs {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-purpose-tabs button {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-purpose-tabs button + button {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-purpose-tabs button.active.standard {
+  background: rgba(2, 132, 199, 0.15) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-purpose-tabs button.active.refund {
+  background: rgba(251, 191, 36, 0.15) !important;
+  color: #b45309 !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-method-tabs button {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-movement-grid label {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-movement-grid input {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-doc-readonly,
+:root[data-theme="ocean"] .payment-v2-pkr-equiv,
+:root[data-theme="ocean"] .payment-v2-movement-grid input:read-only {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-details,
+:root[data-theme="ocean"] .payment-v2-information {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-details-toggle,
+:root[data-theme="ocean"] .payment-v2-information-toggle {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-information-body {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+:root[data-theme="ocean"] .payment-v2-register-stats > div,
+:root[data-theme="ocean"] .payment-v2-register-card {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
