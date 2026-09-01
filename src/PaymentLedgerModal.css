@@ -16,12 +16,12 @@
 
 .payment-ledger-modal .modal-head h3 {
   margin: 4px 0;
-  color: #1b5b9c;
+  color: var(--brand-primary, #1b5b9c);
 }
 
 .payment-ledger-modal .modal-head p {
   margin: 0;
-  color: #667085;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -34,10 +34,10 @@
 .payment-ledger-modal-note {
   margin: 0;
   padding: 10px 12px;
-  border: 1px solid #dbe5ef;
+  border: 1px solid var(--border-light);
   border-radius: 10px;
-  background: #f7fafc;
-  color: #4a6178;
+  background: var(--input-bg);
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -136,9 +136,9 @@
 }
 
 .payment-correction-card {
-  border: 1px solid #dbe5ef;
+  border: 1px solid var(--border-light);
   border-radius: 10px;
-  background: #fff;
+  background: var(--input-bg);
   padding: 12px 14px;
 }
 

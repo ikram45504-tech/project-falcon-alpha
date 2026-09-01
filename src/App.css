@@ -9121,6 +9121,11 @@ textarea:focus {
 :root[data-theme="midnight"] .booking-direction-card small {
   color: var(--text-main) !important;
 }
+:root[data-theme="midnight"] .payment-ledger-modal-note {
+  background: rgba(30, 41, 59, 0.55) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-muted) !important;
+}
 :root[data-theme="midnight"] td {
   color: var(--text-muted) !important;
 }
