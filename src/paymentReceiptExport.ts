@@ -15,6 +15,13 @@ function isMobilePrintShell() {
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
 }
 
+function isIosPrintShell() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPod|iPad/i.test(ua)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
 export function safeFileName(text: string) {
   return String(text || "document")
     .replace(/[<>:"/\\|?*]+/g, "-")
@@ -132,19 +139,26 @@ export async function blobToDataUrl(blob: Blob) {
   });
 }
 
-export function buildReceiptPrintHtml(imageDataUrl: string) {
+export function buildReceiptPrintHtml(imageDataUrl: string, compactPage = false) {
   const pageW = PAYMENT_RECEIPT_PAGE_WIDTH_MM;
-  const pageH = PAYMENT_RECEIPT_PAGE_HEIGHT_MM;
   const receiptH = PAYMENT_RECEIPT_HEIGHT_MM;
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=${pageW}, initial-scale=1.0"><title>Receipt</title><style>
+  const pageH = compactPage ? receiptH : PAYMENT_RECEIPT_PAGE_HEIGHT_MM;
+  const pageSizeRule = compactPage
+    ? `@media print { @page { size: ${pageW}mm ${pageH}mm; margin: 0; } }`
+    : `@media print {
+  @page { size: ${pageW}mm ${pageH}mm; margin: 0; }
+  @page { size: A4 portrait; margin: 0; }
+}`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=${pageW}, initial-scale=1.0"><title>${compactPage ? " " : "Receipt"}</title><style>
 *, *::before, *::after { box-sizing: border-box; }
-@page { size: ${pageW}mm ${pageH}mm; margin: 0; }
-@page { size: A4 portrait; margin: 0; }
+${pageSizeRule}
 html, body {
   margin: 0;
   padding: 0;
   width: ${pageW}mm;
-  min-height: ${pageH}mm;
+  height: ${pageH}mm;
+  max-height: ${pageH}mm;
+  overflow: hidden;
   background: #fff;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
@@ -156,16 +170,23 @@ html, body {
   padding: 0;
   overflow: hidden;
   background: #fff;
+  page-break-before: avoid;
   page-break-after: avoid;
   page-break-inside: avoid;
+  break-inside: avoid;
 }
 .receipt-sheet img {
   display: block;
   width: ${pageW}mm;
-  height: ${receiptH}mm;
+  height: ${compactPage ? pageH : receiptH}mm;
   margin: 0;
+  padding: 0;
   object-fit: contain;
   object-position: top center;
+  page-break-before: avoid;
+  page-break-after: avoid;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 </style></head><body><div class="receipt-sheet"><img src="${imageDataUrl}" alt="Receipt" /></div></body></html>`;
 }
@@ -226,10 +247,12 @@ function printPdfViaIframe(url: string) {
 
 function printReceiptImageInIsolatedDocument(imageDataUrl: string) {
   return new Promise<void>((resolve, reject) => {
+    const compactPage = isIosPrintShell();
     const iframe = document.createElement("iframe");
     const pageW = PAYMENT_RECEIPT_PAGE_WIDTH_MM;
-    const pageH = PAYMENT_RECEIPT_PAGE_HEIGHT_MM;
-    iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${pageW}mm;height:${pageH}mm;border:0;visibility:hidden`;
+    const pageH = compactPage ? PAYMENT_RECEIPT_HEIGHT_MM : PAYMENT_RECEIPT_PAGE_HEIGHT_MM;
+    iframe.name = "printReceiptFrame";
+    iframe.style.cssText = `position:absolute;top:-9999px;left:-9999px;width:${pageW}mm;height:${pageH}mm;border:0`;
     iframe.title = "Print receipt";
 
     const cleanup = () => {
@@ -251,7 +274,7 @@ function printReceiptImageInIsolatedDocument(imageDataUrl: string) {
     }
 
     doc.open();
-    doc.write(buildReceiptPrintHtml(imageDataUrl));
+    doc.write(buildReceiptPrintHtml(imageDataUrl, compactPage));
     doc.close();
 
     const runPrint = async () => {

@@ -65,4 +65,12 @@ describe("paymentReceiptExport WhatsApp", () => {
     expect(html).toContain("size: A4 portrait");
     expect(html).toContain("margin: 0");
   });
+
+  it("builds compact single-page print html for iphone", () => {
+    const html = buildReceiptPrintHtml("data:image/jpeg;base64,abc123", true);
+    expect(html).toContain("210mm 99mm");
+    expect(html).not.toContain("297mm");
+    expect(html).not.toContain("A4 portrait");
+    expect(html).toContain("<title> </title>");
+  });
 });
