@@ -892,113 +892,26 @@
     padding: 12px;
   }
 
-  html:not(.phone-ui) .statement-doc-shell {
+  .statement-doc-shell {
     padding: 8px;
     border-radius: 12px;
   }
 
-  html:not(.phone-ui) .statement-doc-glance {
+  .statement-doc-glance {
     grid-template-columns: 1fr 1fr;
   }
 
-  html:not(.phone-ui) .statement-doc-paper {
+  .statement-doc-paper {
     padding: 16px;
   }
 
-  html:not(.phone-ui) .statement-doc-head {
+  .statement-doc-head {
     flex-direction: column;
   }
 
-  html:not(.phone-ui) .statement-doc-title {
+  .statement-doc-title {
     text-align: left;
   }
-}
-
-/* Mobile PWA — same statement layout as desktop/web; shrink to fit, no sideways scroll */
-html.phone-ui .statement-doc-shell {
-  overflow-x: hidden;
-  overflow-y: visible;
-}
-
-html.phone-ui .statement-doc-paper {
-  max-width: 100%;
-  width: 100%;
-  padding: 28px 16px 32px;
-  font-size: 12px;
-}
-
-html.phone-ui .statement-doc-table-wrap {
-  overflow-x: visible;
-}
-
-html.phone-ui .statement-grid-table {
-  min-width: 0;
-  width: 100%;
-}
-
-html.phone-ui .statement-grid-head,
-html.phone-ui .statement-grid-cell {
-  padding: 6px 5px;
-}
-
-html.phone-ui .statement-grid-head {
-  font-size: 8px;
-  letter-spacing: 0.02em;
-}
-
-html.phone-ui .statement-grid-cell {
-  font-size: 10px;
-}
-
-html.phone-ui .statement-grid-cell .cell-secondary {
-  font-size: 8px;
-}
-
-html.phone-ui .statement-doc-glance {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-}
-
-html.phone-ui .statement-doc-glance-item {
-  padding: 8px 6px;
-}
-
-html.phone-ui .statement-doc-glance-item small {
-  font-size: 8px;
-}
-
-html.phone-ui .statement-doc-glance-item b {
-  font-size: 11px;
-}
-
-html.phone-ui .statement-doc-head {
-  flex-direction: row;
-  gap: 12px;
-}
-
-html.phone-ui .statement-doc-title {
-  text-align: right;
-}
-
-html.phone-ui .statement-doc-company h1 {
-  font-size: 18px;
-}
-
-html.phone-ui .statement-doc-title h2 {
-  font-size: 15px;
-}
-
-html.phone-ui .statement-print-mode .statement-doc-paper {
-  max-width: 100%;
-}
-
-html.phone-ui .statement-doc-print .statement-doc-table-wrap {
-  overflow-x: visible;
-}
-
-html.phone-ui .statement-doc-print .statement-grid-table {
-  min-width: 0;
-  width: 100%;
 }
 
 html.phone-ui .statement-sticky-actions {
