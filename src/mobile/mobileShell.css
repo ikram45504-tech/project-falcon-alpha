@@ -325,15 +325,19 @@ html.phone-ui {
   .ledger-table-wrap,
   .statement-controls,
   .statement-v6-controls,
-  .statement-workspace-v3,
-  .statement-doc-shell,
-  .statement-doc-table-wrap {
+  .statement-workspace-v3 {
     max-width: 100%;
     overflow-x: auto;
   }
 
   .statement-workspace-v3 {
     gap: 12px;
+  }
+
+  html.phone-ui .statement-workspace-v3,
+  html.phone-ui .statement-doc-shell,
+  html.phone-ui .statement-doc-table-wrap {
+    overflow-x: hidden;
   }
 
   .statement-sticky-actions {
