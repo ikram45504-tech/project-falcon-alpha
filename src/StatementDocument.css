@@ -841,6 +841,62 @@
 }
 
 @media (max-width: 768px) {
+  .statement-workspace-toolbar label {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .statement-hero-balance {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px 18px;
+  }
+
+  .statement-hero-meta {
+    text-align: left;
+  }
+
+  .statement-hero-balance b {
+    font-size: 22px;
+  }
+
+  .statement-breakdown-strip {
+    gap: 10px 14px;
+  }
+
+  .statement-sticky-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .statement-sticky-actions label {
+    margin-right: 0;
+  }
+
+  .statement-view-pills {
+    width: 100%;
+  }
+
+  .statement-view-pills button {
+    flex: 1 1 0;
+  }
+
+  .statement-sticky-actions .secondary,
+  .statement-sticky-actions .primary {
+    width: 100%;
+  }
+
+  .statement-print-mode {
+    padding: 12px;
+  }
+
+  .statement-doc-shell {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
   .statement-doc-glance {
     grid-template-columns: 1fr 1fr;
   }
@@ -856,8 +912,9 @@
   .statement-doc-title {
     text-align: left;
   }
+}
 
-  .statement-hero-balance b {
-    font-size: 22px;
-  }
+html.phone-ui .statement-sticky-actions {
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  z-index: 3;
 }
