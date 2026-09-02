@@ -334,7 +334,7 @@ export default function PartyLedger({
           <b>{formatMoney(bookingTotal)}</b>
         </div>
         <div className="paid">
-          <small>NET RECEIPTS</small>
+          <small>PAYMENTS</small>
           <b>{formatMoney(paymentTotal)}</b>
         </div>
         <div className="balance">

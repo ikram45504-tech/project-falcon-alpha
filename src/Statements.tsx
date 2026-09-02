@@ -11,6 +11,7 @@ import {
   type StatementBookingSections,
 } from "./StatementBookingData";
 import { buildStatementPdf, StatementPdfData } from "./StatementJsPdf";
+import StatementDocument from "./StatementDocument";
 import { getChronologicalLedger, type LedgerRow } from "./LedgerEngine";
 import { getPaymentV2MetaForPayments, type PaymentV2Meta } from "./PaymentV2Db";
 import { downloadExcel } from "./exportUtils";
@@ -100,6 +101,15 @@ function money(value: number) {
   return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
 
+function formatDate(value: string) {
+  if (!value) return "—";
+  const [y, m, d] = value.split("-").map(Number);
+  if (!y || !m || !d) return value;
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    .format(new Date(y, m - 1, d))
+    .replace(/ /g, "-");
+}
+
 function sar(value: number) {
   return `SAR ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
@@ -125,12 +135,12 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
   const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
   const [paymentMeta, setPaymentMeta] = useState<Map<string, PaymentV2Meta>>(() => new Map());
+  const [includeLedger, setIncludeLedger] = useState(false);
+  const [includeReconciliation, setIncludeReconciliation] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"pdf" | "print">("pdf");
   const [statementRef, setStatementRef] = useState(makeStatementRef());
   const [generatedOn, setGeneratedOn] = useState(generatedDate());
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(false);
-  const [buildingPdf, setBuildingPdf] = useState(false);
   const [savingPdf, setSavingPdf] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -293,9 +303,12 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       sections: periodSections,
       payments: periodPayments,
       paymentMeta,
-      ledgerRows: ledgerRows.filter(
-        (row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate),
-      ),
+      ledgerRows: includeLedger
+        ? ledgerRows.filter((row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate))
+        : [],
+      includeLedger,
+      includeReconciliation,
+      previewMode,
     };
   }, [
     company,
@@ -314,47 +327,20 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     periodPayments,
     paymentMeta,
     ledgerRows,
+    includeLedger,
+    includeReconciliation,
+    previewMode,
   ]);
 
-  useEffect(() => {
-    let cancelled = false;
-    let nextUrl = "";
-    async function buildPreview() {
-      if (!pdfData) {
-        setPdfBlob(null);
-        setPreviewUrl("");
-        return;
-      }
-      setBuildingPdf(true);
-      setError("");
-      try {
-        const doc = buildStatementPdf(pdfData);
-        const blob = doc.output("blob");
-        if (cancelled) return;
-        nextUrl = URL.createObjectURL(blob);
-        setPdfBlob(blob);
-        setPreviewUrl(nextUrl);
-      } catch (e) {
-        if (!cancelled) setError(`Could not build statement PDF: ${e instanceof Error ? e.message : String(e)}`);
-      } finally {
-        if (!cancelled) setBuildingPdf(false);
-      }
-    }
-    void buildPreview();
-    return () => {
-      cancelled = true;
-      if (nextUrl) URL.revokeObjectURL(nextUrl);
-    };
-  }, [pdfData]);
-
   async function savePdf() {
-    if (!pdfBlob || !pdfData || !selectedParty) return setError("Statement PDF is not ready yet.");
+    if (!pdfData || !selectedParty) return setError("Statement is not ready yet.");
     if (!validatePeriod()) return;
     setSavingPdf(true);
     setError("");
     setMessage("");
     try {
-      const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
+      const doc = buildStatementPdf(pdfData);
+      const pdfBytes = new Uint8Array(doc.output("arraybuffer"));
       const fileName = `${safeFileName(company.name)}_Statement_${safeFileName(selectedParty.name)}_${fromDate}_to_${toDate}.pdf`;
       const isTauri = "__TAURI_INTERNALS__" in window;
 
@@ -494,8 +480,10 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   }
 
   return (
-    <section className="content-card statements-page bookings-flow-v2">
-      <div className="booking-screen-toolbar" style={{ marginBottom: "16px", padding: "0 24px" }}>
+    <section
+      className={`content-card statements-page bookings-flow-v2 statement-workspace-v3${previewMode === "print" ? " statement-print-mode" : ""}`}
+    >
+      <div className="booking-screen-toolbar">
         <button
           type="button"
           className="booking-back-button"
@@ -504,7 +492,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
             setPartyId("");
           }}
         >
-          ← Change Statement Type
+          ← Change statement type
         </button>
         <div className="bf-toolbar-actions">
           <span className={`direction-badge ${statementDirection === "PARTY" ? "sale" : "purchase"}`}>
@@ -513,26 +501,10 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
         </div>
       </div>
 
-      <div className="page-title" style={{ marginTop: 0 }}>
-        <div>
-          <span className="eyebrow blue">SERVICE-WISE BOOKING STATEMENT</span>
-          <h2>{statementDirection === "PARTY" ? "Party Statement" : "Vendor Statement"}</h2>
-          <p>
-            Full Package, Ticket, Hotel, Visa, Transport and Misc are shown as separate statement sections with
-            service-specific fields.
-          </p>
-        </div>
-        {selectedParty && (
-          <button className="secondary" onClick={() => onOpenLedger(selectedParty)}>
-            Open Account Ledger
-          </button>
-        )}
-      </div>
-
       {message && <div className="alert success">{message}</div>}
       {error && <div className="alert error">{error}</div>}
 
-      <div className="statement-controls">
+      <div className="statement-workspace-toolbar">
         <label>
           {accountLabel}
           <select value={partyId} onChange={(e) => setPartyId(e.target.value)}>
@@ -541,12 +513,12 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
               .filter((party) => party.account_type === statementDirection)
               .map((party) => (
                 <option key={party.id} value={party.id}>
-                  {party.name} · {party.account_type}
+                  {party.name}
                 </option>
               ))}
           </select>
         </label>
-        <div className="statement-period-tabs">
+        <div className="statement-period-pills">
           {(["FULL_LEDGER", "THIS_MONTH", "LAST_MONTH", "CUSTOM"] as PeriodType[]).map((type) => (
             <button
               key={type}
@@ -555,108 +527,138 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
               onClick={() => changePeriod(type)}
             >
               {type === "FULL_LEDGER"
-                ? "Full Ledger"
+                ? "Full ledger"
                 : type === "THIS_MONTH"
-                  ? "This Month"
+                  ? "This month"
                   : type === "LAST_MONTH"
-                    ? "Last Month"
+                    ? "Last month"
                     : "Custom"}
             </button>
           ))}
         </div>
-        <label>
-          From Date
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => {
-              setPeriodType("CUSTOM");
-              setFromDate(e.target.value);
-              refreshStatementIdentity();
-            }}
-          />
-        </label>
-        <label>
-          To Date
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => {
-              setPeriodType("CUSTOM");
-              setToDate(e.target.value);
-              refreshStatementIdentity();
-            }}
-          />
-        </label>
-      </div>
-
-      <div className="module-summary-row statement-summary-row">
-        <div>
-          <small>OPENING BALANCE</small>
-          <b>{money(openingBalance)}</b>
-        </div>
-        <div>
-          <small>{bookedLabel}</small>
-          <b>{money(bookingsDuringPeriod)}</b>
-        </div>
-        <div>
-          <small>PAYMENTS</small>
-          <b>{money(paymentsDuringPeriod)}</b>
-        </div>
-        <div>
-          <small>{balanceLabel}</small>
-          <b>{money(closingBalance)}</b>
-        </div>
-        <div>
-          <small>PENDING SAR</small>
-          <b>{sar(pendingSarBalance)}</b>
-        </div>
-      </div>
-
-      <div className="statement-accounting-note">
-        <b>{selectedParty ? `${selectedParty.name} · ${accountDirection}` : "Select an account"}</b>
-        <span>
-          {selectedParty?.account_type === "VENDOR"
-            ? "Purchase bookings increase payable; payments reduce payable."
-            : "Sale bookings increase receivable; payments reduce receivable."}{" "}
-          Pending SAR is shown separately until ROE converts it to PKR.
-        </span>
-      </div>
-
-      <div className="statement-preview-shell">
-        <div className="statement-preview-head">
-          <div>
-            <b>PDF Preview</b>
-            <span>
-              {loading
-                ? "Loading service-wise booking data..."
-                : buildingPdf
-                  ? "Building preview..."
-                  : `${periodBookingCount} booking(s) · ${periodPayments.length} payment(s)`}
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button className="secondary" disabled={!pdfData} onClick={handleExport}>
-              Export to Excel
-            </button>
-            <button
-              className="primary statement-primary"
-              disabled={!pdfBlob || savingPdf || buildingPdf}
-              onClick={() => void savePdf()}
-            >
-              {savingPdf ? "Saving..." : "Save PDF"}
-            </button>
-          </div>
-        </div>
-        {previewUrl ? (
-          <iframe className="statement-pdf-preview" src={previewUrl} title="Statement PDF Preview" />
-        ) : (
-          <div className="empty-state">
-            <h3>No statement preview yet</h3>
-            <p>Select an account with booking or payment activity.</p>
+        {periodType === "CUSTOM" && (
+          <div className="statement-custom-dates">
+            <label>
+              From
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  refreshStatementIdentity();
+                }}
+              />
+            </label>
+            <label>
+              To
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  refreshStatementIdentity();
+                }}
+              />
+            </label>
           </div>
         )}
       </div>
+
+      {selectedParty && (
+        <>
+          <div className="statement-hero-balance">
+            <div>
+              <small>{balanceLabel}</small>
+              <b>{money(closingBalance)}</b>
+            </div>
+            <div className="statement-hero-meta">
+              <div>
+                <b>{selectedParty.name}</b> · {accountDirection}
+              </div>
+              <div>
+                {formatDate(fromDate)} – {formatDate(toDate)}
+              </div>
+              <div>
+                {loading ? "Loading..." : `${periodBookingCount} booking(s) · ${periodPayments.length} payment(s)`}
+              </div>
+            </div>
+          </div>
+
+          <div className="statement-breakdown-strip">
+            <span>
+              Opening <b>{money(openingBalance)}</b>
+            </span>
+            <span>
+              {bookedLabel} <b>{money(bookingsDuringPeriod)}</b>
+            </span>
+            <span>
+              Payments <b>{money(paymentsDuringPeriod)}</b>
+            </span>
+            {pendingSarBalance > 0 && (
+              <span>
+                Pending SAR <b>{sar(pendingSarBalance)}</b>
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className="statement-sticky-actions">
+        <div className="statement-view-pills" role="group" aria-label="Preview format">
+          <button type="button" className={previewMode === "pdf" ? "active" : ""} onClick={() => setPreviewMode("pdf")}>
+            PDF view
+          </button>
+          <button
+            type="button"
+            className={previewMode === "print" ? "active" : ""}
+            onClick={() => setPreviewMode("print")}
+          >
+            Print view
+          </button>
+        </div>
+        <label>
+          <input
+            type="checkbox"
+            checked={includeReconciliation}
+            onChange={(e) => setIncludeReconciliation(e.target.checked)}
+          />
+          Include final reconciliation
+        </label>
+        <label>
+          <input type="checkbox" checked={includeLedger} onChange={(e) => setIncludeLedger(e.target.checked)} />
+          Include ledger summary
+        </label>
+        {previewMode === "print" && pdfData && (
+          <button className="secondary" type="button" onClick={() => window.print()}>
+            Print
+          </button>
+        )}
+        {selectedParty && (
+          <button className="secondary" type="button" onClick={() => onOpenLedger(selectedParty)}>
+            Open account ledger
+          </button>
+        )}
+        <button className="secondary" type="button" disabled={!pdfData} onClick={handleExport}>
+          Export to Excel
+        </button>
+        <button
+          className="primary statement-primary"
+          type="button"
+          disabled={!pdfData || savingPdf || loading}
+          onClick={() => void savePdf()}
+        >
+          {savingPdf ? "Saving..." : "Save PDF"}
+        </button>
+      </div>
+
+      {pdfData ? (
+        <StatementDocument data={pdfData} />
+      ) : (
+        <div className="empty-state">
+          <h3>Select an account</h3>
+          <p>Choose a {statementDirection === "PARTY" ? "customer" : "supplier"} to preview the statement.</p>
+        </div>
+      )}
     </section>
   );
 }

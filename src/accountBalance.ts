@@ -32,8 +32,6 @@ export function accountBalanceFromTotals(bookingTotal: number, signedPaymentSett
 }
 
 export function paymentKindLabel(kind: PaymentTransactionKind) {
-  if (kind === "PARTY_RECEIPT") return "Receipt";
-  if (kind === "PARTY_REFUND") return "Refund";
-  if (kind === "VENDOR_PAYMENT") return "Payment";
-  return "Refund received";
+  if (kind === "PARTY_REFUND" || kind === "VENDOR_REFUND") return "Refund";
+  return "Payment";
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   accountBalanceFromTotals,
   inferPaymentKind,
+  paymentKindLabel,
   signedPaymentSettlement,
   sumSignedPaymentSettlements,
 } from "./accountBalance";
@@ -16,6 +17,12 @@ describe("accountBalance", () => {
     expect(inferPaymentKind(null, "PARTY")).toBe("PARTY_RECEIPT");
     expect(inferPaymentKind(null, "VENDOR")).toBe("VENDOR_PAYMENT");
     expect(inferPaymentKind({ transaction_kind: "PARTY_REFUND" }, "PARTY")).toBe("PARTY_REFUND");
+  });
+
+  it("labels payment kinds for client-facing statements", () => {
+    expect(paymentKindLabel("PARTY_RECEIPT")).toBe("Payment");
+    expect(paymentKindLabel("VENDOR_PAYMENT")).toBe("Payment");
+    expect(paymentKindLabel("PARTY_REFUND")).toBe("Refund");
   });
 
   it("sums signed settlements for mixed receipts and refunds", () => {
