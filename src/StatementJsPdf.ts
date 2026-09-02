@@ -8,6 +8,8 @@ import {
 } from "./StatementBookingData";
 import type { BookingServiceName } from "./BookingLifecycle";
 import type { LedgerRow } from "./LedgerEngine";
+import type { PaymentV2Meta } from "./PaymentV2Db";
+import { inferPaymentKind, paymentKindLabel } from "./accountBalance";
 
 export type StatementPdfData = {
   company: Company;
@@ -24,6 +26,7 @@ export type StatementPdfData = {
   pendingSarBalance: number;
   sections: StatementBookingSections;
   payments: PaymentEntry[];
+  paymentMeta?: Map<string, PaymentV2Meta>;
   ledgerRows?: LedgerRow[];
 };
 
@@ -304,9 +307,9 @@ function drawSummary(doc: jsPDF, data: StatementPdfData, y: number) {
       top: COLORS.navy,
     },
     {
-      title: "PAYMENTS",
+      title: "NET RECEIPTS",
       value: money(data.paymentsDuringPeriod),
-      foot: "During selected period",
+      foot: "Receipts minus refunds in period",
       bg: COLORS.greenCard,
       top: COLORS.green,
     },
@@ -847,7 +850,7 @@ function drawReconciliation(doc: jsPDF, data: StatementPdfData, y: number) {
   const rows: Array<[string, string, string?]> = [
     ...serviceRows.map(([label, value]) => [label, money(value)] as [string, string]),
     ["TOTAL COMMERCIAL ACTIVITY", money(data.bookingsDuringPeriod), "total"],
-    ["LESS: PAYMENTS", money(data.paymentsDuringPeriod)],
+    ["LESS: NET RECEIPTS", money(data.paymentsDuringPeriod)],
     ["ADD: OPENING BALANCE", money(data.openingBalance)],
     [
       data.party.account_type === "VENDOR" ? "CLOSING PAYABLE" : "CLOSING RECEIVABLE",
@@ -1436,30 +1439,38 @@ export function buildStatementPdf(data: StatementPdfData) {
     { width: 14, header: "TYPE", align: "center" },
     { width: 28, header: "PAID PKR", align: "right" },
   ];
-  const paymentRows: TableRow[] = data.payments.map((entry, index) => ({
-    cells: [
-      { text: String(index + 1), align: "center" },
-      { text: longDate(entry.transaction_date), align: "center" },
-      { text: safeText(entry.receipt_no), bold: true },
-      { text: safeText(entry.from_account) },
-      { text: safeText(entry.to_account) },
-      { text: safeText(entry.description) },
-      { text: safeText(entry.payment_type), align: "center" },
-      {
-        text: money(entry.paid_amount),
-        secondary: entry.currency === "SAR" ? `${sar(entry.sar)} @ ${number(entry.roe)}` : undefined,
-        align: "right",
-        bold: true,
-      },
-    ],
-  }));
+  const paymentRows: TableRow[] = data.payments.map((entry, index) => {
+    const kind = inferPaymentKind(data.paymentMeta?.get(entry.id), data.party.account_type);
+    return {
+      cells: [
+        { text: String(index + 1), align: "center" },
+        { text: longDate(entry.transaction_date), align: "center" },
+        { text: safeText(entry.receipt_no), bold: true },
+        { text: safeText(entry.from_account) },
+        { text: safeText(entry.to_account) },
+        { text: safeText(entry.description || paymentKindLabel(kind)) },
+        { text: paymentKindLabel(kind), align: "center" },
+        {
+          text: money(entry.paid_amount),
+          secondary:
+            kind === "PARTY_REFUND" || kind === "VENDOR_REFUND"
+              ? "Increases balance"
+              : entry.currency === "SAR"
+                ? `${sar(entry.sar)} @ ${number(entry.roe)}`
+                : undefined,
+          align: "right",
+          bold: true,
+        },
+      ],
+    };
+  });
   y = renderSection(
     doc,
     data,
-    "PAYMENTS",
+    "PAYMENTS & REFUNDS",
     paymentColumns,
     paymentRows,
-    { label: "PAYMENTS SUBTOTAL", pkr: data.paymentsDuringPeriod },
+    { label: "NET RECEIPTS SUBTOTAL", pkr: data.paymentsDuringPeriod },
     PAYMENT_THEME,
     y,
   );

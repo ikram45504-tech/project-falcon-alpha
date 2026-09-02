@@ -20,10 +20,18 @@ vi.mock("./miscDb", () => ({
   initMiscDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
-const mockGetBookingAccountingEntries = vi.fn();
-vi.mock("./BookingAccounting", () => ({
-  getBookingAccountingEntries: (...args: unknown[]) => mockGetBookingAccountingEntries(...args),
+vi.mock("./SegmentAdjustmentRecord", () => ({
+  loadSegmentAdjustmentsForStatements: vi.fn().mockResolvedValue([]),
 }));
+
+const mockGetBookingAccountingEntries = vi.fn();
+vi.mock("./BookingAccounting", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./BookingAccounting")>();
+  return {
+    ...actual,
+    getBookingAccountingEntries: (...args: unknown[]) => mockGetBookingAccountingEntries(...args),
+  };
+});
 
 const mockSupabaseFrom = vi.fn();
 vi.mock("./supabaseClient", () => ({

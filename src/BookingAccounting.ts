@@ -1,6 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { initMiscDatabase } from "./miscDb";
 import { isDesktopApp } from "./cloudSync";
+import { loadSegmentAdjustmentsForStatements, type StatementSegmentAdjustmentRow } from "./SegmentAdjustmentRecord";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -212,6 +213,63 @@ async function fetchWebBookingAccountingEntries(companyId: string, counterpartyI
   );
 }
 
+export function buildLatestAdjustmentMap(adjustments: StatementSegmentAdjustmentRow[]) {
+  const map = new Map<string, StatementSegmentAdjustmentRow>();
+  for (const row of adjustments) {
+    if (row.adjustment_type === "CORRECTION") continue;
+    const key = `${row.service_type}:${row.booking_id}`;
+    const existing = map.get(key);
+    if (!existing || Number(row.revision_no || 0) >= Number(existing.revision_no || 0)) {
+      map.set(key, row);
+    }
+  }
+  return map;
+}
+
+export function bookingLedgerBaseAmount(
+  entry: Pick<BookingAccountingEntry, "id" | "service_type" | "total_pkr">,
+  adjustments: StatementSegmentAdjustmentRow[],
+) {
+  const commercial = adjustments
+    .filter((row) => row.service_type === entry.service_type && row.booking_id === entry.id)
+    .filter((row) => row.adjustment_type !== "CORRECTION")
+    .sort(
+      (a, b) => Number(a.revision_no || 0) - Number(b.revision_no || 0) || a.created_at.localeCompare(b.created_at),
+    );
+  if (!commercial.length) return Number(entry.total_pkr || 0);
+  return Number(commercial[0].previous_total_pkr || entry.total_pkr || 0);
+}
+
+export function effectiveBookingAmount(
+  entry: Pick<BookingAccountingEntry, "id" | "service_type" | "total_pkr">,
+  latestAdjustments: Map<string, StatementSegmentAdjustmentRow>,
+) {
+  const latest = latestAdjustments.get(`${entry.service_type}:${entry.id}`);
+  if (latest) return Number(latest.effective_total_pkr || 0);
+  return Number(entry.total_pkr || 0);
+}
+
+export function aggregatePartyBookingTotalsWithAdjustments(
+  entries: BookingAccountingEntry[],
+  adjustments: StatementSegmentAdjustmentRow[],
+): PartyBookingTotal[] {
+  const latestAdjustments = buildLatestAdjustmentMap(adjustments);
+  const map = new Map<string, { sale_total: number; purchase_total: number }>();
+  for (const row of entries) {
+    if (row.status !== "ACTIVE") continue;
+    const amount = effectiveBookingAmount(row, latestAdjustments);
+    const current = map.get(row.counterparty_id) || { sale_total: 0, purchase_total: 0 };
+    if (row.transaction_type === "SALE") current.sale_total += amount;
+    else current.purchase_total += amount;
+    map.set(row.counterparty_id, current);
+  }
+  return Array.from(map.entries()).map(([counterparty_id, totals]) => ({
+    counterparty_id,
+    sale_total: totals.sale_total,
+    purchase_total: totals.purchase_total,
+  }));
+}
+
 export function aggregatePartyBookingTotals(entries: BookingAccountingEntry[]): PartyBookingTotal[] {
   const map = new Map<string, { sale_total: number; purchase_total: number }>();
   for (const row of entries) {
@@ -243,20 +301,18 @@ export async function getBookingAccountingEntries(companyId: string, counterpart
 }
 
 export async function getPartyBookingTotals(companyId: string) {
+  const adjustments = await loadSegmentAdjustmentsForStatements(companyId);
   if (!isDesktopApp()) {
-    return aggregatePartyBookingTotals(await fetchWebBookingAccountingEntries(companyId));
+    return aggregatePartyBookingTotalsWithAdjustments(await fetchWebBookingAccountingEntries(companyId), adjustments);
   }
 
   const database = await ready();
-  return database.select<PartyBookingTotal[]>(
-    `SELECT q.counterparty_id,
-            COALESCE(SUM(CASE WHEN q.transaction_type='SALE' THEN q.total_pkr ELSE 0 END),0) AS sale_total,
-            COALESCE(SUM(CASE WHEN q.transaction_type='PURCHASE' THEN q.total_pkr ELSE 0 END),0) AS purchase_total
-     FROM (${bookingUnion}) q
-     WHERE q.status='ACTIVE'
-     GROUP BY q.counterparty_id`,
+  const entries = await database.select<BookingAccountingEntry[]>(
+    `SELECT * FROM (${bookingUnion}) q
+     ORDER BY q.transaction_date ASC,q.created_at ASC,q.service_type ASC`,
     [companyId],
   );
+  return aggregatePartyBookingTotalsWithAdjustments(entries, adjustments);
 }
 
 export async function getCompanyBookingSummary(companyId: string): Promise<CompanyBookingSummary> {

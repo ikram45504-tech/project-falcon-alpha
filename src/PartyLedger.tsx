@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { Company, Party, PaymentEntry } from "./db";
 import { getPayments } from "./db";
 import { downloadExcel } from "./exportUtils";
-import { type BookingAccountingEntry, accountDirectionLabel, getBookingAccountingEntries } from "./BookingAccounting";
+import {
+  type BookingAccountingEntry,
+  accountDirectionLabel,
+  buildLatestAdjustmentMap,
+  effectiveBookingAmount,
+  getBookingAccountingEntries,
+} from "./BookingAccounting";
 import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
 import { recordPaymentVoidHistory } from "./PaymentCorrectionDb";
 import PaymentReceiptPreviewModal from "./PaymentReceiptPreviewModal";
@@ -15,6 +21,8 @@ import {
   type PaymentTransactionKind,
   type PaymentV2Meta,
 } from "./PaymentV2Db";
+import { accountBalanceFromTotals, inferPaymentKind, sumSignedPaymentSettlements } from "./accountBalance";
+import { loadSegmentAdjustmentsForStatements } from "./SegmentAdjustmentRecord";
 import "./PaymentLedgerModal.css";
 
 type Props = {
@@ -82,6 +90,7 @@ export default function PartyLedger({
   const [busyId, setBusyId] = useState("");
   const [modal, setModal] = useState<LedgerModalState>(null);
   const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
+  const [latestAdjustments, setLatestAdjustments] = useState(() => new Map());
 
   const direction = accountDirectionLabel(party.account_type);
   const isVendor = party.account_type === "VENDOR";
@@ -97,10 +106,15 @@ export default function PartyLedger({
         companyId,
         paymentRows.map((row) => row.id),
       );
+      const adjustments = await loadSegmentAdjustmentsForStatements(
+        companyId,
+        bookingRows.map((row) => row.id),
+      );
       const relevant = party.account_type === "PARTY" ? "SALE" : party.account_type === "VENDOR" ? "PURCHASE" : null;
       setBookings(bookingRows.filter((row) => !relevant || row.transaction_type === relevant));
       setPayments(paymentRows);
       setMetaMap(metadata);
+      setLatestAdjustments(buildLatestAdjustmentMap(adjustments));
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -116,14 +130,17 @@ export default function PartyLedger({
   const activeBookings = useMemo(() => bookings.filter((entry) => entry.status === "ACTIVE"), [bookings]);
   const activePayments = useMemo(() => payments.filter((entry) => entry.status === "ACTIVE"), [payments]);
   const bookingTotal = useMemo(
-    () => activeBookings.reduce((sum, entry) => sum + Number(entry.total_pkr || 0), 0),
-    [activeBookings],
+    () => activeBookings.reduce((sum, entry) => sum + effectiveBookingAmount(entry, latestAdjustments), 0),
+    [activeBookings, latestAdjustments],
   );
   const paymentTotal = useMemo(
-    () => activePayments.reduce((sum, entry) => sum + Number(entry.paid_amount || 0), 0),
-    [activePayments],
+    () =>
+      sumSignedPaymentSettlements(activePayments, (index) =>
+        inferPaymentKind(metaMap.get(activePayments[index].id), party.account_type),
+      ),
+    [activePayments, metaMap, party.account_type],
   );
-  const balance = bookingTotal - paymentTotal;
+  const balance = accountBalanceFromTotals(bookingTotal, paymentTotal);
 
   async function openModal(mode: "correct" | "history", entry: PaymentEntry) {
     setError("");
@@ -317,7 +334,7 @@ export default function PartyLedger({
           <b>{formatMoney(bookingTotal)}</b>
         </div>
         <div className="paid">
-          <small>PAYMENTS</small>
+          <small>NET RECEIPTS</small>
           <b>{formatMoney(paymentTotal)}</b>
         </div>
         <div className="balance">

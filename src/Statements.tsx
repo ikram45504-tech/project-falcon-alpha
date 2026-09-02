@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Company, Party, PaymentEntry, getPayments } from "./db";
 import { accountDirectionLabel } from "./BookingAccounting";
+import { inferPaymentKind, signedPaymentSettlement } from "./accountBalance";
 import {
   countStatementBookings,
   filterStatementSections,
@@ -11,6 +12,7 @@ import {
 } from "./StatementBookingData";
 import { buildStatementPdf, StatementPdfData } from "./StatementJsPdf";
 import { getChronologicalLedger, type LedgerRow } from "./LedgerEngine";
+import { getPaymentV2MetaForPayments, type PaymentV2Meta } from "./PaymentV2Db";
 import { downloadExcel } from "./exportUtils";
 
 type PeriodType = "FULL_LEDGER" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM";
@@ -122,6 +124,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const [sections, setSections] = useState<StatementBookingSections>(() => emptySections());
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
   const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
+  const [paymentMeta, setPaymentMeta] = useState<Map<string, PaymentV2Meta>>(() => new Map());
   const [statementRef, setStatementRef] = useState(makeStatementRef());
   const [generatedOn, setGeneratedOn] = useState(generatedDate());
   const [previewUrl, setPreviewUrl] = useState("");
@@ -163,9 +166,14 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       ]);
 
       const activePayments = paymentRows.filter((row) => row.status === "ACTIVE");
+      const meta = await getPaymentV2MetaForPayments(
+        company.id,
+        activePayments.map((row) => row.id),
+      );
       const headers = statementBookingHeaders(bookingSections);
       setSections(bookingSections);
       setPayments(activePayments);
+      setPaymentMeta(meta);
       setLedgerRows(fullLedger);
       applyAutomaticPeriod(periodType, headers, activePayments);
       refreshStatementIdentity();
@@ -234,6 +242,14 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     [payments, fromDate, toDate],
   );
 
+  const signedPaymentAmount = (entry: PaymentEntry) =>
+    selectedParty
+      ? signedPaymentSettlement(
+          entry.paid_amount,
+          inferPaymentKind(paymentMeta.get(entry.id), selectedParty.account_type),
+        )
+      : Number(entry.paid_amount || 0);
+
   const openingBooked = useMemo(
     () =>
       sum(
@@ -246,13 +262,13 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     () =>
       sum(
         payments.filter((row) => beforePeriod(row.transaction_date, fromDate)),
-        (row) => row.paid_amount,
+        (row) => signedPaymentAmount(row),
       ),
-    [payments, fromDate],
+    [payments, fromDate, paymentMeta, selectedParty?.account_type],
   );
   const openingBalance = openingBooked - openingPayments;
   const bookingsDuringPeriod = sum(periodBookingHeaders, (row) => row.total_pkr);
-  const paymentsDuringPeriod = sum(periodPayments, (row) => row.paid_amount);
+  const paymentsDuringPeriod = sum(periodPayments, (row) => signedPaymentAmount(row));
   const closingBalance = openingBalance + bookingsDuringPeriod - paymentsDuringPeriod;
   const pendingSarBalance = sum(
     bookingHeaders.filter((row) => row.transaction_date <= toDate),
@@ -276,6 +292,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       pendingSarBalance,
       sections: periodSections,
       payments: periodPayments,
+      paymentMeta,
       ledgerRows: ledgerRows.filter(
         (row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate),
       ),
@@ -295,6 +312,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     pendingSarBalance,
     periodSections,
     periodPayments,
+    paymentMeta,
     ledgerRows,
   ]);
 

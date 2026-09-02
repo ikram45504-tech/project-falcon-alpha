@@ -2,8 +2,9 @@ import Database from "@tauri-apps/plugin-sql";
 import { initMiscDatabase } from "./miscDb";
 import type { Party } from "./db";
 import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
-import { getBookingAccountingEntries } from "./BookingAccounting";
+import { bookingLedgerBaseAmount, getBookingAccountingEntries, type BookingAccountingEntry } from "./BookingAccounting";
 import { isDesktopApp } from "./cloudSync";
+import { loadSegmentAdjustmentsForStatements } from "./SegmentAdjustmentRecord";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -28,7 +29,7 @@ export type LedgerTransaction = {
   id: string;
   transaction_date: string;
   created_at: string;
-  kind: "SALE_BOOKING" | "PURCHASE_BOOKING" | "PAYMENT";
+  kind: "SALE_BOOKING" | "PURCHASE_BOOKING" | "PAYMENT" | "BOOKING_ADJUSTMENT";
   service_type: string;
   ref_no: string;
   description: string;
@@ -94,6 +95,8 @@ export function buildLedgerRows(transactions: LedgerTransaction[], party: Party)
     if (tx.kind === "SALE_BOOKING" || tx.kind === "PURCHASE_BOOKING") {
       const service = tx.service_type as BookingServiceName;
       description = `${bookingServiceDisplayLabel(service)} Booking`;
+    } else if (tx.kind === "BOOKING_ADJUSTMENT") {
+      description = "Booking Adjustment";
     }
 
     if (tx.status === "ACTIVE") {
@@ -107,6 +110,15 @@ export function buildLedgerRows(transactions: LedgerTransaction[], party: Party)
             running_balance += credit;
           } else {
             debit = tx.total_pkr;
+            running_balance -= debit;
+          }
+        } else if (tx.kind === "BOOKING_ADJUSTMENT") {
+          const delta = Number(tx.total_pkr || 0);
+          if (delta > 0) {
+            credit = delta;
+            running_balance += credit;
+          } else if (delta < 0) {
+            debit = -delta;
             running_balance -= debit;
           }
         } else if (tx.kind === "SALE_BOOKING") {
@@ -123,6 +135,15 @@ export function buildLedgerRows(transactions: LedgerTransaction[], party: Party)
           running_balance += debit;
         } else {
           credit = tx.total_pkr;
+          running_balance -= credit;
+        }
+      } else if (tx.kind === "BOOKING_ADJUSTMENT") {
+        const delta = Number(tx.total_pkr || 0);
+        if (delta > 0) {
+          debit = delta;
+          running_balance += debit;
+        } else if (delta < 0) {
+          credit = -delta;
           running_balance -= credit;
         }
       } else if (tx.kind === "PURCHASE_BOOKING") {
@@ -163,18 +184,65 @@ async function fetchWebPaymentLedgerTransactions(companyId: string, partyId: str
     }
   }
 
-  return (payments || []).map((row): LedgerTransaction => ({
-    id: row.id,
-    transaction_date: row.transaction_date,
-    created_at: row.created_at,
-    kind: "PAYMENT",
-    service_type: row.payment_type,
-    ref_no: row.receipt_no,
-    description: row.description || "Payment",
-    total_pkr: Number(row.paid_amount) || 0,
-    status: row.status as "ACTIVE" | "VOID",
-    payment_kind: metaByPayment.get(row.id),
+  return (payments || []).map((row): LedgerTransaction => {
+    const kind = metaByPayment.get(row.id);
+    const isRefund = kind === "PARTY_REFUND" || kind === "VENDOR_REFUND";
+    return {
+      id: row.id,
+      transaction_date: row.transaction_date,
+      created_at: row.created_at,
+      kind: "PAYMENT",
+      service_type: row.payment_type,
+      ref_no: row.receipt_no,
+      description: row.description || (isRefund ? "Refund" : "Payment"),
+      total_pkr: Number(row.paid_amount) || 0,
+      status: row.status as "ACTIVE" | "VOID",
+      payment_kind: kind,
+    };
+  });
+}
+
+async function enrichLedgerTransactions(companyId: string, transactions: LedgerTransaction[]) {
+  const bookingTransactions = transactions.filter((tx) => tx.kind === "SALE_BOOKING" || tx.kind === "PURCHASE_BOOKING");
+  const paymentTransactions = transactions.filter((tx) => tx.kind === "PAYMENT");
+  const bookingIds = bookingTransactions.map((tx) => tx.id);
+  if (!bookingIds.length) return transactions;
+
+  const adjustments = await loadSegmentAdjustmentsForStatements(companyId, bookingIds);
+  const visible = adjustments.filter((row) => row.adjustment_type !== "CORRECTION");
+
+  const adjustedBookings = bookingTransactions.map((tx) => ({
+    ...tx,
+    total_pkr: bookingLedgerBaseAmount(
+      {
+        id: tx.id,
+        service_type: tx.service_type as BookingAccountingEntry["service_type"],
+        total_pkr: tx.total_pkr,
+      },
+      visible,
+    ),
   }));
+
+  const adjustmentTransactions: LedgerTransaction[] = visible
+    .filter((row) => Number(row.account_delta_pkr || 0) !== 0)
+    .map((row) => {
+      const booking = bookingTransactions.find(
+        (tx) => tx.id === row.booking_id && tx.service_type === row.service_type,
+      );
+      return {
+        id: row.id,
+        transaction_date: row.adjustment_date,
+        created_at: row.created_at,
+        kind: "BOOKING_ADJUSTMENT" as const,
+        service_type: row.service_type,
+        ref_no: booking?.ref_no || "",
+        description: "Booking Adjustment",
+        total_pkr: Number(row.account_delta_pkr || 0),
+        status: "ACTIVE" as const,
+      };
+    });
+
+  return sortLedgerTransactions([...adjustedBookings, ...adjustmentTransactions, ...paymentTransactions]);
 }
 
 async function fetchWebLedgerTransactions(companyId: string, partyId: string) {
@@ -247,6 +315,7 @@ export async function getChronologicalLedger(companyId: string, party: Party): P
     );
   }
 
+  transactions = await enrichLedgerTransactions(companyId, transactions);
   return buildLedgerRows(transactions, party);
 }
 

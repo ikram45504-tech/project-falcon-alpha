@@ -11,6 +11,8 @@ import {
   syncClearBookingChildren,
   type SyncOperation as CloudSyncOperation,
 } from "./cloudSync";
+import { inferPaymentKind, signedPaymentSettlement } from "./accountBalance";
+import type { PaymentTransactionKind } from "./PaymentV2Db";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -196,6 +198,24 @@ export function aggregatePartyPaymentTotals(
     const partyId = String(row.party_id || "");
     if (!partyId) continue;
     map.set(partyId, (map.get(partyId) || 0) + Number(row.paid_amount || 0));
+  }
+  return Array.from(map.entries()).map(([party_id, paid_amount]) => ({ party_id, paid_amount }));
+}
+
+export function aggregatePartySignedPaymentTotals(
+  rows: Array<{ id?: string; party_id: string; paid_amount: number | string | null }>,
+  metaByPayment: Map<string, PaymentTransactionKind>,
+  accountTypeByParty: Map<string, Party["account_type"]>,
+): PartyPaymentTotal[] {
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const partyId = String(row.party_id || "");
+    if (!partyId) continue;
+    const kind = inferPaymentKind(
+      row.id && metaByPayment.has(row.id) ? { transaction_kind: metaByPayment.get(row.id) } : null,
+      accountTypeByParty.get(partyId) || "PARTY",
+    );
+    map.set(partyId, (map.get(partyId) || 0) + signedPaymentSettlement(Number(row.paid_amount || 0), kind));
   }
   return Array.from(map.entries()).map(([party_id, paid_amount]) => ({ party_id, paid_amount }));
 }
@@ -2682,23 +2702,51 @@ export async function voidPayment(companyId: string, entryId: string) {
 
 export async function getPartyPaymentTotals(companyId: string) {
   if (!isDesktopApp()) {
-    const { data, error } = await supabase
-      .from("payment_entries")
-      .select("party_id,paid_amount")
-      .eq("company_id", companyId)
-      .eq("status", "ACTIVE");
+    const [{ data: payments, error }, { data: metas, error: metaError }, { data: parties, error: partyError }] =
+      await Promise.all([
+        supabase
+          .from("payment_entries")
+          .select("id,party_id,paid_amount")
+          .eq("company_id", companyId)
+          .eq("status", "ACTIVE"),
+        supabase.from("payment_v2_meta").select("payment_id,transaction_kind").eq("company_id", companyId),
+        supabase.from("parties").select("id,account_type").eq("company_id", companyId),
+      ]);
     if (error) throw new Error(error.message);
-    return aggregatePartyPaymentTotals(data || []);
+    if (metaError) throw new Error(metaError.message);
+    if (partyError) throw new Error(partyError.message);
+
+    const metaByPayment = new Map<string, PaymentTransactionKind>();
+    for (const row of metas || []) {
+      metaByPayment.set(String(row.payment_id), row.transaction_kind as PaymentTransactionKind);
+    }
+    const accountTypeByParty = new Map<string, Party["account_type"]>();
+    for (const row of parties || []) {
+      accountTypeByParty.set(String(row.id), row.account_type as Party["account_type"]);
+    }
+
+    return aggregatePartySignedPaymentTotals(payments || [], metaByPayment, accountTypeByParty);
   }
 
   const database = await db();
-  return database.select<PartyPaymentTotal[]>(
-    `SELECT party_id, COALESCE(SUM(paid_amount), 0) AS paid_amount
-     FROM payment_entries
-     WHERE company_id=$1 AND status='ACTIVE'
-     GROUP BY party_id`,
+  const rows = await database.select<
+    Array<{ id: string; party_id: string; paid_amount: number; transaction_kind: string | null; account_type: string }>
+  >(
+    `SELECT p.id,p.party_id,p.paid_amount,m.transaction_kind,a.account_type
+     FROM payment_entries p
+     LEFT JOIN payment_v2_meta m ON m.payment_id=p.id
+     LEFT JOIN parties a ON a.id=p.party_id AND a.company_id=p.company_id
+     WHERE p.company_id=$1 AND p.status='ACTIVE'`,
     [companyId],
   );
+
+  const metaByPayment = new Map<string, PaymentTransactionKind>();
+  const accountTypeByParty = new Map<string, Party["account_type"]>();
+  for (const row of rows) {
+    if (row.transaction_kind) metaByPayment.set(row.id, row.transaction_kind as PaymentTransactionKind);
+    accountTypeByParty.set(row.party_id, (row.account_type || "PARTY") as Party["account_type"]);
+  }
+  return aggregatePartySignedPaymentTotals(rows, metaByPayment, accountTypeByParty);
 }
 
 export async function getCompanyPackageSummary(companyId: string) {
