@@ -6,7 +6,33 @@ const DB_PATH = "sqlite:travel-accounting.db";
 
 export type SyncOperation = "INSERT" | "UPDATE" | "DELETE" | "UPSERT" | "REPLACE_CHILDREN";
 
-/** Child tables keyed without a single `id` column need composite upsert conflicts. */
+/** Allowlist mirrored by `public.replace_booking_children` on Supabase. */
+const REPLACE_CHILDREN_TABLES = new Set([
+  "package_booking_lines",
+  "ticket_booking_lines",
+  "hotel_booking_lines",
+  "visa_booking_lines",
+  "transport_booking_lines",
+  "misc_booking_lines",
+  "package_operational_passengers",
+  "package_operational_hotels",
+  "package_operational_flights",
+  "package_operational_flight_stopovers",
+  "package_movement_events",
+  "ticket_operational_passengers",
+  "ticket_operational_flights",
+  "hotel_commercial_guest_refs",
+  "hotel_operational_reservations",
+  "hotel_operational_guests",
+  "visa_transport_fleet",
+  "visa_passport_details",
+  "visa_operational_passengers",
+  "transport_operational_sectors",
+  "misc_commercial_family_refs",
+  "misc_operational_services",
+]);
+
+/** Child tables keyed without a single `id` column need composite dedupe keys. */
 function replaceChildrenOnConflict(tableName: string) {
   switch (tableName) {
     case "hotel_commercial_guest_refs":
@@ -26,6 +52,17 @@ function replaceChildRowKey(tableName: string, row: Record<string, unknown>) {
     .split(",")
     .map((column) => String(row[column.trim()] ?? ""))
     .join("|");
+}
+
+function dedupeReplaceChildrenRows(tableName: string, rows: Record<string, unknown>[]) {
+  return [...rows]
+    .reverse()
+    .filter((row, index, list) => {
+      const key = replaceChildRowKey(tableName, row);
+      if (!key) return true;
+      return list.findIndex((item) => replaceChildRowKey(tableName, item) === key) === index;
+    })
+    .reverse();
 }
 
 export type PackageBookingSyncHeader = {
@@ -130,21 +167,21 @@ export async function applyCloudOperation(
   if (operation === "REPLACE_CHILDREN") {
     const parentColumn = String(payload.parent_column || "booking_id");
     const rows = (payload.rows as Record<string, unknown>[] | undefined) || [];
-    const { error: deleteError } = await supabase.from(tableName).delete().eq(parentColumn, recordId);
-    if (deleteError) throw new Error(deleteError.message);
-    if (rows.length) {
-      const onConflict = replaceChildrenOnConflict(tableName);
-      const deduped = [...rows]
-        .reverse()
-        .filter((row, index, list) => {
-          const key = replaceChildRowKey(tableName, row);
-          if (!key) return true;
-          return list.findIndex((item) => replaceChildRowKey(tableName, item) === key) === index;
-        })
-        .reverse();
-      const { error: insertError } = await supabase.from(tableName).upsert(deduped, { onConflict });
-      if (insertError) throw new Error(insertError.message);
+    if (!REPLACE_CHILDREN_TABLES.has(tableName)) {
+      throw new Error(`REPLACE_CHILDREN unsupported table: ${tableName}`);
     }
+    if (parentColumn !== "booking_id") {
+      throw new Error(`REPLACE_CHILDREN unsupported parent column: ${parentColumn}`);
+    }
+    const deduped = dedupeReplaceChildrenRows(tableName, rows);
+    // Atomic delete+insert in one Postgres transaction (see replace_booking_children).
+    const { error } = await supabase.rpc("replace_booking_children", {
+      p_table_name: tableName,
+      p_parent_column: parentColumn,
+      p_parent_id: recordId,
+      p_rows: deduped,
+    });
+    if (error) throw new Error(error.message);
     return;
   }
 
