@@ -34,6 +34,8 @@ type Props = {
   canVoid?: boolean;
   onBack: () => void;
   onChanged?: () => void | Promise<void>;
+  openBookingId?: string | null;
+  onOpenBookingConsumed?: () => void;
 };
 
 type CommercialRow = {
@@ -129,6 +131,8 @@ export default function HotelBookingFlowV3({
   canVoid = true,
   onBack,
   onChanged,
+  openBookingId = null,
+  onOpenBookingConsumed,
 }: Props) {
   const [entries, setEntries] = useState<HotelBooking[]>([]);
   const {
@@ -172,6 +176,21 @@ export default function HotelBookingFlowV3({
   useEffect(() => {
     void loadEntries();
   }, [companyId]);
+
+  useEffect(() => {
+    if (!openBookingId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await openEntryById(openBookingId);
+      } finally {
+        if (!cancelled) onOpenBookingConsumed?.();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [openBookingId, companyId]);
 
   const summary = useMemo(() => calculateHotelSummary(rows), [rows]);
   const commercialLocked = Boolean(editingId);

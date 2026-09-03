@@ -31,6 +31,8 @@ type Props = {
   canVoid?: boolean;
   onBack: () => void;
   onChanged?: () => void | Promise<void>;
+  openBookingId?: string | null;
+  onOpenBookingConsumed?: () => void;
 };
 type Row = {
   rowId: string;
@@ -62,6 +64,8 @@ export default function MiscBookingFlowV3({
   canVoid = true,
   onBack,
   onChanged,
+  openBookingId = null,
+  onOpenBookingConsumed,
 }: Props) {
   const [entries, setEntries] = useState<MiscBooking[]>([]);
   const {
@@ -107,6 +111,21 @@ export default function MiscBookingFlowV3({
       }
     })();
   }, [companyId]);
+
+  useEffect(() => {
+    if (!openBookingId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await openEntryById(openBookingId);
+      } finally {
+        if (!cancelled) onOpenBookingConsumed?.();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [openBookingId, companyId]);
 
   const summary = useMemo(() => calculateMiscSummary(rows), [rows]);
   const commercialLocked = Boolean(editingId);

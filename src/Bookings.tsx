@@ -5,11 +5,14 @@ import HotelBookingModule from "./HotelBookingFlowV3";
 import VisaBookingModule from "./VisaBookingFlowV3";
 import TransportBookingModule from "./TransportBookingFlowV3";
 import MiscBookingModule from "./MiscBookingFlowV3";
+import DirectionBookingLedger from "./DirectionBookingLedger";
 import type { BookingTransactionType, Party } from "./db";
+import type { BookingServiceName } from "./BookingLifecycle";
 import "./BookingFinalization.css";
+import "./PaymentsV2.css";
 
-type BookingService = "PACKAGE" | "TICKET" | "HOTEL" | "VISA" | "TRANSPORT" | "MISC";
-type BookingScreen = "DIRECTION" | "SERVICES" | "SERVICE_FORM";
+type BookingService = BookingServiceName;
+type BookingScreen = "DIRECTION" | "SERVICES" | "SERVICE_FORM" | "ALL_BOOKING_REGISTER";
 
 type Props = {
   companyId: string;
@@ -103,24 +106,58 @@ export default function BookingsModule({
   const [screen, setScreen] = useState<BookingScreen>("DIRECTION");
   const [transactionType, setTransactionType] = useState<BookingTransactionType | null>(null);
   const [service, setService] = useState<BookingService | null>(null);
+  const [openBookingId, setOpenBookingId] = useState<string | null>(null);
+  const [openedFromAllRegister, setOpenedFromAllRegister] = useState(false);
 
   function chooseDirection(next: BookingTransactionType) {
     setTransactionType(next);
     setService(null);
+    setOpenBookingId(null);
+    setOpenedFromAllRegister(false);
     setScreen("SERVICES");
   }
   function chooseService(next: BookingService) {
     setService(next);
+    setOpenBookingId(null);
+    setOpenedFromAllRegister(false);
     setScreen("SERVICE_FORM");
   }
   function backToDirections() {
     setTransactionType(null);
     setService(null);
+    setOpenBookingId(null);
+    setOpenedFromAllRegister(false);
     setScreen("DIRECTION");
   }
   function backToServices() {
     setService(null);
+    setOpenBookingId(null);
+    setOpenedFromAllRegister(false);
     setScreen("SERVICES");
+  }
+  function openAllBookingRegister() {
+    setService(null);
+    setOpenBookingId(null);
+    setOpenedFromAllRegister(false);
+    setScreen("ALL_BOOKING_REGISTER");
+  }
+  function openBookingFromRegister(
+    next: BookingServiceName,
+    bookingId: string,
+    nextTransactionType: BookingTransactionType,
+  ) {
+    setTransactionType(nextTransactionType);
+    setService(next);
+    setOpenBookingId(bookingId);
+    setOpenedFromAllRegister(true);
+    setScreen("SERVICE_FORM");
+  }
+  function backFromServiceForm() {
+    if (openedFromAllRegister) {
+      openAllBookingRegister();
+      return;
+    }
+    backToServices();
   }
 
   function renderDirectionScreen() {
@@ -128,6 +165,13 @@ export default function BookingsModule({
       <section className="booking-entry-screen booking-direction-screen">
         <div className="booking-screen-toolbar">
           <span></span>
+          <button
+            type="button"
+            className="booking-foundation-badge payment-register-link"
+            onClick={openAllBookingRegister}
+          >
+            Open All Booking Register
+          </button>
         </div>
         <div className="booking-screen-heading centered-heading">
           <span className="eyebrow blue">BOOKINGS</span>
@@ -203,12 +247,40 @@ export default function BookingsModule({
   }
 
   const sharedProps = transactionType
-    ? { companyId, parties, transactionType, userId, canCreate, canEdit, canVoid, onBack: backToServices, onChanged }
+    ? {
+        companyId,
+        parties,
+        transactionType,
+        userId,
+        canCreate,
+        canEdit,
+        canVoid,
+        onBack: backFromServiceForm,
+        onChanged,
+        openBookingId,
+        onOpenBookingConsumed: () => setOpenBookingId(null),
+      }
     : null;
 
   // Direction hub matches Counterparties — no white content-card wrapper.
   if (screen === "DIRECTION") {
     return renderDirectionScreen();
+  }
+
+  if (screen === "ALL_BOOKING_REGISTER") {
+    return (
+      <section className="content-card bookings-page bookings-flow-v2">
+        <DirectionBookingLedger
+          companyId={companyId}
+          userId={userId}
+          canEdit={canEdit}
+          canVoid={canVoid}
+          onBack={backToDirections}
+          onOpenBooking={openBookingFromRegister}
+          onChanged={onChanged}
+        />
+      </section>
+    );
   }
 
   return (

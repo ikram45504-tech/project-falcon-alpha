@@ -43,6 +43,8 @@ type Props = {
   canVoid?: boolean;
   onBack: () => void;
   onChanged?: () => void | Promise<void>;
+  openBookingId?: string | null;
+  onOpenBookingConsumed?: () => void;
 };
 
 type VisaRow = {
@@ -148,6 +150,8 @@ export default function VisaBookingFlowV3({
   canVoid = true,
   onBack,
   onChanged,
+  openBookingId = null,
+  onOpenBookingConsumed,
 }: Props) {
   const [entries, setEntries] = useState<VisaBooking[]>([]);
   const {
@@ -193,6 +197,21 @@ export default function VisaBookingFlowV3({
   useEffect(() => {
     void loadEntries();
   }, [companyId]);
+
+  useEffect(() => {
+    if (!openBookingId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await openEntryById(openBookingId);
+      } finally {
+        if (!cancelled) onOpenBookingConsumed?.();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [openBookingId, companyId]);
 
   const summary = useMemo(() => calculateVisaSummary(rows, fleet, busRate), [rows, fleet, busRate]);
 

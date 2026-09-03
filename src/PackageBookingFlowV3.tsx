@@ -30,6 +30,8 @@ type Props = {
   canVoid?: boolean;
   onBack: () => void;
   onChanged?: () => void | Promise<void>;
+  openBookingId?: string | null;
+  onOpenBookingConsumed?: () => void;
 };
 
 type RegisterFilter = "ALL" | BookingTransactionType;
@@ -71,6 +73,8 @@ export default function PackageBookingFlowV2({
   canVoid = true,
   onBack,
   onChanged,
+  openBookingId = null,
+  onOpenBookingConsumed,
 }: Props) {
   const [entries, setEntries] = useState<PackageBooking[]>([]);
   const {
@@ -112,6 +116,31 @@ export default function PackageBookingFlowV2({
   useEffect(() => {
     void loadEntries("");
   }, [companyId]);
+
+  useEffect(() => {
+    if (!openBookingId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [bookingRows, summaries] = await Promise.all([
+          getPackageBookings(companyId),
+          getPackageAdjustmentSummaryMap(companyId),
+        ]);
+        if (cancelled) return;
+        setEntries(bookingRows);
+        setAdjustmentSummaries(summaries);
+        const entry = bookingRows.find((item) => item.id === openBookingId);
+        if (entry) openEntry(entry);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) onOpenBookingConsumed?.();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [openBookingId, companyId]);
 
   const packageTypeSuggestions = useMemo(() => {
     const values = new Set(packageTypeDefaults);

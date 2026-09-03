@@ -300,6 +300,41 @@ export async function getBookingAccountingEntries(companyId: string, counterpart
   );
 }
 
+export type DirectionBookingLedgerRow = BookingAccountingEntry & {
+  effective_pkr: number;
+  revision_no: number;
+  lifecycle_status: string;
+};
+
+/** All bookings for one side (SALE = Party ledger, PURCHASE = Vendor ledger), all 6 segments. */
+export async function getDirectionBookingLedger(
+  companyId: string,
+  direction: BookingAccountingDirection,
+): Promise<DirectionBookingLedgerRow[]> {
+  const [entries, adjustments] = await Promise.all([
+    getBookingAccountingEntries(companyId),
+    loadSegmentAdjustmentsForStatements(companyId),
+  ]);
+  const latest = buildLatestAdjustmentMap(adjustments);
+  return entries
+    .filter((entry) => entry.transaction_type === direction)
+    .map((entry) => {
+      const adj = latest.get(`${entry.service_type}:${entry.id}`);
+      return {
+        ...entry,
+        effective_pkr: effectiveBookingAmount(entry, latest),
+        revision_no: adj ? Number(adj.revision_no || 1) : 1,
+        lifecycle_status: entry.status === "VOID" ? "VOID" : String(adj?.lifecycle_status || "ACTIVE").toUpperCase(),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.transaction_date.localeCompare(a.transaction_date) ||
+        b.created_at.localeCompare(a.created_at) ||
+        a.service_type.localeCompare(b.service_type),
+    );
+}
+
 export async function getPartyBookingTotals(companyId: string) {
   const adjustments = await loadSegmentAdjustmentsForStatements(companyId);
   if (!isDesktopApp()) {

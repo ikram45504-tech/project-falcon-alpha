@@ -25,6 +25,8 @@ type Props = {
   canVoid?: boolean;
   onBack: () => void;
   onChanged?: () => void | Promise<void>;
+  openBookingId?: string | null;
+  onOpenBookingConsumed?: () => void;
 };
 type Row = {
   rowId: string;
@@ -74,6 +76,8 @@ export default function TicketBookingFlowV2({
   canVoid = true,
   onBack,
   onChanged,
+  openBookingId = null,
+  onOpenBookingConsumed,
 }: Props) {
   const [entries, setEntries] = useState<TicketCommercialBooking[]>([]);
   const {
@@ -108,6 +112,21 @@ export default function TicketBookingFlowV2({
   useEffect(() => {
     void loadEntries();
   }, [companyId]);
+
+  useEffect(() => {
+    if (!openBookingId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await openEntryById(openBookingId);
+      } finally {
+        if (!cancelled) onOpenBookingConsumed?.();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [openBookingId, companyId]);
 
   const totals = useMemo(() => calculateTicketSummary(rows), [rows]);
   const currentEntry = editingId ? entries.find((entry) => entry.id === editingId) || null : null;
