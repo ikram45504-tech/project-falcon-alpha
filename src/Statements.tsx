@@ -170,6 +170,10 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       setLoading(false);
       setSections(emptySections());
       setPayments([]);
+      setLedgerRows([]);
+      setPaymentMeta(new Map());
+      setError("");
+      setMessage("");
       return;
     }
     void loadPartyTransactions(partyId, selectedParty.account_type, selectedParty);
