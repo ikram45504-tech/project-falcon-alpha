@@ -1,4 +1,4 @@
-/* All Booking Register — same horizontal-scroll table pattern as segment registers on phone */
+/* All Booking Register — horizontal scroll on phone (same idea as Payment Register) */
 
 html.phone-ui .all-booking-register .package14-register-title p {
   font-size: 13px;
@@ -18,19 +18,39 @@ html.phone-ui .all-booking-register .package-register-filter-tabs button {
 
 html.phone-ui .bookings-page.bookings-flow-v2:has(.all-booking-register) {
   padding: 10px !important;
+  /* .bookings-page { overflow: hidden } expands with the wide table and gets clipped by
+     .mobile-layout-content { overflow-x: hidden }. Match Payment Register: let the page
+     stay viewport-width and scroll only inside the table wrap. */
+  overflow: visible !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-/* Keep the table scrollable inside the phone shell (parent uses overflow-x: hidden) */
+html.phone-ui .all-booking-register {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  /* CSS Grid default min-width:auto would grow to the table's 1280px min-content */
+  overflow: visible;
+}
+
+/* Critical: min-width:0 so the grid item does not stretch to table width */
 html.phone-ui .all-booking-register .party-table-wrap,
 html.phone-ui .all-booking-register .package14-register-wrap,
 html.phone-ui .all-booking-register .lifecycle-table-wrap {
   display: block !important;
+  min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
+  box-sizing: border-box !important;
   overflow-x: auto !important;
-  overflow-y: visible !important;
+  overflow-y: hidden !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
   border: 1px solid #d7e1eb;
   border-radius: 14px;
   background: #fff;
@@ -40,4 +60,5 @@ html.phone-ui .all-booking-register .lifecycle-table,
 html.phone-ui .all-booking-register .package14-register-table {
   min-width: 1280px !important;
   width: max-content !important;
+  max-width: none !important;
 }

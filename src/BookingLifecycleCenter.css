@@ -62,3 +62,36 @@
     width: 100%;
   }
 }
+
+/* Phone: keep segment / all registers horizontally scrollable inside the clipped mobile shell.
+   Without min-width:0, CSS Grid grows to the table min-width and .bookings-page overflow:hidden
+   clips Actions with no way to swipe. */
+html.phone-ui .bookings-page:has(.lifecycle-register-page) {
+  overflow: visible !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+html.phone-ui .lifecycle-register-page {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+html.phone-ui .lifecycle-register-page .party-table-wrap,
+html.phone-ui .lifecycle-register-page .package14-register-wrap,
+html.phone-ui .lifecycle-register-page .lifecycle-table-wrap {
+  display: block !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+}
