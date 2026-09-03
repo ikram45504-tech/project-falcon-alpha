@@ -2,6 +2,7 @@ import "./BookingLifecycleActions.css";
 
 type Props = {
   busy?: boolean;
+  compact?: boolean;
   canOpen?: boolean;
   canAdjust?: boolean;
   canHistory?: boolean;
@@ -16,6 +17,7 @@ type Props = {
 
 export default function BookingLifecycleActions({
   busy = false,
+  compact = false,
   canOpen = true,
   canAdjust = true,
   canHistory = true,
@@ -28,15 +30,15 @@ export default function BookingLifecycleActions({
   onDelete,
 }: Props) {
   return (
-    <div className="booking-lifecycle-actions">
+    <div className={`booking-lifecycle-actions${compact ? " compact" : ""}`}>
       {onOpen && (
         <button type="button" className="open" disabled={!canOpen || busy} onClick={onOpen}>
-          Open Booking
+          {compact ? "Open" : "Open Booking"}
         </button>
       )}
       {onAdjustment && (
         <button type="button" className="adjustment" disabled={!canAdjust || busy} onClick={onAdjustment}>
-          Booking Adjustment
+          {compact ? "Adjust" : "Booking Adjustment"}
         </button>
       )}
       {onHistory && (
@@ -46,7 +48,7 @@ export default function BookingLifecycleActions({
       )}
       {onVoid && (
         <button type="button" className="void" disabled={!canVoid || busy} onClick={onVoid}>
-          Void Booking
+          {compact ? "Void" : "Void Booking"}
         </button>
       )}
       {onDelete && (
@@ -57,7 +59,7 @@ export default function BookingLifecycleActions({
           disabled={!canDelete || busy}
           onClick={onDelete}
         >
-          Delete (Test)
+          {compact ? "Delete" : "Delete (Test)"}
         </button>
       )}
     </div>

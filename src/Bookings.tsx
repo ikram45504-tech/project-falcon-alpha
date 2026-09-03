@@ -269,17 +269,15 @@ export default function BookingsModule({
 
   if (screen === "ALL_BOOKING_REGISTER") {
     return (
-      <section className="content-card bookings-page bookings-flow-v2">
-        <DirectionBookingLedger
-          companyId={companyId}
-          userId={userId}
-          canEdit={canEdit}
-          canVoid={canVoid}
-          onBack={backToDirections}
-          onOpenBooking={openBookingFromRegister}
-          onChanged={onChanged}
-        />
-      </section>
+      <DirectionBookingLedger
+        companyId={companyId}
+        userId={userId}
+        canEdit={canEdit}
+        canVoid={canVoid}
+        onBack={backToDirections}
+        onOpenBooking={openBookingFromRegister}
+        onChanged={onChanged}
+      />
     );
   }
 

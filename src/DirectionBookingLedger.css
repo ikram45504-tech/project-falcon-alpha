@@ -1,52 +1,104 @@
-/* All Booking Register — horizontal scroll on phone (same idea as Payment Register) */
+/* All Booking Register — own card (no content-card wrapper, same as Payment Register) */
+.all-booking-register.package14-register-page {
+  max-width: 1500px;
+  margin: 0 auto 22px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #d7e1eb);
+  border-radius: var(--radius-xl, 14px);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+/* Phone: keep chrome in viewport; only the table scrolls sideways */
+html.phone-ui .all-booking-register {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  padding: 12px !important;
+  margin: 0 0 12px !important;
+}
+
+html.phone-ui .all-booking-register > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+html.phone-ui .all-booking-register .package14-toolbar,
+html.phone-ui .all-booking-register .package14-register-title,
+html.phone-ui .all-booking-register .package14-register-controls {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  gap: 10px !important;
+}
 
 html.phone-ui .all-booking-register .package14-register-title p {
+  margin: 0;
   font-size: 13px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+html.phone-ui .all-booking-register .package14-register-stats {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 8px !important;
+}
+
+html.phone-ui .all-booking-register .package14-register-stats > div {
+  min-width: 0 !important;
+  max-width: 100% !important;
 }
 
 html.phone-ui .all-booking-register .package-register-filter-tabs {
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   padding-bottom: 2px;
 }
 
 html.phone-ui .all-booking-register .package-register-filter-tabs button {
-  flex: 0 0 auto;
+  flex: 0 0 auto !important;
 }
 
-html.phone-ui .bookings-page.bookings-flow-v2:has(.all-booking-register) {
-  padding: 10px !important;
-  /* .bookings-page { overflow: hidden } expands with the wide table and gets clipped by
-     .mobile-layout-content { overflow-x: hidden }. Match Payment Register: let the page
-     stay viewport-width and scroll only inside the table wrap. */
-  overflow: visible !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
+html.phone-ui .all-booking-register .search-box,
+html.phone-ui .all-booking-register .package-search {
   width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-html.phone-ui .all-booking-register {
-  min-width: 0 !important;
   max-width: 100% !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  /* CSS Grid default min-width:auto would grow to the table's 1280px min-content */
-  overflow: visible;
+  min-width: 0 !important;
 }
 
-/* Critical: min-width:0 so the grid item does not stretch to table width */
-html.phone-ui .all-booking-register .party-table-wrap,
-html.phone-ui .all-booking-register .package14-register-wrap,
-html.phone-ui .all-booking-register .lifecycle-table-wrap {
+html.phone-ui .all-booking-register .search-box input {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Isolated horizontal scrollport — must stay viewport-width while table is wider */
+html.phone-ui .all-booking-register .all-booking-x-scroll {
   display: block !important;
-  min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   box-sizing: border-box !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: hidden !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
@@ -56,9 +108,24 @@ html.phone-ui .all-booking-register .lifecycle-table-wrap {
   background: #fff;
 }
 
-html.phone-ui .all-booking-register .lifecycle-table,
-html.phone-ui .all-booking-register .package14-register-table {
-  min-width: 1280px !important;
+html.phone-ui .all-booking-register .all-booking-x-scroll .lifecycle-table,
+html.phone-ui .all-booking-register .all-booking-x-scroll .package14-register-table {
+  min-width: 1180px !important;
   width: max-content !important;
   max-width: none !important;
+}
+
+html.phone-ui .all-booking-register .booking-lifecycle-actions {
+  min-width: 112px !important;
+  max-width: 128px;
+}
+
+html.phone-ui .all-booking-register .booking-lifecycle-actions.compact {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+html.phone-ui .all-booking-register .booking-lifecycle-actions.compact button {
+  width: 100%;
+  box-sizing: border-box;
 }

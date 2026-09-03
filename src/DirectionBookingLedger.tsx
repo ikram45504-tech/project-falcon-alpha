@@ -20,6 +20,7 @@ import HotelBookingAdjustment from "./HotelBookingAdjustment";
 import VisaBookingAdjustment from "./VisaBookingAdjustment";
 import TransportBookingAdjustment from "./TransportBookingAdjustment";
 import MiscBookingAdjustment from "./MiscBookingAdjustment";
+import { usePhoneUi } from "./phoneUi";
 import "./BookingFinalization.css";
 import "./BookingLifecycleCenter.css";
 import "./PackageBookingFlow.css";
@@ -110,6 +111,7 @@ export default function DirectionBookingLedger({
   onOpenBooking,
   onChanged,
 }: Props) {
+  const isPhone = usePhoneUi();
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [packageSummaries, setPackageSummaries] = useState<Record<string, PackageAdjustmentSummary>>({});
   const [ticketSummaries, setTicketSummaries] = useState<Record<string, TicketAdjustmentSummary>>({});
@@ -321,6 +323,7 @@ export default function DirectionBookingLedger({
     return (
       <BookingLifecycleActions
         busy={busy}
+        compact={isPhone}
         canOpen={row.booking.status === "ACTIVE" && !cancelled}
         canAdjust={canEdit && row.booking.status === "ACTIVE" && !cancelled}
         canHistory={row.booking.status !== "VOID" || Boolean(summary)}
@@ -350,9 +353,9 @@ export default function DirectionBookingLedger({
             <span className="eyebrow blue">ALL BOOKING REGISTER</span>
             <h2>All Booking Register</h2>
             <p>
-              Company-wide view of every booking across Package, Ticket, Hotel, Visa, Transport and Misc. Each segment
-              still keeps its own dedicated register — use this when you want everything in one place. Open Booking,
-              Booking Adjustment, History and Void stay in the same Actions column.
+              {isPhone
+                ? "All segments in one place. Swipe the table sideways to reach Actions."
+                : "Company-wide view of every booking across Package, Ticket, Hotel, Visa, Transport and Misc. Each segment still keeps its own dedicated register — use this when you want everything in one place. Open Booking, Booking Adjustment, History and Void stay in the same Actions column."}
             </p>
           </div>
           <div className="package14-register-stats">
@@ -424,7 +427,7 @@ export default function DirectionBookingLedger({
             <p>Create a booking or change the filter/search.</p>
           </div>
         ) : (
-          <div className="party-table-wrap package14-register-wrap lifecycle-table-wrap">
+          <div className="party-table-wrap package14-register-wrap lifecycle-table-wrap all-booking-x-scroll">
             <table className="party-table package14-register-table lifecycle-table">
               <thead>
                 <tr>

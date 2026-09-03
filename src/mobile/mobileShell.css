@@ -240,6 +240,17 @@ html.phone-ui {
     box-sizing: border-box;
   }
 
+  /* All Booking Register: never let wide table/tabs expand the shell */
+  .mobile-layout-content:has(.all-booking-register) {
+    overflow-x: hidden !important;
+  }
+
+  .mobile-layout-content:has(.all-booking-register) .all-booking-register {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
   .welcome,
   .content-card,
   .ledger-page,
