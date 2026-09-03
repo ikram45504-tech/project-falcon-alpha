@@ -372,72 +372,6 @@
   min-width: 140px;
 }
 
-.statement-hero-balance {
-  background: #153f73;
-  color: #fff;
-  border-radius: 16px;
-  padding: 20px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.statement-hero-balance small {
-  display: block;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  opacity: 0.85;
-  margin-bottom: 4px;
-}
-
-.statement-hero-balance b {
-  font-size: 28px;
-  font-variant-numeric: tabular-nums;
-}
-
-.statement-hero-sar {
-  display: block;
-  margin-top: 4px;
-  font-size: 13px;
-  font-weight: 700;
-  opacity: 0.85;
-}
-
-.statement-breakdown-strip em {
-  font-style: normal;
-  color: #66788a;
-  font-weight: 600;
-}
-
-.statement-hero-meta {
-  text-align: right;
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-.statement-breakdown-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 12px 16px;
-  background: #f7f9fb;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-.statement-breakdown-strip span {
-  color: #66788a;
-}
-
-.statement-breakdown-strip b {
-  color: #153f73;
-  margin-left: 4px;
-}
-
 .statement-sticky-actions {
   display: flex;
   flex-wrap: wrap;
@@ -874,24 +808,6 @@
   .statement-workspace-toolbar label {
     min-width: 0;
     width: 100%;
-  }
-
-  .statement-hero-balance {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 16px 18px;
-  }
-
-  .statement-hero-meta {
-    text-align: left;
-  }
-
-  .statement-hero-balance b {
-    font-size: 22px;
-  }
-
-  .statement-breakdown-strip {
-    gap: 10px 14px;
   }
 
   .statement-sticky-actions {

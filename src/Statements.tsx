@@ -4,7 +4,6 @@ import { Company, Party, PaymentEntry, getPayments } from "./db";
 import { accountDirectionLabel } from "./BookingAccounting";
 import { inferPaymentKind, signedPaymentSettlement } from "./accountBalance";
 import {
-  countStatementBookings,
   filterStatementSections,
   getStatementBookingSections,
   statementBookingHeaders,
@@ -103,23 +102,6 @@ function beforePeriod(date: string, from: string) {
 
 function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + Number(selector(row) || 0), 0);
-}
-
-function money(value: number) {
-  return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
-}
-
-function formatDate(value: string) {
-  if (!value) return "—";
-  const [y, m, d] = value.split("-").map(Number);
-  if (!y || !m || !d) return value;
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-    .format(new Date(y, m - 1, d))
-    .replace(/ /g, "-");
-}
-
-function sar(value: number) {
-  return `SAR ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
 
 export default function StatementsModule({ company, parties, initialPartyId = "", onOpenLedger, onConsumed }: Props) {
@@ -474,13 +456,6 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   }
 
   const accountLabel = statementDirection === "VENDOR" ? "Vendor / Supplier" : "Party / Customer";
-  const bookedLabel = statementDirection === "VENDOR" ? "TOTAL PURCHASE" : "TOTAL SALES";
-  const balanceLabel = selectedParty
-    ? statementClosingBalanceLabel(selectedParty.account_type, closingBalance)
-    : statementDirection === "VENDOR"
-      ? "PAYABLE BALANCE"
-      : "RECEIVABLE BALANCE";
-  const periodBookingCount = countStatementBookings(periodSections);
 
   if (!statementDirection) {
     return (
@@ -610,45 +585,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
         )}
       </div>
 
-      {selectedParty && (
-        <>
-          <div className="statement-hero-balance">
-            <div>
-              <small>{balanceLabel}</small>
-              <b>{money(statementClosingBalanceDisplayPkr(closingBalance))}</b>
-              {hasSarFigure(pendingSarBalance) ? (
-                <span className="statement-hero-sar">{sar(pendingSarBalance)}</span>
-              ) : null}
-            </div>
-            <div className="statement-hero-meta">
-              <div>
-                <b>{selectedParty.name}</b> · {accountDirection}
-              </div>
-              <div>
-                {formatDate(fromDate)} – {formatDate(toDate)}
-              </div>
-              <div>
-                {loading ? "Loading..." : `${periodBookingCount} booking(s) · ${periodPayments.length} payment(s)`}
-              </div>
-            </div>
-          </div>
-
-          <div className="statement-breakdown-strip">
-            <span>
-              Opening <b>{money(openingBalance)}</b>
-              {hasSarFigure(openingSar) ? <em> · {sar(openingSar)}</em> : null}
-            </span>
-            <span>
-              {bookedLabel} <b>{money(bookingsDuringPeriod)}</b>
-              {hasSarFigure(bookingsDuringPeriodSar) ? <em> · {sar(bookingsDuringPeriodSar)}</em> : null}
-            </span>
-            <span>
-              Paid Amount <b>{money(paymentsDuringPeriod)}</b>
-              {hasSarFigure(paymentsDuringPeriodSar) ? <em> · {sar(paymentsDuringPeriodSar)}</em> : null}
-            </span>
-          </div>
-        </>
-      )}
+      {loading && selectedParty ? <div className="alert info">Loading statement...</div> : null}
 
       <div className="statement-sticky-actions">
         <div className="statement-view-pills" role="group" aria-label="Preview format">
