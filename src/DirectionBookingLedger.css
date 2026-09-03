@@ -1,105 +1,4 @@
-/* All Booking Register — mobile card layout (PWA phone shell) */
-
-.all-booking-register-cards {
-  display: grid;
-  gap: 12px;
-}
-
-.all-booking-register-card {
-  border: 1px solid #d7e1eb;
-  border-radius: 14px;
-  background: #fff;
-  padding: 12px 12px 10px;
-  display: grid;
-  gap: 10px;
-}
-
-.all-booking-register-card.void-row {
-  opacity: 0.72;
-}
-
-.all-booking-register-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.all-booking-register-card-top h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 850;
-  color: #0f2f4f;
-  line-height: 1.2;
-}
-
-.all-booking-register-card-top small {
-  display: block;
-  margin-top: 3px;
-  color: #657486;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.all-booking-register-card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
-.all-booking-register-card-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 10px;
-}
-
-.all-booking-register-card-meta > div {
-  min-width: 0;
-}
-
-.all-booking-register-card-meta span {
-  display: block;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #7a8796;
-  text-transform: uppercase;
-}
-
-.all-booking-register-card-meta b {
-  display: block;
-  margin-top: 2px;
-  font-size: 13px;
-  color: #1f3348;
-  word-break: break-word;
-}
-
-.all-booking-register-card-meta .amount b {
-  color: #176c49;
-  font-weight: 900;
-}
-
-.all-booking-register-card-details {
-  border-top: 1px solid #e6edf4;
-  padding-top: 8px;
-}
-
-.all-booking-register-card-details > span {
-  display: block;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #7a8796;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-
-.all-booking-register-card .booking-lifecycle-actions {
-  min-width: 0 !important;
-  border-top: 1px solid #e6edf4;
-  padding-top: 8px;
-}
+/* All Booking Register — same horizontal-scroll table pattern as segment registers on phone */
 
 html.phone-ui .all-booking-register .package14-register-title p {
   font-size: 13px;
@@ -119,4 +18,26 @@ html.phone-ui .all-booking-register .package-register-filter-tabs button {
 
 html.phone-ui .bookings-page.bookings-flow-v2:has(.all-booking-register) {
   padding: 10px !important;
+}
+
+/* Keep the table scrollable inside the phone shell (parent uses overflow-x: hidden) */
+html.phone-ui .all-booking-register .party-table-wrap,
+html.phone-ui .all-booking-register .package14-register-wrap,
+html.phone-ui .all-booking-register .lifecycle-table-wrap {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  border: 1px solid #d7e1eb;
+  border-radius: 14px;
+  background: #fff;
+}
+
+html.phone-ui .all-booking-register .lifecycle-table,
+html.phone-ui .all-booking-register .package14-register-table {
+  min-width: 1280px !important;
+  width: max-content !important;
 }
