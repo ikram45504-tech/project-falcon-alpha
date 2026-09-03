@@ -62,3 +62,82 @@
     width: 100%;
   }
 }
+
+/* PWA phone: segment registers become stacked cards (same feel as All Booking Register) */
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table {
+  min-width: 0 !important;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+}
+
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table thead {
+  display: none;
+}
+
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table tbody,
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table tr,
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td {
+  display: block;
+  width: 100%;
+}
+
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table tr {
+  border: 1px solid #d7e1eb;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+  margin: 0;
+}
+
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td {
+  border: 0 !important;
+  padding: 4px 0 !important;
+  white-space: normal !important;
+}
+
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td::before {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #7a8796;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td:nth-child(1)::before {
+  content: "Date";
+}
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td:nth-child(2)::before {
+  content: "UB #";
+}
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td:nth-child(3)::before {
+  content: "Type";
+}
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td:nth-child(4)::before {
+  content: "Party / Vendor";
+}
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td:nth-child(5)::before {
+  content: "Booking details";
+}
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td:nth-child(6)::before {
+  content: "Effective total";
+}
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td:nth-child(7)::before {
+  content: "Lifecycle";
+}
+html.phone-ui .lifecycle-register-page:not(.all-booking-register) .lifecycle-table td:nth-child(8)::before {
+  content: "Actions";
+  margin-bottom: 6px;
+}
+
+html.phone-ui .lifecycle-register-page .package14-register-wrap {
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+html.phone-ui .lifecycle-register-page .booking-lifecycle-actions {
+  min-width: 0 !important;
+}

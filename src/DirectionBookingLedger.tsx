@@ -20,9 +20,11 @@ import HotelBookingAdjustment from "./HotelBookingAdjustment";
 import VisaBookingAdjustment from "./VisaBookingAdjustment";
 import TransportBookingAdjustment from "./TransportBookingAdjustment";
 import MiscBookingAdjustment from "./MiscBookingAdjustment";
+import { usePhoneUi } from "./phoneUi";
 import "./BookingFinalization.css";
 import "./BookingLifecycleCenter.css";
 import "./PackageBookingFlow.css";
+import "./DirectionBookingLedger.css";
 
 type Props = {
   companyId: string;
@@ -109,6 +111,7 @@ export default function DirectionBookingLedger({
   onOpenBooking,
   onChanged,
 }: Props) {
+  const isPhone = usePhoneUi();
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [packageSummaries, setPackageSummaries] = useState<Record<string, PackageAdjustmentSummary>>({});
   const [ticketSummaries, setTicketSummaries] = useState<Record<string, TicketAdjustmentSummary>>({});
@@ -313,9 +316,178 @@ export default function DirectionBookingLedger({
     await onChanged?.();
   }
 
+  function renderRowActions(row: LedgerRow) {
+    const summary = summaryFor(row);
+    const lifecycle = lifecycleOf(row);
+    const cancelled = lifecycle === "CANCELLED";
+    return (
+      <BookingLifecycleActions
+        busy={busy}
+        canOpen={row.booking.status === "ACTIVE" && !cancelled}
+        canAdjust={canEdit && row.booking.status === "ACTIVE" && !cancelled}
+        canHistory={row.booking.status !== "VOID" || Boolean(summary)}
+        canVoid={canVoid && row.booking.status === "ACTIVE" && !cancelled}
+        canDelete={canVoid}
+        onOpen={() => void openRow(row)}
+        onAdjustment={() => setAdjustmentTarget({ ...row, view: "ADJUSTMENT" })}
+        onHistory={() => setAdjustmentTarget({ ...row, view: "HISTORY" })}
+        onVoid={() => void voidRow(row)}
+        onDelete={() => void deleteRow(row)}
+      />
+    );
+  }
+
+  function renderMobileCards() {
+    return (
+      <div className="all-booking-register-cards">
+        {visible.map((row) => {
+          const summary = summaryFor(row);
+          const lifecycle = lifecycleOf(row);
+          const revision = summary?.revisionNo || 1;
+          const cancelled = lifecycle === "CANCELLED";
+          const lifecycleClass = lifecycle.toLowerCase().replace(/_/g, "-");
+          const lines = detailLines(row);
+          return (
+            <article
+              key={`${row.service}:${row.booking.id}`}
+              className={`all-booking-register-card${row.booking.status === "VOID" ? " void-row" : ""}`}
+            >
+              <div className="all-booking-register-card-top">
+                <div>
+                  <h3>{row.booking.ub_number}</h3>
+                  <small>{row.booking.counterparty_name || "—"}</small>
+                </div>
+                <div className="all-booking-register-card-badges">
+                  <span className={`direction-badge ${row.booking.transaction_type === "SALE" ? "sale" : "purchase"}`}>
+                    {row.booking.transaction_type}
+                  </span>
+                  <span className="booking-foundation-badge">{bookingLifecycleConfigs[row.service].label}</span>
+                </div>
+              </div>
+
+              <div className="all-booking-register-card-meta">
+                <div>
+                  <span>Date</span>
+                  <b>{formatDate(row.booking.transaction_date)}</b>
+                </div>
+                <div className="amount">
+                  <span>Effective total</span>
+                  <b>{cancelled ? money(0) : money(row.booking.total_pkr)}</b>
+                </div>
+                <div>
+                  <span>Lifecycle</span>
+                  <b>
+                    <span className={`status lifecycle-status ${lifecycleClass}`}>
+                      {lifecycle} · REV {revision}
+                    </span>
+                  </b>
+                </div>
+              </div>
+
+              <div className="all-booking-register-card-details">
+                <span>Booking details</span>
+                <div className="package14-register-lines">
+                  {lines.length ? (
+                    lines.map((line, index) => (
+                      <div key={`${row.booking.id}-line-${index}`}>
+                        <span>{line}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span>All commercial rows cancelled</span>
+                  )}
+                </div>
+              </div>
+
+              {renderRowActions(row)}
+            </article>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderDesktopTable() {
+    return (
+      <div className="party-table-wrap package14-register-wrap lifecycle-table-wrap">
+        <table className="party-table package14-register-table lifecycle-table">
+          <thead>
+            <tr>
+              <th>DATE</th>
+              <th>UB #</th>
+              <th>TYPE</th>
+              <th>SEGMENT</th>
+              <th>PARTY / VENDOR</th>
+              <th>BOOKING DETAILS</th>
+              <th>EFFECTIVE TOTAL PKR</th>
+              <th>LIFECYCLE</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((row) => {
+              const summary = summaryFor(row);
+              const lifecycle = lifecycleOf(row);
+              const revision = summary?.revisionNo || 1;
+              const cancelled = lifecycle === "CANCELLED";
+              const lifecycleClass = lifecycle.toLowerCase().replace(/_/g, "-");
+              const lines = detailLines(row);
+              return (
+                <tr
+                  key={`${row.service}:${row.booking.id}`}
+                  className={row.booking.status === "VOID" ? "void-row" : ""}
+                >
+                  <td>{formatDate(row.booking.transaction_date)}</td>
+                  <td>
+                    <b>{row.booking.ub_number}</b>
+                  </td>
+                  <td>
+                    <span
+                      className={`direction-badge ${row.booking.transaction_type === "SALE" ? "sale" : "purchase"}`}
+                    >
+                      {row.booking.transaction_type}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="booking-foundation-badge">{bookingLifecycleConfigs[row.service].label}</span>
+                  </td>
+                  <td>
+                    <b>{row.booking.counterparty_name || "—"}</b>
+                  </td>
+                  <td>
+                    <div className="package14-register-lines">
+                      {lines.length ? (
+                        lines.map((line, index) => (
+                          <div key={`${row.booking.id}-line-${index}`}>
+                            <span>{line}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <span>All commercial rows cancelled</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="amount">
+                    <b>{cancelled ? money(0) : money(row.booking.total_pkr)}</b>
+                  </td>
+                  <td>
+                    <span className={`status lifecycle-status ${lifecycleClass}`}>
+                      {lifecycle} · REV {revision}
+                    </span>
+                  </td>
+                  <td>{renderRowActions(row)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <>
-      <section className="booking-entry-screen package14-page package14-register-page lifecycle-register-page">
+      <section className="booking-entry-screen package14-page package14-register-page lifecycle-register-page all-booking-register">
         <div className="booking-screen-toolbar package14-toolbar">
           <button type="button" className="booking-back-button" onClick={onBack}>
             ← Back to Bookings
@@ -401,94 +573,10 @@ export default function DirectionBookingLedger({
             <h3>No bookings found</h3>
             <p>Create a booking or change the filter/search.</p>
           </div>
+        ) : isPhone ? (
+          renderMobileCards()
         ) : (
-          <div className="party-table-wrap package14-register-wrap lifecycle-table-wrap">
-            <table className="party-table package14-register-table lifecycle-table">
-              <thead>
-                <tr>
-                  <th>DATE</th>
-                  <th>UB #</th>
-                  <th>TYPE</th>
-                  <th>SEGMENT</th>
-                  <th>PARTY / VENDOR</th>
-                  <th>BOOKING DETAILS</th>
-                  <th>EFFECTIVE TOTAL PKR</th>
-                  <th>LIFECYCLE</th>
-                  <th>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((row) => {
-                  const summary = summaryFor(row);
-                  const lifecycle = lifecycleOf(row);
-                  const revision = summary?.revisionNo || 1;
-                  const cancelled = lifecycle === "CANCELLED";
-                  const lifecycleClass = lifecycle.toLowerCase().replace(/_/g, "-");
-                  const lines = detailLines(row);
-                  return (
-                    <tr
-                      key={`${row.service}:${row.booking.id}`}
-                      className={row.booking.status === "VOID" ? "void-row" : ""}
-                    >
-                      <td>{formatDate(row.booking.transaction_date)}</td>
-                      <td>
-                        <b>{row.booking.ub_number}</b>
-                      </td>
-                      <td>
-                        <span
-                          className={`direction-badge ${row.booking.transaction_type === "SALE" ? "sale" : "purchase"}`}
-                        >
-                          {row.booking.transaction_type}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="booking-foundation-badge">{bookingLifecycleConfigs[row.service].label}</span>
-                      </td>
-                      <td>
-                        <b>{row.booking.counterparty_name || "—"}</b>
-                      </td>
-                      <td>
-                        <div className="package14-register-lines">
-                          {lines.length ? (
-                            lines.map((line, index) => (
-                              <div key={`${row.booking.id}-line-${index}`}>
-                                <span>{line}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <span>All commercial rows cancelled</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="amount">
-                        <b>{cancelled ? money(0) : money(row.booking.total_pkr)}</b>
-                      </td>
-                      <td>
-                        <span className={`status lifecycle-status ${lifecycleClass}`}>
-                          {lifecycle} · REV {revision}
-                        </span>
-                      </td>
-                      <td>
-                        <BookingLifecycleActions
-                          busy={busy}
-                          canOpen={row.booking.status === "ACTIVE" && !cancelled}
-                          canAdjust={canEdit && row.booking.status === "ACTIVE" && !cancelled}
-                          canHistory={row.booking.status !== "VOID" || Boolean(summary)}
-                          canVoid={canVoid && row.booking.status === "ACTIVE" && !cancelled}
-                          canDelete={canVoid}
-                          onOpen={() => void openRow(row)}
-                          onAdjustment={() => setAdjustmentTarget({ ...row, view: "ADJUSTMENT" })}
-                          onHistory={() => setAdjustmentTarget({ ...row, view: "HISTORY" })}
-                          onVoid={() => void voidRow(row)}
-                          onDelete={() => void deleteRow(row)}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          renderDesktopTable()
         )}
       </section>
 
