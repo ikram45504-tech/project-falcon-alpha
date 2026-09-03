@@ -163,6 +163,34 @@ export function buildLedgerRows(transactions: LedgerTransaction[], party: Party)
   });
 }
 
+/**
+ * Period view of a full chronological ledger: keeps row debit/credit,
+ * but recomputes running balance from the statement opening balance so the
+ * first in-period row ties to opening and the last ties to closing.
+ */
+export function sliceLedgerRowsForPeriod(
+  rows: LedgerRow[],
+  fromDate: string,
+  toDate: string,
+  openingBalance: number,
+  accountType: Party["account_type"],
+): LedgerRow[] {
+  const isVendor = accountType === "VENDOR";
+  let running = Number(openingBalance || 0);
+
+  return rows
+    .filter((row) => row.status === "ACTIVE" && row.transaction_date >= fromDate && row.transaction_date <= toDate)
+    .map((row) => {
+      const debit = Number(row.debit || 0);
+      const credit = Number(row.credit || 0);
+      running += isVendor ? credit - debit : debit - credit;
+      return {
+        ...row,
+        running_balance: running,
+      };
+    });
+}
+
 async function fetchWebPaymentLedgerTransactions(companyId: string, partyId: string) {
   const { data: payments, error: paymentError } = await supabase
     .from("payment_entries")

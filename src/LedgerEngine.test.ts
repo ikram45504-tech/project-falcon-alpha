@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { buildLedgerRows, getChronologicalLedger } from "./LedgerEngine";
+import { buildLedgerRows, getChronologicalLedger, sliceLedgerRowsForPeriod } from "./LedgerEngine";
 import type { Party } from "./db";
 import type { LedgerTransaction } from "./LedgerEngine";
 
@@ -284,5 +284,56 @@ describe("LedgerEngine", () => {
 
     expect(rows[0].running_balance).toBe(1000);
     expect(rows[1].running_balance).toBe(1200);
+  });
+
+  it("recomputes period ledger balances from statement opening", () => {
+    const party = { account_type: "PARTY" } as Party;
+    const full = buildLedgerRows(
+      [
+        {
+          id: "sale_prior",
+          transaction_date: "2026-08-01",
+          created_at: "2026-08-01",
+          kind: "SALE_BOOKING",
+          service_type: "PACKAGE",
+          ref_no: "UB-0001",
+          description: "Prior sale",
+          total_pkr: 5000,
+          status: "ACTIVE",
+        },
+        {
+          id: "sale_period",
+          transaction_date: "2026-09-10",
+          created_at: "2026-09-10",
+          kind: "SALE_BOOKING",
+          service_type: "PACKAGE",
+          ref_no: "UB-0002",
+          description: "Period sale",
+          total_pkr: 2000,
+          status: "ACTIVE",
+        },
+        {
+          id: "pay_period",
+          transaction_date: "2026-09-15",
+          created_at: "2026-09-15",
+          kind: "PAYMENT",
+          service_type: "CASH",
+          ref_no: "RC-0001",
+          description: "Receipt",
+          total_pkr: 500,
+          status: "ACTIVE",
+          payment_kind: "PARTY_RECEIPT",
+        },
+      ] as LedgerTransaction[],
+      party,
+    );
+
+    // Naive filter would keep full-ledger balances (7000 then 6500).
+    expect(full[1].running_balance).toBe(7000);
+
+    const period = sliceLedgerRowsForPeriod(full, "2026-09-01", "2026-09-30", 5000, "PARTY");
+    expect(period).toHaveLength(2);
+    expect(period[0].running_balance).toBe(7000); // 5000 opening + 2000 sale
+    expect(period[1].running_balance).toBe(6500); // 7000 - 500 payment
   });
 });

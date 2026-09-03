@@ -20,7 +20,7 @@ import {
   statementPeriodActivitySar,
   sumSignedPaymentSar,
 } from "./StatementSummary";
-import { getChronologicalLedger, type LedgerRow } from "./LedgerEngine";
+import { getChronologicalLedger, sliceLedgerRowsForPeriod, type LedgerRow } from "./LedgerEngine";
 import { getPaymentV2MetaForPayments, type PaymentV2Meta } from "./PaymentV2Db";
 import { downloadExcel } from "./exportUtils";
 
@@ -312,6 +312,11 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     : 0;
   const pendingSarBalance = statementPendingSarAsOf(sections, toDate, "onOrBefore");
 
+  const periodLedgerRows = useMemo(() => {
+    if (!selectedParty || !fromDate || !toDate) return [];
+    return sliceLedgerRowsForPeriod(ledgerRows, fromDate, toDate, openingBalance, selectedParty.account_type);
+  }, [ledgerRows, fromDate, toDate, openingBalance, selectedParty]);
+
   const pdfData = useMemo<StatementPdfData | null>(() => {
     if (!selectedParty || !fromDate || !toDate) return null;
     return {
@@ -333,9 +338,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       sections: periodSections,
       payments: periodPayments,
       paymentMeta,
-      ledgerRows: includeLedger
-        ? ledgerRows.filter((row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate))
-        : [],
+      ledgerRows: includeLedger ? periodLedgerRows : [],
       includeLedger,
       includeReconciliation,
       previewMode,
@@ -359,7 +362,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     periodSections,
     periodPayments,
     paymentMeta,
-    ledgerRows,
+    periodLedgerRows,
     includeLedger,
     includeReconciliation,
     previewMode,
@@ -412,9 +415,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
 
   function handleExport() {
     if (!selectedParty) return setError("Select an account first.");
-    const filteredLedger = ledgerRows.filter(
-      (row) => row.status === "ACTIVE" && inPeriod(row.transaction_date, fromDate, toDate),
-    );
+    const filteredLedger = periodLedgerRows;
 
     const bookingData = filteredLedger.map((b, i) => ({
       "SR #": i + 1,
