@@ -322,6 +322,36 @@ export function statementSectionPeriodTotal(rows: StatementBookingMeta[]) {
   return rows.reduce((sum, row) => sum + Number(row.statementPeriodActivityPkr || 0), 0);
 }
 
+/**
+ * Pending / unconverted SAR as of a statement date.
+ * Uses booking-level pending SAR for bookings that already existed by the as-of date
+ * (and were not cancelled on/before that date). This avoids the event-sum bug where
+ * pending SAR lived only on the latest adjustment row dated after the statement end.
+ */
+export function statementPendingSarAsOf(
+  sections: StatementBookingSections,
+  asOfDate: string,
+  mode: "onOrBefore" | "before" = "onOrBefore",
+) {
+  const included = (date: string) => (mode === "before" ? date < asOfDate : date <= asOfDate);
+  const rows = [
+    ...sections.hotelBookings,
+    ...sections.visaBookings,
+    ...sections.transportBookings,
+    ...sections.miscBookings,
+  ];
+
+  return rows.reduce((total, row) => {
+    if (!included(row.transaction_date)) return total;
+
+    const adjustmentsAsOf = row.statementAdjustments.filter((adjustment) => included(adjustment.adjustment_date));
+    const latestAsOf = adjustmentsAsOf[adjustmentsAsOf.length - 1];
+    if (latestAsOf?.lifecycle_status === "CANCELLED") return total;
+
+    return total + Number(row.unconverted_sar || 0);
+  }, 0);
+}
+
 export function countStatementBookings(sections: StatementBookingSections) {
   return (
     sections.packageBookings.length +

@@ -8,6 +8,7 @@ import {
   filterStatementSections,
   getStatementBookingSections,
   statementBookingHeaders,
+  statementPendingSarAsOf,
   type StatementBookingSections,
 } from "./StatementBookingData";
 import { buildStatementPdf, StatementPdfData } from "./StatementJsPdf";
@@ -304,18 +305,12 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const bookingsDuringPeriod = sum(periodBookingHeaders, (row) => row.total_pkr);
   const paymentsDuringPeriod = sum(periodPayments, (row) => signedPaymentAmount(row));
   const closingBalance = openingBalance + bookingsDuringPeriod - paymentsDuringPeriod;
-  const openingSar = sum(
-    bookingHeaders.filter((row) => beforePeriod(row.transaction_date, fromDate)),
-    (row) => row.unconverted_sar,
-  );
+  const openingSar = statementPendingSarAsOf(sections, fromDate, "before");
   const bookingsDuringPeriodSar = statementPeriodActivitySar(periodSections);
   const paymentsDuringPeriodSar = selectedParty
     ? sumSignedPaymentSar(periodPayments, paymentMeta, selectedParty.account_type)
     : 0;
-  const pendingSarBalance = sum(
-    bookingHeaders.filter((row) => row.transaction_date <= toDate),
-    (row) => row.unconverted_sar,
-  );
+  const pendingSarBalance = statementPendingSarAsOf(sections, toDate, "onOrBefore");
 
   const pdfData = useMemo<StatementPdfData | null>(() => {
     if (!selectedParty || !fromDate || !toDate) return null;
