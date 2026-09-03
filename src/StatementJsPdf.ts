@@ -544,7 +544,7 @@ export function buildStatementPdf(data: StatementPdfData) {
       section.columns,
       section.rows,
       section.subtotal,
-      section.title === "PAID AMOUNT" ? PAYMENT_THEME : BOOKING_THEME,
+      section.title === "PAYMENTS" ? PAYMENT_THEME : BOOKING_THEME,
       y,
     );
   }

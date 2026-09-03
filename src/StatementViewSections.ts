@@ -37,7 +37,15 @@ export type StatementViewSection = {
   title: string;
   columns: StatementViewColumn[];
   rows: StatementViewRow[];
-  subtotal: { label: string; pkr?: number; sar?: number; pendingSar?: number };
+  subtotal: {
+    label: string;
+    pkr?: number;
+    sar?: number;
+    pendingSar?: number;
+    /** Payments section only: split of settlements vs refunds inside the period. */
+    paidPkr?: number;
+    refundPkr?: number;
+  };
 };
 
 function money(value: number) {
@@ -968,10 +976,14 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     { width: 14, header: "TYPE", align: "center" },
     { width: 28, header: "PAID PKR", align: "right" },
   ];
+  let paymentPaidPkr = 0;
+  let paymentRefundPkr = 0;
   const paymentRows: StatementViewRow[] = data.payments.map((entry, index) => {
     const kind = inferPaymentKind(data.paymentMeta?.get(entry.id), data.party.account_type);
     const signedPkr = signedPaymentSettlement(entry.paid_amount, kind);
     const isRefund = kind === "PARTY_REFUND" || kind === "VENDOR_REFUND";
+    if (isRefund) paymentRefundPkr += Math.abs(signedPkr);
+    else paymentPaidPkr += signedPkr;
     const sarSecondary =
       entry.currency === "SAR"
         ? `${sar(Math.abs(signedPaymentSarAmount(entry, kind)))} @ ${number(entry.roe)}`
@@ -999,10 +1011,15 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     };
   });
   pushSectionIfRows(sections, {
-    title: "PAID AMOUNT",
+    title: "PAYMENTS",
     columns: paymentColumns,
     rows: paymentRows,
-    subtotal: { label: "PAID AMOUNT SUBTOTAL", pkr: data.paymentsDuringPeriod },
+    subtotal: {
+      label: "PAYMENTS SUBTOTAL",
+      pkr: data.paymentsDuringPeriod,
+      paidPkr: paymentPaidPkr,
+      refundPkr: paymentRefundPkr,
+    },
   });
 
   return sections;

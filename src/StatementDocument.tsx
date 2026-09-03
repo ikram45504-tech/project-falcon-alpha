@@ -95,14 +95,39 @@ function groupSectionRows(rows: StatementViewRow[]) {
   return groups;
 }
 
-function StatementSectionTable({ section }: { section: StatementViewSection }) {
+/** Print view moves the section total into the header, e.g. "SUBTOTAL FOR HOTEL". */
+function inlineSubtotals(section: StatementViewSection) {
+  const { subtotal } = section;
+  if (subtotal.paidPkr != null || subtotal.refundPkr != null) {
+    return [
+      { label: "SUBTOTAL FOR PAID", value: money(subtotal.paidPkr || 0) },
+      { label: "SUBTOTAL FOR REFUND", value: money(subtotal.refundPkr || 0) },
+    ];
+  }
+  const segment = section.title.replace(/^FULL\s+/, "").replace(/\s+BOOKINGS?$/, "");
+  return [{ label: `SUBTOTAL FOR ${segment}`, value: formatSubtotal(subtotal) }];
+}
+
+function StatementSectionTable({ section, printView }: { section: StatementViewSection; printView: boolean }) {
   if (!section.rows.length) return null;
   const columns = gridTemplateColumns(section.columns);
   const rowGroups = groupSectionRows(section.rows);
   return (
     <div className="statement-doc-section">
       <div className="statement-doc-section-card">
-        <div className="statement-doc-section-title">{section.title}</div>
+        <div className="statement-doc-section-title">
+          <span className="statement-doc-section-title-text">{section.title}</span>
+          {printView ? (
+            <span className="statement-doc-section-title-totals">
+              {inlineSubtotals(section).map((entry) => (
+                <span key={`${section.title}-${entry.label}`} className="statement-doc-section-title-total">
+                  <em>{entry.label}</em>
+                  <b>{entry.value}</b>
+                </span>
+              ))}
+            </span>
+          ) : null}
+        </div>
         <div className="statement-doc-table-wrap">
           <div className="statement-grid-table">
             <div className="statement-grid-head-row" style={{ gridTemplateColumns: columns }}>
@@ -129,10 +154,12 @@ function StatementSectionTable({ section }: { section: StatementViewSection }) {
             )}
           </div>
         </div>
-        <div className="statement-doc-subtotal">
-          <span>{section.subtotal.label}</span>
-          <span>{formatSubtotal(section.subtotal)}</span>
-        </div>
+        {printView ? null : (
+          <div className="statement-doc-subtotal">
+            <span>{section.subtotal.label}</span>
+            <span>{formatSubtotal(section.subtotal)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -214,7 +241,7 @@ export default function StatementDocument({ data }: { data: StatementPdfData }) 
         </div>
 
         {sections.map((section) => (
-          <StatementSectionTable key={section.title} section={section} />
+          <StatementSectionTable key={section.title} section={section} printView={printView} />
         ))}
 
         {data.includeReconciliation && (
