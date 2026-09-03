@@ -110,14 +110,6 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     (initialParty?.account_type as "PARTY" | "VENDOR") || null,
   );
   const [partyId, setPartyId] = useState(initialPartyId || "");
-
-  // Once we've consumed the initialPartyId, clear it in the parent so
-  // subsequent visits to Statements start with the direction-selection screen.
-  useEffect(() => {
-    if (initialPartyId && onConsumed) {
-      onConsumed();
-    }
-  }, []);
   const [periodType, setPeriodType] = useState<PeriodType>("FULL_LEDGER");
   const [fromDate, setFromDate] = useState(todayIso());
   const [toDate, setToDate] = useState(todayIso());
@@ -141,10 +133,16 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const accountDirection = selectedParty ? accountDirectionLabel(selectedParty.account_type) : "BOOKING";
   const bookingHeaders = useMemo(() => statementBookingHeaders(sections), [sections]);
 
+  // Apply deep-link / "open statement" party when the id arrives (including late), then clear parent.
   useEffect(() => {
-    if (initialPartyId && parties.some((party) => party.id === initialPartyId)) {
-      setPartyId(initialPartyId);
+    if (!initialPartyId) return;
+    const party = parties.find((p) => p.id === initialPartyId);
+    if (!party) return;
+    if (party.account_type === "PARTY" || party.account_type === "VENDOR") {
+      setStatementDirection(party.account_type);
     }
+    setPartyId(initialPartyId);
+    onConsumed?.();
   }, [initialPartyId, parties]);
 
   useEffect(() => {
@@ -372,6 +370,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        setMessage("PDF downloaded successfully.");
         return;
       }
 
@@ -386,8 +385,8 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       });
       if (filePath) {
         await writeFile(filePath, pdfBytes);
+        setMessage("PDF saved successfully.");
       }
-      setMessage("PDF saved successfully.");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -397,6 +396,10 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
 
   function handleExport() {
     if (!selectedParty) return setError("Select an account first.");
+    if (!validatePeriod()) return;
+    setError("");
+    setMessage("");
+
     const filteredLedger = periodLedgerRows;
 
     const bookingData = filteredLedger.map((b, i) => ({
@@ -453,6 +456,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       ],
       `${safeFileName(company.name)}_Excel_Statement_${safeFileName(selectedParty.name)}_${fromDate}_to_${toDate}`,
     );
+    setMessage("Excel exported successfully.");
   }
 
   const accountLabel = statementDirection === "VENDOR" ? "Vendor / Supplier" : "Party / Customer";

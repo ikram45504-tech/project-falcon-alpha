@@ -101,12 +101,17 @@ export function PwaChrome() {
 
   async function installApp() {
     if (!installEvent) return;
-    await installEvent.prompt();
-    const choice = await installEvent.userChoice;
-    setInstallEvent(null);
-    if (choice.outcome === "dismissed") {
-      sessionStorage.setItem(INSTALL_DISMISS_KEY, "1");
-      setInstallDismissed(true);
+    try {
+      await installEvent.prompt();
+      const choice = await installEvent.userChoice;
+      setInstallEvent(null);
+      if (choice.outcome === "dismissed") {
+        sessionStorage.setItem(INSTALL_DISMISS_KEY, "1");
+        setInstallDismissed(true);
+      }
+    } catch (error) {
+      console.warn("PWA install prompt failed:", error);
+      setInstallEvent(null);
     }
   }
 
