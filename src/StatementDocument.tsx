@@ -6,6 +6,12 @@ import {
   type StatementViewRow,
   type StatementViewSection,
 } from "./StatementViewSections";
+import {
+  hasSarFigure,
+  statementActivityLabel,
+  statementClosingBalanceDisplayPkr,
+  statementClosingBalanceLabel,
+} from "./StatementSummary";
 import "./StatementDocument.css";
 
 function money(value: number) {
@@ -135,8 +141,9 @@ function StatementSectionTable({ section }: { section: StatementViewSection }) {
 export default function StatementDocument({ data }: { data: StatementPdfData }) {
   const isVendor = data.party.account_type === "VENDOR";
   const directionTitle = isVendor ? "PURCHASE / PAYABLE STATEMENT" : "SALE / RECEIVABLE STATEMENT";
-  const bookedLabel = isVendor ? "PURCHASE ACTIVITY" : "SALE ACTIVITY";
-  const balanceLabel = isVendor ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE";
+  const activityLabel = statementActivityLabel(data.party.account_type);
+  const balanceLabel = statementClosingBalanceLabel(data.party.account_type, data.closingBalance);
+  const balancePkr = statementClosingBalanceDisplayPkr(data.closingBalance);
   const contacts = [data.company.phone, data.company.whatsapp, data.company.email].filter(Boolean).join(" · ");
   const sections = buildStatementViewSections(data);
   const reconciliationRows = buildStatementReconciliationRows(data);
@@ -179,22 +186,30 @@ export default function StatementDocument({ data }: { data: StatementPdfData }) 
           <div className="statement-doc-glance-item">
             <small>OPENING BALANCE</small>
             <b>{money(data.openingBalance)}</b>
+            {hasSarFigure(data.openingSar) ? (
+              <span className="statement-doc-glance-sar">{sar(data.openingSar)}</span>
+            ) : null}
           </div>
           <div className="statement-doc-glance-item">
-            <small>{bookedLabel}</small>
+            <small>{activityLabel}</small>
             <b>{money(data.bookingsDuringPeriod)}</b>
+            {hasSarFigure(data.bookingsDuringPeriodSar) ? (
+              <span className="statement-doc-glance-sar">{sar(data.bookingsDuringPeriodSar)}</span>
+            ) : null}
           </div>
           <div className="statement-doc-glance-item">
-            <small>PAYMENTS</small>
+            <small>PAID AMOUNT</small>
             <b>{money(data.paymentsDuringPeriod)}</b>
+            {hasSarFigure(data.paymentsDuringPeriodSar) ? (
+              <span className="statement-doc-glance-sar">{sar(data.paymentsDuringPeriodSar)}</span>
+            ) : null}
           </div>
           <div className="statement-doc-glance-item">
             <small>{balanceLabel}</small>
-            <b>{money(data.closingBalance)}</b>
-          </div>
-          <div className="statement-doc-glance-item">
-            <small>PENDING SAR</small>
-            <b>{sar(data.pendingSarBalance)}</b>
+            <b>{money(balancePkr)}</b>
+            {hasSarFigure(data.pendingSarBalance) ? (
+              <span className="statement-doc-glance-sar">{sar(data.pendingSarBalance)}</span>
+            ) : null}
           </div>
         </div>
 
@@ -216,7 +231,7 @@ export default function StatementDocument({ data }: { data: StatementPdfData }) 
               <b>{money(data.bookingsDuringPeriod)}</b>
             </div>
             <div className="statement-doc-recon-row">
-              <span>Less: payments</span>
+              <span>Less: paid amount</span>
               <b>{money(data.paymentsDuringPeriod)}</b>
             </div>
             <div className="statement-doc-recon-row">
@@ -225,11 +240,7 @@ export default function StatementDocument({ data }: { data: StatementPdfData }) 
             </div>
             <div className="statement-doc-recon-row closing">
               <span>{balanceLabel}</span>
-              <b>{money(data.closingBalance)}</b>
-            </div>
-            <div className="statement-doc-recon-row pending">
-              <span>Pending SAR conversion</span>
-              <b>{sar(data.pendingSarBalance)}</b>
+              <b>{money(balancePkr)}</b>
             </div>
           </div>
         )}

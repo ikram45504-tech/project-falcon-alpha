@@ -4,6 +4,12 @@ import type { StatementBookingSections } from "./StatementBookingData";
 import type { LedgerRow } from "./LedgerEngine";
 import type { PaymentV2Meta } from "./PaymentV2Db";
 import { buildStatementReconciliationRows, buildStatementViewSections } from "./StatementViewSections";
+import {
+  hasSarFigure,
+  statementActivityLabel,
+  statementClosingBalanceDisplayPkr,
+  statementClosingBalanceLabel,
+} from "./StatementSummary";
 
 export type StatementPdfData = {
   company: Company;
@@ -14,9 +20,13 @@ export type StatementPdfData = {
   generatedOn: string;
   statementRef: string;
   openingBalance: number;
+  openingSar: number;
   bookingsDuringPeriod: number;
+  bookingsDuringPeriodSar: number;
   paymentsDuringPeriod: number;
+  paymentsDuringPeriodSar: number;
   closingBalance: number;
+  /** Pending / unconverted SAR as of statement end date (shown on balance box when non-zero). */
   pendingSarBalance: number;
   sections: StatementBookingSections;
   payments: PaymentEntry[];
@@ -209,46 +219,56 @@ function drawHeader(doc: jsPDF, data: StatementPdfData) {
 
 function drawSummary(doc: jsPDF, data: StatementPdfData, y: number) {
   const isVendor = data.party.account_type === "VENDOR";
+  const balanceTitle = statementClosingBalanceLabel(data.party.account_type, data.closingBalance);
+  const balancePkr = statementClosingBalanceDisplayPkr(data.closingBalance);
+  const balanceFoot =
+    Math.abs(data.closingBalance) < 0.005
+      ? "Nothing due"
+      : data.closingBalance < 0
+        ? isVendor
+          ? "Prepaid / overpaid supplier"
+          : "Customer credit / advance"
+        : isVendor
+          ? "Closing payable position"
+          : "Closing receivable position";
+
   const cards = [
     {
       title: "OPENING BALANCE",
       value: money(data.openingBalance),
+      secondary: hasSarFigure(data.openingSar) ? sar(data.openingSar) : "",
       foot: "Before selected period",
       bg: COLORS.greyCard,
       top: COLORS.navy,
     },
     {
-      title: isVendor ? "PURCHASE ACTIVITY" : "SALE ACTIVITY",
+      title: statementActivityLabel(data.party.account_type),
       value: money(data.bookingsDuringPeriod),
+      secondary: hasSarFigure(data.bookingsDuringPeriodSar) ? sar(data.bookingsDuringPeriodSar) : "",
       foot: "Bookings + adjustments in period",
       bg: COLORS.blueCard,
       top: COLORS.navy,
     },
     {
-      title: "PAYMENTS",
+      title: "PAID AMOUNT",
       value: money(data.paymentsDuringPeriod),
-      foot: "Payments in period",
+      secondary: hasSarFigure(data.paymentsDuringPeriodSar) ? sar(data.paymentsDuringPeriodSar) : "",
+      foot: "Payments in period (refunds signed)",
       bg: COLORS.greyCard,
       top: COLORS.navy,
     },
     {
-      title: isVendor ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE",
-      value: money(data.closingBalance),
-      foot: data.closingBalance < 0 ? "Advance / overpayment" : "Closing PKR position",
+      title: balanceTitle,
+      value: money(balancePkr),
+      secondary: hasSarFigure(data.pendingSarBalance) ? sar(data.pendingSarBalance) : "",
+      foot: balanceFoot,
       bg: COLORS.blueCard,
       top: COLORS.navy,
     },
-    {
-      title: "PENDING SAR",
-      value: sar(data.pendingSarBalance),
-      foot: "Awaiting ROE",
-      bg: COLORS.amberCard,
-      top: COLORS.navy,
-    },
   ];
-  const gap = 1.25;
-  const w = (CONTENT_W - gap * 4) / 5;
-  const h = 15.2;
+  const gap = 1.5;
+  const w = (CONTENT_W - gap * 3) / 4;
+  const h = 17.2;
   cards.forEach((card, index) => {
     const x = MARGIN + index * (w + gap);
     fill(doc, card.bg);
@@ -257,17 +277,24 @@ function drawSummary(doc: jsPDF, data: StatementPdfData, y: number) {
     fill(doc, card.top);
     doc.rect(x, y, w, 0.9, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(4.15);
+    doc.setFontSize(4.0);
     textColor(doc, COLORS.muted);
-    doc.text(card.title, x + 1.6, y + 4.0);
-    doc.setFontSize(7.4);
+    doc.text(card.title, x + 1.6, y + 3.8);
+    doc.setFontSize(7.2);
     textColor(doc, card.top);
-    doc.text(card.value, x + 1.6, y + 9.0);
+    doc.text(card.value, x + 1.6, y + 8.4);
+    if (card.secondary) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(4.4);
+      textColor(doc, COLORS.muted);
+      doc.text(card.secondary, x + 1.6, y + 11.2);
+    }
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(3.75);
+    doc.setFontSize(3.6);
     textColor(doc, COLORS.muted);
+    const footY = card.secondary ? 13.6 : 12.0;
     const foot = doc.splitTextToSize(card.foot, w - 3) as string[];
-    foot.slice(0, 2).forEach((line, lineIndex) => doc.text(line, x + 1.6, y + 12.25 + lineIndex * 1.5));
+    foot.slice(0, 2).forEach((line, lineIndex) => doc.text(line, x + 1.6, y + footY + lineIndex * 1.45));
   });
   return y + h + 1.9;
 }
@@ -438,20 +465,19 @@ function drawReconciliation(doc: jsPDF, data: StatementPdfData, y: number) {
   const serviceRows = buildStatementReconciliationRows(data);
   const rowH = 4.7;
   const noteReserve = 11;
-  const required = SECTION_TITLE_H + (serviceRows.length + 5) * rowH + noteReserve;
+  const required = SECTION_TITLE_H + (serviceRows.length + 4) * rowH + noteReserve;
   if (y + required > PAGE_BOTTOM) y = continuation(doc, data);
   y = drawSectionTitle(doc, "FINAL RECONCILIATION", RECON_THEME, y);
   const rows: Array<[string, string, string?]> = [
     ...serviceRows.map(([label, value]) => [label, money(value)] as [string, string]),
     ["TOTAL COMMERCIAL ACTIVITY", money(data.bookingsDuringPeriod), "total"],
-    ["LESS: PAYMENTS", money(data.paymentsDuringPeriod)],
+    ["LESS: PAID AMOUNT", money(data.paymentsDuringPeriod)],
     ["ADD: OPENING BALANCE", money(data.openingBalance)],
     [
-      data.party.account_type === "VENDOR" ? "CLOSING PAYABLE" : "CLOSING RECEIVABLE",
-      money(data.closingBalance),
+      statementClosingBalanceLabel(data.party.account_type, data.closingBalance),
+      money(statementClosingBalanceDisplayPkr(data.closingBalance)),
       "closing",
     ],
-    ["PENDING SAR CONVERSION", sar(data.pendingSarBalance), "pending"],
   ];
   rows.forEach(([label, value, kind], index) => {
     const bg =
@@ -459,11 +485,9 @@ function drawReconciliation(doc: jsPDF, data: StatementPdfData, y: number) {
         ? COLORS.blueSubtotal
         : kind === "closing"
           ? COLORS.greenSubtotal
-          : kind === "pending"
-            ? COLORS.amberCard
-            : index % 2
-              ? COLORS.greenAlt
-              : COLORS.white;
+          : index % 2
+            ? COLORS.greenAlt
+            : COLORS.white;
     fill(doc, bg);
     stroke(doc, COLORS.border);
     doc.rect(MARGIN, y, CONTENT_W, rowH, "FD");
@@ -520,7 +544,7 @@ export function buildStatementPdf(data: StatementPdfData) {
       section.columns,
       section.rows,
       section.subtotal,
-      section.title === "PAYMENTS" ? PAYMENT_THEME : BOOKING_THEME,
+      section.title === "PAID AMOUNT" ? PAYMENT_THEME : BOOKING_THEME,
       y,
     );
   }

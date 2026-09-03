@@ -5,8 +5,9 @@ import {
   type StatementAdjustmentRecord,
   type StatementBookingMeta,
 } from "./StatementBookingData";
-import { inferPaymentKind, paymentKindLabel } from "./accountBalance";
+import { inferPaymentKind, paymentKindLabel, signedPaymentSettlement } from "./accountBalance";
 import type { StatementPdfData } from "./StatementJsPdf";
+import { signedPaymentSarAmount } from "./StatementSummary";
 
 type Align = "left" | "center" | "right";
 type Obj = Record<string, unknown>;
@@ -969,6 +970,12 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
   ];
   const paymentRows: StatementViewRow[] = data.payments.map((entry, index) => {
     const kind = inferPaymentKind(data.paymentMeta?.get(entry.id), data.party.account_type);
+    const signedPkr = signedPaymentSettlement(entry.paid_amount, kind);
+    const isRefund = kind === "PARTY_REFUND" || kind === "VENDOR_REFUND";
+    const sarSecondary =
+      entry.currency === "SAR"
+        ? `${sar(Math.abs(signedPaymentSarAmount(entry, kind)))} @ ${number(entry.roe)}`
+        : undefined;
     return {
       cells: [
         { text: String(index + 1), align: "center" },
@@ -979,13 +986,12 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
         { text: safeText(entry.description || paymentKindLabel(kind)) },
         { text: paymentKindLabel(kind), align: "center" },
         {
-          text: money(entry.paid_amount),
-          secondary:
-            kind === "PARTY_REFUND" || kind === "VENDOR_REFUND"
-              ? "Increases balance"
-              : entry.currency === "SAR"
-                ? `${sar(entry.sar)} @ ${number(entry.roe)}`
-                : undefined,
+          text: money(signedPkr),
+          secondary: isRefund
+            ? sarSecondary
+              ? `Increases balance · ${sarSecondary}`
+              : "Increases balance"
+            : sarSecondary,
           align: "right",
           bold: true,
         },
@@ -993,10 +999,10 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     };
   });
   pushSectionIfRows(sections, {
-    title: "PAYMENTS",
+    title: "PAID AMOUNT",
     columns: paymentColumns,
     rows: paymentRows,
-    subtotal: { label: "PAYMENTS SUBTOTAL", pkr: data.paymentsDuringPeriod },
+    subtotal: { label: "PAID AMOUNT SUBTOTAL", pkr: data.paymentsDuringPeriod },
   });
 
   return sections;

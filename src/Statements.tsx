@@ -12,6 +12,13 @@ import {
 } from "./StatementBookingData";
 import { buildStatementPdf, StatementPdfData } from "./StatementJsPdf";
 import StatementDocument from "./StatementDocument";
+import {
+  hasSarFigure,
+  statementClosingBalanceDisplayPkr,
+  statementClosingBalanceLabel,
+  statementPeriodActivitySar,
+  sumSignedPaymentSar,
+} from "./StatementSummary";
 import { getChronologicalLedger, type LedgerRow } from "./LedgerEngine";
 import { getPaymentV2MetaForPayments, type PaymentV2Meta } from "./PaymentV2Db";
 import { downloadExcel } from "./exportUtils";
@@ -280,6 +287,14 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const bookingsDuringPeriod = sum(periodBookingHeaders, (row) => row.total_pkr);
   const paymentsDuringPeriod = sum(periodPayments, (row) => signedPaymentAmount(row));
   const closingBalance = openingBalance + bookingsDuringPeriod - paymentsDuringPeriod;
+  const openingSar = sum(
+    bookingHeaders.filter((row) => beforePeriod(row.transaction_date, fromDate)),
+    (row) => row.unconverted_sar,
+  );
+  const bookingsDuringPeriodSar = statementPeriodActivitySar(periodSections);
+  const paymentsDuringPeriodSar = selectedParty
+    ? sumSignedPaymentSar(periodPayments, paymentMeta, selectedParty.account_type)
+    : 0;
   const pendingSarBalance = sum(
     bookingHeaders.filter((row) => row.transaction_date <= toDate),
     (row) => row.unconverted_sar,
@@ -296,8 +311,11 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       generatedOn,
       statementRef,
       openingBalance,
+      openingSar,
       bookingsDuringPeriod,
+      bookingsDuringPeriodSar,
       paymentsDuringPeriod,
+      paymentsDuringPeriodSar,
       closingBalance,
       pendingSarBalance,
       sections: periodSections,
@@ -319,8 +337,11 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
     generatedOn,
     statementRef,
     openingBalance,
+    openingSar,
     bookingsDuringPeriod,
+    bookingsDuringPeriodSar,
     paymentsDuringPeriod,
+    paymentsDuringPeriodSar,
     closingBalance,
     pendingSarBalance,
     periodSections,
@@ -414,10 +435,18 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
         "Period From": fromDate,
         "Period To": toDate,
         "Opening Balance (PKR)": openingBalance,
-        "Total Booked (PKR)": bookingsDuringPeriod,
-        "Total Payments (PKR)": paymentsDuringPeriod,
-        "Closing Balance (PKR)": closingBalance,
-        "Pending SAR": pendingSarBalance,
+        ...(hasSarFigure(openingSar) ? { "Opening (SAR)": openingSar } : {}),
+        [statementDirection === "VENDOR" ? "Total Purchase (PKR)" : "Total Sales (PKR)"]: bookingsDuringPeriod,
+        ...(hasSarFigure(bookingsDuringPeriodSar)
+          ? {
+              [statementDirection === "VENDOR" ? "Total Purchase (SAR)" : "Total Sales (SAR)"]: bookingsDuringPeriodSar,
+            }
+          : {}),
+        "Paid Amount (PKR)": paymentsDuringPeriod,
+        ...(hasSarFigure(paymentsDuringPeriodSar) ? { "Paid Amount (SAR)": paymentsDuringPeriodSar } : {}),
+        [statementClosingBalanceLabel(selectedParty.account_type, closingBalance)]:
+          statementClosingBalanceDisplayPkr(closingBalance),
+        ...(hasSarFigure(pendingSarBalance) ? { "Pending SAR": pendingSarBalance } : {}),
       },
     ];
 
@@ -432,8 +461,12 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   }
 
   const accountLabel = statementDirection === "VENDOR" ? "Vendor / Supplier" : "Party / Customer";
-  const bookedLabel = statementDirection === "VENDOR" ? "PURCHASE BOOKINGS" : "SALE BOOKINGS";
-  const balanceLabel = statementDirection === "VENDOR" ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE";
+  const bookedLabel = statementDirection === "VENDOR" ? "TOTAL PURCHASE" : "TOTAL SALES";
+  const balanceLabel = selectedParty
+    ? statementClosingBalanceLabel(selectedParty.account_type, closingBalance)
+    : statementDirection === "VENDOR"
+      ? "PAYABLE BALANCE"
+      : "RECEIVABLE BALANCE";
   const periodBookingCount = countStatementBookings(periodSections);
 
   if (!statementDirection) {
@@ -569,7 +602,10 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
           <div className="statement-hero-balance">
             <div>
               <small>{balanceLabel}</small>
-              <b>{money(closingBalance)}</b>
+              <b>{money(statementClosingBalanceDisplayPkr(closingBalance))}</b>
+              {hasSarFigure(pendingSarBalance) ? (
+                <span className="statement-hero-sar">{sar(pendingSarBalance)}</span>
+              ) : null}
             </div>
             <div className="statement-hero-meta">
               <div>
@@ -587,18 +623,16 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
           <div className="statement-breakdown-strip">
             <span>
               Opening <b>{money(openingBalance)}</b>
+              {hasSarFigure(openingSar) ? <em> · {sar(openingSar)}</em> : null}
             </span>
             <span>
               {bookedLabel} <b>{money(bookingsDuringPeriod)}</b>
+              {hasSarFigure(bookingsDuringPeriodSar) ? <em> · {sar(bookingsDuringPeriodSar)}</em> : null}
             </span>
             <span>
-              Payments <b>{money(paymentsDuringPeriod)}</b>
+              Paid Amount <b>{money(paymentsDuringPeriod)}</b>
+              {hasSarFigure(paymentsDuringPeriodSar) ? <em> · {sar(paymentsDuringPeriodSar)}</em> : null}
             </span>
-            {pendingSarBalance > 0 && (
-              <span>
-                Pending SAR <b>{sar(pendingSarBalance)}</b>
-              </span>
-            )}
           </div>
         </>
       )}
