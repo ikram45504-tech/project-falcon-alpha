@@ -72,19 +72,16 @@ export function PwaChrome() {
   useEffect(() => {
     if (isTauriShell()) return;
 
-    void import("./registerPwa").then(({ registerPwa, applyPwaUpdate }) => {
+    void import("./registerPwa").then(({ registerPwa, applyPwaUpdate, checkAndApplyPwaUpdate }) => {
       registerPwa({
         onNeedRefresh: () => {
-          // Desktop web / desktop PWA: apply silently.
-          // Mobile PWA: show banner + Settings update button (stickier caches).
-          if (isPhoneViewport()) {
-            setUpdatePending(true);
-            setBannerVisible(true);
-            return;
-          }
+          // Always apply — waiting for a banner left iPhone PWAs on old UI and caused white screens.
+          setUpdatePending(true);
+          setBannerVisible(true);
           void applyPwaUpdate();
         },
       });
+      void checkAndApplyPwaUpdate();
     });
   }, [setUpdatePending]);
 

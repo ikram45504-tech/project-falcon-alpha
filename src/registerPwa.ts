@@ -55,8 +55,7 @@ export async function checkAndApplyPwaUpdate(): Promise<"updated" | "current" | 
   try {
     const registration = await navigator.serviceWorker.getRegistration();
     if (!registration) {
-      window.location.reload();
-      return "updated";
+      return "current";
     }
 
     await registration.update();
@@ -67,10 +66,20 @@ export async function checkAndApplyPwaUpdate(): Promise<"updated" | "current" | 
       return "updated";
     }
 
+    // Controller exists but page may still be on a previous worker generation.
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
+    }
+
     return "current";
   } catch (error) {
     console.warn("PWA update check failed:", error);
-    window.location.reload();
-    return "updated";
+    return "unavailable";
   }
+}
+
+/** Unregister workers + wipe Cache Storage, then reload (escape hatch for white screens). */
+export async function hardResetPwaCache() {
+  const { hardResetWebCache } = await import("./AppErrorBoundary");
+  await hardResetWebCache();
 }

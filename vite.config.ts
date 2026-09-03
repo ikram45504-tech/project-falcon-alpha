@@ -15,7 +15,8 @@ export default defineConfig(async () => ({
     VitePWA({
       // Desktop installers already have their own shell; skip the worker there.
       disable: isTauriBuild,
-      registerType: "prompt",
+      // Auto-activate new builds so iOS/Android PWAs do not stay on stale white-screen caches.
+      registerType: "autoUpdate",
       injectRegister: false,
       includeAssets: [
         "icons/pwa-192x192.png",

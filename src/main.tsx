@@ -1,11 +1,20 @@
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { AppErrorBoundary, hardResetWebCache } from "./AppErrorBoundary";
 import { initializeDatabaseSafety } from "./DatabaseSafety";
 import { ThemeProvider } from "./ThemeContext";
 import { PRODUCT_NAME } from "./brand";
 import { PwaChrome } from "./PwaChrome";
 import { applyPhoneShellDocumentClass } from "./phoneUi";
 import "./mobile/mobileShell.css";
+
+async function maybeResetStalePwa() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("pwa-reset") !== "1") return false;
+  await hardResetWebCache();
+  return true;
+}
 
 function renderSafetyFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -44,6 +53,8 @@ function renderSafetyFailure(error: unknown) {
 
 async function bootstrap() {
   try {
+    if (await maybeResetStalePwa()) return;
+
     document.title = PRODUCT_NAME;
     applyPhoneShellDocumentClass();
     const report = await initializeDatabaseSafety();
@@ -54,8 +65,10 @@ async function bootstrap() {
     }
     ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       <ThemeProvider>
-        <PwaChrome />
-        <App />
+        <AppErrorBoundary>
+          <PwaChrome />
+          <App />
+        </AppErrorBoundary>
       </ThemeProvider>,
     );
   } catch (error) {
