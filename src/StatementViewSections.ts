@@ -230,16 +230,86 @@ function chargeableTotalOrPending(value: number, superseded: boolean): Statement
   return { text: "Pending", align: "right", bold: true };
 }
 
+/** Amendment child SRs under one booking: A, B, C… (then AA if past Z). */
+function adjustmentSrLabel(amendmentIndex: number) {
+  let n = amendmentIndex;
+  let letters = "";
+  do {
+    letters = String.fromCharCode(65 + (n % 26)) + letters;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return letters;
+}
+
+function packageSnapshotLines(json: string): Obj[] {
+  return array(object(parseJson(json)).lines).map(object);
+}
+
+function packageLineRate(line: Obj) {
+  return numberField(line, "ratePerPerson") || numberField(line, "rate_per_person");
+}
+
+function packageLineQty(line: Obj) {
+  return numberField(line, "personCount") || numberField(line, "person_count");
+}
+
+/** Real pax count from after-snapshot; dash when unknown / cancelled empty. */
+function packageAdjustmentQtyText(adjustment: StatementAdjustmentRecord) {
+  const after = packageSnapshotLines(adjustment.after_snapshot_json);
+  if (!after.length) return "—";
+  const qty = after.reduce((sum, line) => sum + Math.max(0, packageLineQty(line)), 0);
+  return qty > 0 ? String(qty) : "—";
+}
+
+/**
+ * RATE / PAX for package amendments:
+ * primary = new rate (or revised base);
+ * secondary = signed Δ rate/pax when comparable, else fee/credit line.
+ */
+function packageAdjustmentRateCell(
+  adjustment: StatementAdjustmentRecord,
+  accountType: Party["account_type"],
+): StatementViewCell {
+  const primary = adjustmentRateSummary("PACKAGE", adjustment);
+  const finance = adjustmentFinanceSecondary(adjustment, accountType);
+  const before = packageSnapshotLines(adjustment.before_snapshot_json);
+  const after = packageSnapshotLines(adjustment.after_snapshot_json);
+
+  if (before.length === 1 && after.length === 1) {
+    const delta = packageLineRate(after[0]) - packageLineRate(before[0]);
+    if (Math.abs(delta) >= 0.005) {
+      const deltaText = `${signedMoney(delta)} / Pax`;
+      const hasFee = adjustment.charge_pkr > 0 || adjustment.credit_pkr > 0;
+      return {
+        text: primary,
+        secondary: hasFee ? `${deltaText} · ${finance}` : deltaText,
+        align: "right",
+      };
+    }
+  }
+
+  if (after.length > 1) {
+    return {
+      text: primary,
+      secondary: finance.includes("No separate") ? "Mixed passenger rates" : finance,
+      align: "right",
+    };
+  }
+
+  return { text: primary, secondary: finance, align: "right" };
+}
+
 function packageAdjustmentRow(
   booking: StatementBookingMeta & { ub_number: string },
   adjustment: StatementAdjustmentRecord,
   data: StatementPdfData,
   latest: boolean,
+  srLabel: string,
 ): StatementViewRow {
   return {
     kind: "adjustment",
     cells: [
-      { text: "A", align: "center", bold: true },
+      { text: srLabel, align: "center", bold: true },
       {
         text: shortDate(adjustment.adjustment_date),
         secondary: displayUb(booking.ub_number),
@@ -248,12 +318,8 @@ function packageAdjustmentRow(
       },
       { text: adjustmentTypeLabel(adjustment.adjustment_type), secondary: adjustmentReason(adjustment), bold: true },
       { text: safeText(adjustment.category || "Booking change"), secondary: `REV ${adjustment.revision_no}` },
-      {
-        text: adjustmentRateSummary("PACKAGE", adjustment),
-        secondary: adjustmentFinanceSecondary(adjustment, data.party.account_type),
-        align: "right",
-      },
-      { text: `R${adjustment.revision_no}`, align: "center", bold: true },
+      packageAdjustmentRateCell(adjustment, data.party.account_type),
+      { text: packageAdjustmentQtyText(adjustment), align: "center", bold: true },
       {
         text: money(adjustment.effective_total_pkr),
         secondary: adjustmentAmountSecondary(adjustment, data, latest),
@@ -268,11 +334,12 @@ function ticketAdjustmentRow(
   adjustment: StatementAdjustmentRecord,
   data: StatementPdfData,
   latest: boolean,
+  srLabel: string,
 ): StatementViewRow {
   return {
     kind: "adjustment",
     cells: [
-      { text: "A", align: "center", bold: true },
+      { text: srLabel, align: "center", bold: true },
       {
         text: shortDate(adjustment.adjustment_date),
         secondary: displayUb(booking.ub_number),
@@ -305,11 +372,12 @@ function hotelAdjustmentRow(
   adjustment: StatementAdjustmentRecord,
   data: StatementPdfData,
   latest: boolean,
+  srLabel: string,
 ): StatementViewRow {
   return {
     kind: "adjustment",
     cells: [
-      { text: "A", align: "center", bold: true },
+      { text: srLabel, align: "center", bold: true },
       {
         text: shortDate(adjustment.adjustment_date),
         secondary: displayUb(booking.ub_number),
@@ -341,11 +409,12 @@ function visaAdjustmentRow(
   adjustment: StatementAdjustmentRecord,
   data: StatementPdfData,
   latest: boolean,
+  srLabel: string,
 ): StatementViewRow {
   return {
     kind: "adjustment",
     cells: [
-      { text: "A", align: "center", bold: true },
+      { text: srLabel, align: "center", bold: true },
       {
         text: shortDate(adjustment.adjustment_date),
         secondary: displayUb(booking.ub_number),
@@ -378,11 +447,12 @@ function transportAdjustmentRow(
   adjustment: StatementAdjustmentRecord,
   data: StatementPdfData,
   latest: boolean,
+  srLabel: string,
 ): StatementViewRow {
   return {
     kind: "adjustment",
     cells: [
-      { text: "A", align: "center", bold: true },
+      { text: srLabel, align: "center", bold: true },
       {
         text: shortDate(adjustment.adjustment_date),
         secondary: displayUb(booking.ub_number),
@@ -414,11 +484,12 @@ function miscAdjustmentRow(
   adjustment: StatementAdjustmentRecord,
   data: StatementPdfData,
   latest: boolean,
+  srLabel: string,
 ): StatementViewRow {
   return {
     kind: "adjustment",
     cells: [
-      { text: "A", align: "center", bold: true },
+      { text: srLabel, align: "center", bold: true },
       {
         text: shortDate(adjustment.adjustment_date),
         secondary: displayUb(booking.ub_number),
@@ -448,11 +519,13 @@ function miscAdjustmentRow(
 function insertAdjustmentsAfterOriginals(
   originalRows: StatementViewRow[],
   adjustments: StatementAdjustmentRecord[],
-  makeAdjustment: (adjustment: StatementAdjustmentRecord, latest: boolean) => StatementViewRow,
+  makeAdjustment: (adjustment: StatementAdjustmentRecord, latest: boolean, srLabel: string) => StatementViewRow,
 ) {
   if (!adjustments.length) return originalRows;
   const latestId = adjustments[adjustments.length - 1]?.id;
-  const adjustmentRows = adjustments.map((adjustment) => makeAdjustment(adjustment, adjustment.id === latestId));
+  const adjustmentRows = adjustments.map((adjustment, index) =>
+    makeAdjustment(adjustment, adjustment.id === latestId, adjustmentSrLabel(index)),
+  );
   if (!originalRows.length) return adjustmentRows;
   return [...originalRows, ...adjustmentRows];
 }
@@ -540,8 +613,8 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     });
     packageRows.push(
       ...tagBookingGroup(
-        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest) =>
-          packageAdjustmentRow(booking, adjustment, data, latest),
+        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest, srLabel) =>
+          packageAdjustmentRow(booking, adjustment, data, latest, srLabel),
         ),
         booking.ub_number,
       ),
@@ -611,8 +684,8 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     });
     ticketRows.push(
       ...tagBookingGroup(
-        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest) =>
-          ticketAdjustmentRow(booking, adjustment, data, latest),
+        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest, srLabel) =>
+          ticketAdjustmentRow(booking, adjustment, data, latest, srLabel),
         ),
         booking.ub_number,
       ),
@@ -696,8 +769,8 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     });
     hotelRows.push(
       ...tagBookingGroup(
-        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest) =>
-          hotelAdjustmentRow(booking, adjustment, data, latest),
+        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest, srLabel) =>
+          hotelAdjustmentRow(booking, adjustment, data, latest, srLabel),
         ),
         booking.ub_number,
       ),
@@ -779,8 +852,8 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     });
     visaRows.push(
       ...tagBookingGroup(
-        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest) =>
-          visaAdjustmentRow(booking, adjustment, data, latest),
+        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest, srLabel) =>
+          visaAdjustmentRow(booking, adjustment, data, latest, srLabel),
         ),
         booking.ub_number,
       ),
@@ -871,8 +944,8 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     });
     transportRows.push(
       ...tagBookingGroup(
-        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest) =>
-          transportAdjustmentRow(booking, adjustment, data, latest),
+        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest, srLabel) =>
+          transportAdjustmentRow(booking, adjustment, data, latest, srLabel),
         ),
         booking.ub_number,
       ),
@@ -947,8 +1020,8 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
     });
     miscRows.push(
       ...tagBookingGroup(
-        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest) =>
-          miscAdjustmentRow(booking, adjustment, data, latest),
+        insertAdjustmentsAfterOriginals(rows, booking.statementDisplayAdjustments, (adjustment, latest, srLabel) =>
+          miscAdjustmentRow(booking, adjustment, data, latest, srLabel),
         ),
         booking.ub_number,
       ),
