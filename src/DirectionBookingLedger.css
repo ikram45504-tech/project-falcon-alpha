@@ -115,17 +115,21 @@ html.phone-ui .all-booking-register .all-booking-x-scroll .package14-register-ta
   max-width: none !important;
 }
 
-html.phone-ui .all-booking-register .booking-lifecycle-actions {
-  min-width: 112px !important;
-  max-width: 128px;
-}
-
+/* Keep Actions on one horizontal row so table rows stay short on phone */
+html.phone-ui .all-booking-register .booking-lifecycle-actions,
 html.phone-ui .all-booking-register .booking-lifecycle-actions.compact {
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: max-content !important;
+  max-width: none !important;
 }
 
 html.phone-ui .all-booking-register .booking-lifecycle-actions.compact button {
-  width: 100%;
+  width: auto !important;
+  flex: 0 0 auto;
   box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 11px;
 }
