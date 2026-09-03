@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Company, Party, PaymentEntry, getPayments } from "./db";
 import { accountDirectionLabel } from "./BookingAccounting";
@@ -151,6 +151,8 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const [savingPdf, setSavingPdf] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  /** Ignores stale async loads when the user switches accounts quickly. */
+  const loadRequestIdRef = useRef(0);
 
   const selectedParty = useMemo(() => parties.find((party) => party.id === partyId) ?? null, [parties, partyId]);
   const accountDirection = selectedParty ? accountDirectionLabel(selectedParty.account_type) : "BOOKING";
@@ -164,6 +166,8 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
 
   useEffect(() => {
     if (!partyId || !selectedParty) {
+      loadRequestIdRef.current += 1;
+      setLoading(false);
       setSections(emptySections());
       setPayments([]);
       return;
@@ -172,6 +176,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   }, [company.id, partyId, selectedParty?.account_type]);
 
   async function loadPartyTransactions(selectedPartyId: string, accountType: Party["account_type"], party: Party) {
+    const requestId = ++loadRequestIdRef.current;
     setLoading(true);
     setError("");
     setMessage("");
@@ -182,11 +187,16 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
         getChronologicalLedger(company.id, party),
       ]);
 
+      if (requestId !== loadRequestIdRef.current) return;
+
       const activePayments = paymentRows.filter((row) => row.status === "ACTIVE");
       const meta = await getPaymentV2MetaForPayments(
         company.id,
         activePayments.map((row) => row.id),
       );
+
+      if (requestId !== loadRequestIdRef.current) return;
+
       const headers = statementBookingHeaders(bookingSections);
       setSections(bookingSections);
       setPayments(activePayments);
@@ -195,9 +205,12 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       applyAutomaticPeriod(periodType, headers, activePayments);
       refreshStatementIdentity();
     } catch (e) {
+      if (requestId !== loadRequestIdRef.current) return;
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }
 
