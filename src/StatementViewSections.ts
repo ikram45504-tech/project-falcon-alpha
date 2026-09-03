@@ -204,16 +204,13 @@ function adjustmentRateSummary(service: BookingServiceName, adjustment: Statemen
   }
   return `Revised Base ${money(adjustment.revised_base_pkr)}`;
 }
-function adjustmentFinanceSecondary(adjustment: StatementAdjustmentRecord, accountType: Party["account_type"]) {
-  const parts: string[] = [];
-  if (adjustment.charge_pkr > 0)
-    parts.push(`${accountType === "VENDOR" ? "Cost" : "Fee"} +${money(adjustment.charge_pkr)}`);
-  if (adjustment.credit_pkr > 0) parts.push(`Credit -${money(adjustment.credit_pkr)}`);
-  if (!parts.length) parts.push("No separate fee / credit");
-  return parts.join(" · ");
+/** RATE sub-header finance: fee/cost only — credit is excluded (reflected in TOTAL). */
+function adjustmentFeeOnlySecondary(adjustment: StatementAdjustmentRecord, accountType: Party["account_type"]) {
+  if (adjustment.charge_pkr <= 0) return undefined;
+  return `${accountType === "VENDOR" ? "Cost" : "Fee"} +${money(adjustment.charge_pkr)}`;
 }
 
-/** Rate primary; fee only as small secondary when present (no stacked “No separate…”). */
+/** Rate primary; fee-only secondary when present (no credit under RATE). */
 function compactRateFinanceCell(
   service: BookingServiceName,
   adjustment: StatementAdjustmentRecord,
@@ -221,9 +218,9 @@ function compactRateFinanceCell(
   align: Align = "right",
 ): StatementViewCell {
   const primary = adjustmentRateSummary(service, adjustment);
-  const hasFee = adjustment.charge_pkr > 0 || adjustment.credit_pkr > 0;
-  if (!hasFee) return { text: primary, align };
-  return { text: primary, secondary: adjustmentFinanceSecondary(adjustment, accountType), align };
+  const fee = adjustmentFeeOnlySecondary(adjustment, accountType);
+  if (!fee) return { text: primary, align };
+  return { text: primary, secondary: fee, align };
 }
 function adjustmentReason(adjustment: StatementAdjustmentRecord) {
   const parts = [
@@ -253,10 +250,6 @@ function bookingChangeNote(adjustmentType?: string) {
   return "Booking amended";
 }
 
-function latestDisplayAdjustmentType(adjustments: StatementAdjustmentRecord[]) {
-  return adjustments[adjustments.length - 1]?.adjustment_type;
-}
-
 /**
  * TOTAL PKR on amendment rows:
  * - intermediate revisions → note only (avoids looking like multiple charges)
@@ -276,10 +269,10 @@ function adjustmentTotalPkrCell(adjustment: StatementAdjustmentRecord, latest: b
   };
 }
 
-/** Original parent row after amendments — same note as intermediate revisions (no amount). */
-function supersededOriginalTotalCell(adjustments: StatementAdjustmentRecord[]): StatementViewCell {
+/** Original parent row after amendments — plain note, same family as middle revisions. */
+function supersededOriginalTotalCell(_adjustments: StatementAdjustmentRecord[]): StatementViewCell {
   return {
-    text: bookingChangeNote(latestDisplayAdjustmentType(adjustments)),
+    text: "Booking amended",
     align: "right",
   };
 }
@@ -340,15 +333,14 @@ function packageAdjustmentQtyText(adjustment: StatementAdjustmentRecord) {
 }
 
 /**
- * RATE cell for package amendments — amount on primary; Δ as small secondary with unit.
+ * RATE cell for package amendments — rate Δ / pax + optional Fee (no Credit).
  */
 function packageAdjustmentRateCell(
   adjustment: StatementAdjustmentRecord,
   accountType: Party["account_type"],
 ): StatementViewCell {
   const primary = adjustmentRateSummary("PACKAGE", adjustment);
-  const finance = adjustmentFinanceSecondary(adjustment, accountType);
-  const hasFee = adjustment.charge_pkr > 0 || adjustment.credit_pkr > 0;
+  const fee = adjustmentFeeOnlySecondary(adjustment, accountType);
   const before = packageSnapshotLines(adjustment.before_snapshot_json);
   const after = packageSnapshotLines(adjustment.after_snapshot_json);
 
@@ -357,12 +349,12 @@ function packageAdjustmentRateCell(
     const delta = packageLineRate(after[0]) - packageLineRate(before[0]);
     if (Math.abs(delta) >= 0.005) {
       const deltaText = `${signedMoney(delta)} / pax`;
-      secondary = hasFee ? `${deltaText} · ${finance}` : deltaText;
+      secondary = fee ? `${deltaText} · ${fee}` : deltaText;
     }
   } else if (after.length > 1) {
-    secondary = hasFee ? `Mixed rates · ${finance}` : "Mixed rates";
+    secondary = fee ? `Mixed rates · ${fee}` : "Mixed rates";
   }
-  if (!secondary && hasFee) secondary = finance;
+  if (!secondary && fee) secondary = fee;
   return { text: primary, secondary, align: "right" };
 }
 
@@ -408,8 +400,7 @@ function ticketAdjustmentRateCell(
   accountType: Party["account_type"],
 ): StatementViewCell {
   const primary = adjustmentRateSummary("TICKET", adjustment);
-  const finance = adjustmentFinanceSecondary(adjustment, accountType);
-  const hasFee = adjustment.charge_pkr > 0 || adjustment.credit_pkr > 0;
+  const fee = adjustmentFeeOnlySecondary(adjustment, accountType);
   const before = ticketSnapshotLines(adjustment.before_snapshot_json);
   const after = ticketSnapshotLines(adjustment.after_snapshot_json);
 
@@ -418,12 +409,12 @@ function ticketAdjustmentRateCell(
     const delta = ticketLineRate(after[0]) - ticketLineRate(before[0]);
     if (Math.abs(delta) >= 0.005) {
       const deltaText = `${signedMoney(delta)} / ticket`;
-      secondary = hasFee ? `${deltaText} · ${finance}` : deltaText;
+      secondary = fee ? `${deltaText} · ${fee}` : deltaText;
     }
   } else if (after.length > 1) {
-    secondary = hasFee ? `Mixed rates · ${finance}` : "Mixed rates";
+    secondary = fee ? `Mixed rates · ${fee}` : "Mixed rates";
   }
-  if (!secondary && hasFee) secondary = finance;
+  if (!secondary && fee) secondary = fee;
   return { text: primary, secondary, align: "right" };
 }
 
