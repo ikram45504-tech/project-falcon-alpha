@@ -69,40 +69,48 @@
 
 .statement-doc-glance {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
   margin-bottom: 22px;
 }
 
 .statement-doc-glance-item {
-  background: #f7f9fb;
-  border: 1px solid #e2e8f0;
-  border-top: 2px solid #153f73;
-  border-radius: 6px;
-  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: #f4f7fb;
+  border: 1px solid #e3eaf2;
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-width: 0;
 }
 
 .statement-doc-glance-item small {
   display: block;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: #66788a;
-  margin-bottom: 4px;
+  line-height: 1.3;
 }
 
 .statement-doc-glance-item b {
   display: block;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 800;
   color: #153f73;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
 }
 
 .statement-doc-glance-sar {
   display: block;
-  margin-top: 4px;
   font-size: 11px;
   font-weight: 700;
-  color: #66788a;
+  color: #5a6d82;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
 }
 
 .statement-doc-section {
@@ -512,39 +520,46 @@
 }
 
 .statement-doc-print .statement-doc-glance {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  margin-bottom: 12px;
-  border: none;
-  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 .statement-doc-print .statement-doc-glance-item {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  background: #f4f7fb;
+  border: 1px solid #e3eaf2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 0;
 }
 
 .statement-doc-print .statement-doc-glance-item small {
-  display: inline;
-  font-size: 10px;
-  margin: 0 4px 0 0;
-  letter-spacing: 0.03em;
+  display: block;
+  font-size: 9px;
+  margin: 0;
+  letter-spacing: 0.05em;
+  color: #4a5568;
 }
 
 .statement-doc-print .statement-doc-glance-item b {
-  display: inline;
+  display: block;
   font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .statement-doc-print .statement-doc-glance-sar {
-  display: inline;
-  margin: 0 0 0 6px;
-  font-size: 11px;
+  display: block;
+  margin: 0;
+  font-size: 10px;
   font-weight: 700;
-  color: #000;
+  color: #4a5568;
+  font-variant-numeric: tabular-nums;
 }
 
 .statement-doc-print .statement-doc-section {
@@ -769,7 +784,6 @@
 
   .statement-doc-print .statement-doc-section-card,
   .statement-doc-print .statement-doc-recon,
-  .statement-doc-print .statement-doc-glance-item,
   .statement-doc-print .statement-doc-recon-row,
   .statement-doc-print .statement-grid-row,
   .statement-doc-print .statement-booking-block {
@@ -777,6 +791,15 @@
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
+  }
+
+  .statement-doc-print .statement-doc-glance-item {
+    background: #f4f7fb !important;
+    background-color: #f4f7fb !important;
+    border: 1px solid #e3eaf2 !important;
+    border-radius: 10px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .statement-doc-print .statement-grid-head {
@@ -844,6 +867,11 @@
   }
 
   .statement-doc-glance {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .statement-doc-print .statement-doc-glance {
     grid-template-columns: 1fr 1fr;
   }
 
