@@ -667,13 +667,13 @@
   box-shadow: none !important;
 }
 
-/* Rows inside one booking stay visually joined; only the group closes with a line. */
+/* Every row closes with a line; a booking group closes with a slightly darker one. */
 .statement-doc-print .statement-booking-block .statement-grid-row {
-  border-bottom: none;
+  border-bottom: 1px solid #d0d0d0;
 }
 
 .statement-doc-print .statement-booking-block .statement-grid-row:last-child {
-  border-bottom: 1px solid #d0d0d0;
+  border-bottom: 1px solid #b4b4b4;
 }
 
 .statement-doc-print .statement-grid-table {
@@ -859,15 +859,27 @@
   }
 
   .statement-doc-print .statement-booking-block .statement-grid-row {
-    border-bottom: none !important;
+    border-bottom: 1px solid #c8c8c8 !important;
   }
 
   .statement-doc-print .statement-booking-block .statement-grid-row:last-child {
-    border-bottom: 1px solid #c8c8c8 !important;
+    border-bottom: 1px solid #ababab !important;
   }
 
   .statement-doc-print .statement-grid-table {
     border-bottom: 1px solid #9e9e9e !important;
+  }
+
+  /* Long segments: never split a row across pages, never orphan a section header. */
+  .statement-doc-print .statement-grid-head-row,
+  .statement-doc-print .statement-grid-row {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .statement-doc-print .statement-doc-section-title {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 
   .statement-doc-print .statement-doc-glance-item {
