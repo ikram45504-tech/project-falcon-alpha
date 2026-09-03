@@ -22,6 +22,13 @@ import {
   type PaymentV2Meta,
 } from "./PaymentV2Db";
 import { accountBalanceFromTotals, inferPaymentKind, sumSignedPaymentSettlements } from "./accountBalance";
+import {
+  hasSarFigure,
+  statementActivityLabel,
+  statementClosingBalanceDisplayPkr,
+  statementClosingBalanceLabel,
+  sumSignedPaymentSar,
+} from "./StatementSummary";
 import { loadSegmentAdjustmentsForStatements } from "./SegmentAdjustmentRecord";
 import "./PaymentLedgerModal.css";
 
@@ -62,6 +69,10 @@ function formatDate(value: string) {
 
 function formatMoney(value: number) {
   return `Rs ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
+}
+
+function formatSar(value: number) {
+  return `SAR ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
 
 function formatNumber(value: number) {
@@ -133,6 +144,14 @@ export default function PartyLedger({
     () => activeBookings.reduce((sum, entry) => sum + effectiveBookingAmount(entry, latestAdjustments), 0),
     [activeBookings, latestAdjustments],
   );
+  const bookingSarTotal = useMemo(
+    () => activeBookings.reduce((sum, entry) => sum + Number(entry.total_sar || 0), 0),
+    [activeBookings],
+  );
+  const pendingSarTotal = useMemo(
+    () => activeBookings.reduce((sum, entry) => sum + Number(entry.unconverted_sar || 0), 0),
+    [activeBookings],
+  );
   const paymentTotal = useMemo(
     () =>
       sumSignedPaymentSettlements(activePayments, (index) =>
@@ -140,7 +159,14 @@ export default function PartyLedger({
       ),
     [activePayments, metaMap, party.account_type],
   );
+  const paymentSarTotal = useMemo(
+    () => sumSignedPaymentSar(activePayments, metaMap, party.account_type),
+    [activePayments, metaMap, party.account_type],
+  );
   const balance = accountBalanceFromTotals(bookingTotal, paymentTotal);
+  const activityLabel = statementActivityLabel(party.account_type);
+  const balanceLabel = statementClosingBalanceLabel(party.account_type, balance);
+  const balanceDisplay = statementClosingBalanceDisplayPkr(balance);
 
   async function openModal(mode: "correct" | "history", entry: PaymentEntry) {
     setError("");
@@ -242,9 +268,14 @@ export default function PartyLedger({
       {
         "Account Name": party.name,
         "Account Type": party.account_type,
-        "Total Bookings (PKR)": bookingTotal,
-        "Total Payments (PKR)": paymentTotal,
-        "Balance (PKR)": balance,
+        [isVendor ? "Total Purchase (PKR)" : "Total Sales (PKR)"]: bookingTotal,
+        ...(hasSarFigure(bookingSarTotal)
+          ? { [isVendor ? "Total Purchase (SAR)" : "Total Sales (SAR)"]: bookingSarTotal }
+          : {}),
+        "Paid Amount (PKR)": paymentTotal,
+        ...(hasSarFigure(paymentSarTotal) ? { "Paid Amount (SAR)": paymentSarTotal } : {}),
+        [balanceLabel]: balanceDisplay,
+        ...(hasSarFigure(pendingSarTotal) ? { "Pending SAR": pendingSarTotal } : {}),
       },
     ];
 
@@ -330,24 +361,31 @@ export default function PartyLedger({
 
       <div className="ledger-summary">
         <div className="purchase">
-          <small>{isVendor ? "PURCHASE BOOKINGS" : "SALE BOOKINGS"}</small>
+          <small>{activityLabel}</small>
           <b>{formatMoney(bookingTotal)}</b>
+          {hasSarFigure(bookingSarTotal) ? (
+            <span className="ledger-summary-sar">{formatSar(bookingSarTotal)}</span>
+          ) : null}
         </div>
         <div className="paid">
-          <small>PAYMENTS</small>
+          <small>PAID AMOUNT</small>
           <b>{formatMoney(paymentTotal)}</b>
+          {hasSarFigure(paymentSarTotal) ? (
+            <span className="ledger-summary-sar">{formatSar(paymentSarTotal)}</span>
+          ) : null}
         </div>
-        <div className="balance">
-          <small>{isVendor ? "PAYABLE BALANCE" : "RECEIVABLE BALANCE"}</small>
-          <b>{formatMoney(balance)}</b>
+        <div className={`balance${balance < 0 ? " advance" : Math.abs(balance) < 0.005 ? " settled" : ""}`}>
+          <small>{balanceLabel}</small>
+          <b>{formatMoney(balanceDisplay)}</b>
+          {hasSarFigure(pendingSarTotal) ? (
+            <span className="ledger-summary-sar">{formatSar(pendingSarTotal)}</span>
+          ) : null}
         </div>
       </div>
 
       <div className="ledger-section blue-section services-ledger-section">
         <div className="ledger-section-title">
-          <b>
-            {isVendor ? "PURCHASE BOOKINGS" : "SALE BOOKINGS"} — FULL PACKAGE / TICKET / HOTEL / VISA / TRANSPORT / MISC
-          </b>
+          <b>{activityLabel} — FULL PACKAGE / TICKET / HOTEL / VISA / TRANSPORT / MISC</b>
           <div className="section-right">
             <strong>TOTAL: {formatMoney(bookingTotal)}</strong>
           </div>
@@ -402,7 +440,7 @@ export default function PartyLedger({
 
       <div className="ledger-section purple-section payments-ledger-section">
         <div className="ledger-section-title">
-          <b>PAYMENTS</b>
+          <b>PAID AMOUNT</b>
           <div className="section-right">
             <strong>TOTAL: {formatMoney(paymentTotal)}</strong>
             {onOpenPayments ? (

@@ -833,6 +833,12 @@ select:focus {
 .ledger-summary b {
   font-size: 28px;
 }
+.ledger-summary-sar {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.85;
+}
 .ledger-summary .purchase {
   background: #eef5fc;
   border-color: #cbdff1;
@@ -847,6 +853,16 @@ select:focus {
   background: #fff3f4;
   border-color: #f0cdd1;
   color: #b0313d;
+}
+.ledger-summary .balance.advance {
+  background: #eef9f3;
+  border-color: #cce7d8;
+  color: #1a704d;
+}
+.ledger-summary .balance.settled {
+  background: #f4f6f8;
+  border-color: #d8e1ea;
+  color: #526579;
 }
 .ledger-section {
   margin-top: 17px;
@@ -8862,6 +8878,14 @@ table tbody tr:hover {
 .ledger-summary .balance {
   background: var(--loss-glow) !important;
   color: var(--loss-color) !important;
+}
+.ledger-summary .balance.advance {
+  background: var(--profit-glow) !important;
+  color: var(--profit-color) !important;
+}
+.ledger-summary .balance.settled {
+  background: var(--bg-muted, #f4f6f8) !important;
+  color: var(--text-muted, #526579) !important;
 }
 
 /* =========================================================
