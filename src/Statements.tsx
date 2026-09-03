@@ -423,7 +423,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
       Method: p.payment_type,
       SAR: p.currency === "SAR" ? p.sar || 0 : "",
       ROE: p.currency === "SAR" ? p.roe || 0 : "",
-      "PKR Amount": p.paid_amount || 0,
+      "PKR Amount": signedPaymentAmount(p),
     }));
 
     const summaryData = [
