@@ -983,7 +983,9 @@ export async function syncMiscAdjustmentBundle(input: {
 
 /**
  * Desktop: immediately push PENDING/FAILED sync_queue jobs to Supabase.
- * Used after package adjustments so web sees the change without waiting for the 5s timer.
+ * Used after saves so web sees the change without waiting for the 5s timer.
+ * Continues after individual job failures (marks FAILED) so one bad job
+ * does not block the rest of the queue — same behavior as processSyncQueue.
  */
 export async function flushDesktopSyncQueue() {
   if (!isCloudSyncEnabled() || !navigator.onLine) return;
@@ -1002,6 +1004,7 @@ export async function flushDesktopSyncQueue() {
     "SELECT id, operation, table_name, record_id, payload FROM sync_queue WHERE status = 'PENDING' ORDER BY created_at ASC",
   );
 
+  let failedCount = 0;
   for (const job of pending) {
     try {
       if (isDeprecatedCloudTable(job.table_name)) {
@@ -1012,14 +1015,17 @@ export async function flushDesktopSyncQueue() {
       await applyCloudOperation(job.operation, job.table_name, job.record_id, payload);
       await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);
     } catch (jobError: unknown) {
+      failedCount += 1;
       const message = jobError instanceof Error ? jobError.message : String(jobError);
       console.error("Sync job failed:", jobError);
       await database.execute("UPDATE sync_queue SET status = 'FAILED', error_message = $1 WHERE id = $2", [
         message,
         job.id,
       ]);
-      const syncError = new Error(`Cloud sync failed: ${message}`);
-      throw syncError;
     }
+  }
+
+  if (failedCount > 0) {
+    console.warn(`Desktop sync flush finished with ${failedCount} failed job(s); remaining queue will retry later.`);
   }
 }
