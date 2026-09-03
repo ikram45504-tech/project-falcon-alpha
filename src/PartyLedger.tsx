@@ -503,6 +503,9 @@ export default function PartyLedger({
                 {payments.map((entry, index) => {
                   const kind = inferPaymentKind(metaMap.get(entry.id), party.account_type);
                   const signedPkr = signedPaymentSettlement(entry.paid_amount, kind);
+                  const descriptionText = (entry.description || paymentKindLabel(kind)).trim();
+                  const isRefund = kind === "PARTY_REFUND" || kind === "VENDOR_REFUND";
+                  const showRefundBadge = isRefund && descriptionText.toLowerCase() !== "refund";
                   return (
                     <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
                       <td className="centered">{index + 1}</td>
@@ -511,11 +514,9 @@ export default function PartyLedger({
                       <td>{entry.from_account}</td>
                       <td>{entry.to_account}</td>
                       <td className="payment-description-cell">
-                        {entry.description || paymentKindLabel(kind)}
+                        {descriptionText || "—"}
                         {entry.status === "VOID" && <small className="void-label">VOID</small>}
-                        {kind === "PARTY_REFUND" || kind === "VENDOR_REFUND" ? (
-                          <small className="ledger-amended-note">Refund</small>
-                        ) : null}
+                        {showRefundBadge ? <small className="ledger-amended-note">Refund</small> : null}
                       </td>
                       <td className="centered">{entry.payment_type}</td>
                       <td className="right">{entry.currency === "SAR" ? formatNumber(entry.sar) : "—"}</td>

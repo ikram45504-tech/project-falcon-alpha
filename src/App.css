@@ -1180,7 +1180,7 @@ body.modal-scroll-locked,
 
 .ledger-table-wrap {
   width: 100%;
-  overflow: auto;
+  overflow-x: hidden;
   background: #fff;
 }
 
@@ -1344,14 +1344,14 @@ body.modal-scroll-locked,
 }
 .ledger-service-table {
   width: 100%;
-  min-width: 1500px;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 .ledger-service-table th {
-  padding: 10px 8px;
+  padding: 8px 6px;
   background: #dff1e7;
   color: #185e42;
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.18;
   text-align: center;
   border-right: 1px solid #c8dfd2;
@@ -1359,12 +1359,48 @@ body.modal-scroll-locked,
   white-space: nowrap;
 }
 .ledger-service-table td {
-  padding: 10px 8px;
+  padding: 8px 6px;
   font-size: 11px;
   color: #34465a;
   border-right: 1px solid #e0e7ee;
   border-bottom: 1px solid #e0e7ee;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ledger-service-table th:nth-child(1),
+.ledger-service-table td:nth-child(1) {
+  width: 36px;
+}
+.ledger-service-table th:nth-child(2),
+.ledger-service-table td:nth-child(2) {
+  width: 88px;
+}
+.ledger-service-table th:nth-child(3),
+.ledger-service-table td:nth-child(3) {
+  width: 78px;
+}
+.ledger-service-table th:nth-child(4),
+.ledger-service-table td:nth-child(4) {
+  width: 96px;
+}
+.ledger-service-table th:nth-child(5),
+.ledger-service-table td:nth-child(5) {
+  width: 72px;
+}
+.ledger-service-table th:nth-child(6),
+.ledger-service-table td:nth-child(6),
+.ledger-service-table th:nth-child(7),
+.ledger-service-table td:nth-child(7) {
+  width: 88px;
+}
+.ledger-service-table th:nth-child(8),
+.ledger-service-table td:nth-child(8) {
+  width: 110px;
+}
+.ledger-service-table th:nth-child(9),
+.ledger-service-table td:nth-child(9) {
+  width: 72px;
 }
 .ledger-service-table tbody tr:nth-child(odd) {
   background: #fff;
@@ -1381,6 +1417,10 @@ body.modal-scroll-locked,
 .ledger-service-table .total-pkr {
   color: #176c49;
   font-weight: 900;
+  white-space: normal;
+}
+.ledger-service-table .total-pkr .ledger-amended-note {
+  display: block;
 }
 
 @media (max-width: 1100px) {
@@ -1514,10 +1554,10 @@ body.modal-scroll-locked,
   text-align: right;
 }
 .payment-description-cell {
-  min-width: 260px;
-  max-width: 360px;
+  min-width: 0;
+  max-width: none;
   white-space: normal !important;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 .payment-paid-amount {
   color: #176c49 !important;
@@ -1529,14 +1569,14 @@ body.modal-scroll-locked,
 }
 .ledger-payment-table {
   width: 100%;
-  min-width: 1600px;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 .ledger-payment-table th {
-  padding: 10px 8px;
+  padding: 8px 5px;
   background: #e7dcf0;
   color: #563478;
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.18;
   text-align: center;
   border-right: 1px solid #d5c4e2;
@@ -1544,13 +1584,56 @@ body.modal-scroll-locked,
   white-space: nowrap;
 }
 .ledger-payment-table td {
-  padding: 10px 8px;
+  padding: 8px 5px;
   font-size: 11px;
   color: #34465a;
   border-right: 1px solid #e0e7ee;
   border-bottom: 1px solid #e0e7ee;
   white-space: nowrap;
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ledger-payment-table th:nth-child(1),
+.ledger-payment-table td:nth-child(1) {
+  width: 32px;
+}
+.ledger-payment-table th:nth-child(2),
+.ledger-payment-table td:nth-child(2) {
+  width: 78px;
+}
+.ledger-payment-table th:nth-child(3),
+.ledger-payment-table td:nth-child(3) {
+  width: 118px;
+}
+.ledger-payment-table th:nth-child(4),
+.ledger-payment-table td:nth-child(4),
+.ledger-payment-table th:nth-child(5),
+.ledger-payment-table td:nth-child(5) {
+  width: 100px;
+  white-space: normal;
+}
+.ledger-payment-table th:nth-child(6),
+.ledger-payment-table td:nth-child(6) {
+  width: 88px;
+}
+.ledger-payment-table th:nth-child(7),
+.ledger-payment-table td:nth-child(7) {
+  width: 56px;
+}
+.ledger-payment-table th:nth-child(8),
+.ledger-payment-table td:nth-child(8),
+.ledger-payment-table th:nth-child(9),
+.ledger-payment-table td:nth-child(9) {
+  width: 56px;
+}
+.ledger-payment-table th:nth-child(10),
+.ledger-payment-table td:nth-child(10) {
+  width: 88px;
+}
+.ledger-payment-table th:nth-child(11),
+.ledger-payment-table td:nth-child(11) {
+  width: 150px;
 }
 .ledger-payment-table tbody tr:nth-child(odd) {
   background: #fff;
@@ -1566,7 +1649,16 @@ body.modal-scroll-locked,
 }
 .ledger-payment-table .payment-description-cell {
   white-space: normal;
-  min-width: 280px;
+  min-width: 0;
+}
+.ledger-payment-table .compact-actions {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ledger-payment-table .compact-actions button {
+  padding: 5px 7px;
+  font-size: 10px;
 }
 
 @media (max-width: 1100px) {
