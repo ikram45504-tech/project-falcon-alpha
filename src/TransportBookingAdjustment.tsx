@@ -10,6 +10,7 @@ import {
 } from "./TransportAdjustmentDb";
 import { bookingAccountTerms, bookingLifecycleConfigs } from "./BookingLifecycle";
 import { adjustmentSelectionIntro, adjustmentTypeLabel, buildAdjustmentChoices } from "./bookingAdjustmentCopy";
+import { AdjustmentChargeFields, adjustmentChargeUnitLabel, totalChargeFromRateAndQty } from "./AdjustmentChargeFields";
 import { transportRowCalc } from "./pricingEngines";
 import "./PackageBookingAdjustment.css";
 
@@ -136,7 +137,7 @@ export default function TransportBookingAdjustment({
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [amendmentCharge, setAmendmentCharge] = useState("");
-  const [credit, setCredit] = useState("");
+  const [chargeQty, setChargeQty] = useState("1");
   const [rows, setRows] = useState<RowState[]>(booking.lines.map(rowFromBooking));
   const [cancelQuantities, setCancelQuantities] = useState<Record<string, string>>({});
   const [history, setHistory] = useState<TransportAdjustmentRecord[]>([]);
@@ -161,14 +162,15 @@ export default function TransportBookingAdjustment({
     () => booking.lines.reduce((sum, line) => sum + Number(line.line_total_pkr || 0), 0),
     [booking.lines],
   );
+  const availableChargeQty = useMemo(
+    () => booking.lines.reduce((sum, line) => sum + lineCancelQty(line), 0),
+    [booking.lines],
+  );
   const carriedAdjustment = Number(booking.total_pkr || 0) - currentBase;
   const revisedBase = useMemo(() => rows.reduce((sum, row) => sum + lineTotalPkr(row), 0), [rows]);
-  const chargeValue = Math.max(0, numberValue(amendmentCharge));
-  const creditValue = Math.max(0, numberValue(credit));
+  const chargeValue = totalChargeFromRateAndQty(amendmentCharge, chargeQty, availableChargeQty);
   const revisedEffective =
-    adjustmentType === "CORRECTION"
-      ? revisedBase + carriedAdjustment
-      : revisedBase + carriedAdjustment + chargeValue - creditValue;
+    adjustmentType === "CORRECTION" ? revisedBase + carriedAdjustment : revisedBase + carriedAdjustment + chargeValue;
   const baseDifference = revisedBase - currentBase;
 
   const cancelledValue = useMemo(() => {
@@ -189,6 +191,7 @@ export default function TransportBookingAdjustment({
   const cancellationCredit = Math.max(0, Number(booking.total_pkr || 0) - cancellationEffective);
   const accountTerms = bookingAccountTerms(booking.transaction_type);
   const accountNoun = accountTerms.accountImpact;
+  const chargeUnitLabel = adjustmentChargeUnitLabel("TRANSPORT");
   const requestedBy = booking.transaction_type === "SALE" ? ("CUSTOMER" as const) : ("VENDOR" as const);
 
   function chooseType(type: TransportAdjustmentType) {
@@ -201,7 +204,7 @@ export default function TransportBookingAdjustment({
     setReference("");
     setNotes("");
     setAmendmentCharge("");
-    setCredit("");
+    setChargeQty("1");
     setRows(booking.lines.map(rowFromBooking));
     setCancelQuantities({});
     setError("");
@@ -233,7 +236,7 @@ export default function TransportBookingAdjustment({
             reference,
             notes,
             amendmentChargePkr: adjustmentType === "AMENDMENT" ? chargeValue : 0,
-            creditPkr: adjustmentType === "AMENDMENT" ? creditValue : 0,
+            creditPkr: 0,
             lines: rows.map((row) => ({
               lineId: row.sourceLineId || undefined,
               transportDate: row.transportDate,
@@ -734,56 +737,35 @@ export default function TransportBookingAdjustment({
                     </div>
                     {isCancellation ? renderCancellationRows() : renderEditableRows()}
                     {adjustmentType === "AMENDMENT" && (
-                      <div className="adj-charge-grid">
-                        <label>
-                          {accountTerms.chargeLabel} (PKR)
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={amendmentCharge}
-                            onChange={(e) => setAmendmentCharge(e.target.value)}
-                            placeholder="0"
-                          />
-                          <small>{accountTerms.chargeHelp}</small>
-                        </label>
-                        <label>
-                          {accountTerms.creditLabel} (PKR)
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={credit}
-                            onChange={(e) => setCredit(e.target.value)}
-                            placeholder="0"
-                          />
-                          <small>{accountTerms.creditHelp}</small>
-                        </label>
-                      </div>
+                      <AdjustmentChargeFields
+                        mode="amendment"
+                        chargeLabel={accountTerms.chargeLabel}
+                        chargeHelp={accountTerms.chargeHelp}
+                        unitLabel={chargeUnitLabel}
+                        rate={amendmentCharge}
+                        qty={chargeQty}
+                        onRateChange={setAmendmentCharge}
+                        onQtyChange={setChargeQty}
+                        totalCharge={chargeValue}
+                        formatMoney={money}
+                        maxQty={availableChargeQty}
+                      />
                     )}
                     {isCancellation && (
-                      <div className="adj-charge-grid">
-                        <label>
-                          Cancellation Charge (PKR)
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={amendmentCharge}
-                            onChange={(e) => setAmendmentCharge(e.target.value)}
-                            placeholder="0"
-                          />
-                          <small>Amount retained/charged despite cancellation.</small>
-                        </label>
-                        <div className="adj-credit-preview">
-                          <small>NET ACCOUNT CREDIT</small>
-                          <b>{money(cancellationCredit)}</b>
-                          <span>
-                            This is not a cash refund. Refund movement is recorded later in Payments if money is
-                            returned.
-                          </span>
-                        </div>
-                      </div>
+                      <AdjustmentChargeFields
+                        mode="cancellation"
+                        chargeLabel="Cancellation Charge"
+                        chargeHelp="Amount retained/charged despite cancellation (per unit × qty)."
+                        unitLabel={chargeUnitLabel}
+                        rate={amendmentCharge}
+                        qty={chargeQty}
+                        onRateChange={setAmendmentCharge}
+                        onQtyChange={setChargeQty}
+                        totalCharge={chargeValue}
+                        formatMoney={money}
+                        maxQty={availableChargeQty}
+                        cancellationNetCredit={cancellationCredit}
+                      />
                     )}
                     {adjustmentType === "AMENDMENT" ? (
                       <div className="adj-financial-breakdown">
@@ -802,10 +784,6 @@ export default function TransportBookingAdjustment({
                         <div>
                           <small>{accountTerms.chargeLabel.toUpperCase()}</small>
                           <b>{chargeValue > 0 ? `+${money(chargeValue)}` : money(0)}</b>
-                        </div>
-                        <div>
-                          <small>{accountTerms.creditLabel.toUpperCase()}</small>
-                          <b>{creditValue > 0 ? `−${money(creditValue)}` : money(0)}</b>
                         </div>
                         <div className={previewDelta > 0 ? "increase" : previewDelta < 0 ? "decrease" : "neutral"}>
                           <small>FINAL {accountNoun.toUpperCase()} IMPACT</small>
@@ -844,9 +822,9 @@ export default function TransportBookingAdjustment({
                     )}
                     {adjustmentType === "AMENDMENT" && (
                       <div className="adj-rule-note">
-                        <b>Amendment:</b> revised base difference + {accountTerms.chargeLabel.toLowerCase()} −{" "}
-                        {accountTerms.creditLabel.toLowerCase()} = final {accountNoun.toLowerCase()} impact. A genuine
-                        change can therefore increase, decrease or leave the account unchanged.
+                        <b>Amendment:</b> revised base difference + {accountTerms.chargeLabel.toLowerCase()} (rate ×
+                        qty) = final {accountNoun.toLowerCase()} impact. Discounts, if needed later, can be handled in
+                        Payments.
                       </div>
                     )}
                   </section>

@@ -335,6 +335,9 @@
   gap: 14px;
   margin-top: 16px;
 }
+.adj-charge-grid.has-cancel-preview .adj-credit-preview {
+  grid-column: 1 / -1;
+}
 .adj-charge-grid small {
   display: block;
   color: #64748b;
