@@ -21,7 +21,13 @@ import {
   type PaymentTransactionKind,
   type PaymentV2Meta,
 } from "./PaymentV2Db";
-import { accountBalanceFromTotals, inferPaymentKind, sumSignedPaymentSettlements } from "./accountBalance";
+import {
+  accountBalanceFromTotals,
+  inferPaymentKind,
+  paymentKindLabel,
+  signedPaymentSettlement,
+  sumSignedPaymentSettlements,
+} from "./accountBalance";
 import {
   hasSarFigure,
   statementActivityLabel,
@@ -238,31 +244,41 @@ export default function PartyLedger({
   }
 
   function handleExport() {
-    const bookingData = bookings.map((b, i) => ({
-      "SR #": i + 1,
-      Date: formatDate(b.transaction_date),
-      "UB #": b.ub_number || "-",
-      Service: bookingServiceDisplayLabel(b.service_type as BookingServiceName),
-      Type: b.transaction_type,
-      "Total SAR": b.total_sar || 0,
-      "Pending SAR": b.unconverted_sar || 0,
-      "Total PKR": b.total_pkr || 0,
-      Status: b.status,
-    }));
+    const bookingData = bookings.map((b, i) => {
+      const effectivePkr = effectiveBookingAmount(b, latestAdjustments);
+      const originalPkr = Number(b.total_pkr || 0);
+      return {
+        "SR #": i + 1,
+        Date: formatDate(b.transaction_date),
+        "UB #": b.ub_number || "-",
+        Service: bookingServiceDisplayLabel(b.service_type as BookingServiceName),
+        Type: b.transaction_type,
+        "Total SAR": b.total_sar || 0,
+        "Pending SAR": b.unconverted_sar || 0,
+        "Original PKR": originalPkr,
+        "Total PKR": effectivePkr,
+        Amended: Math.abs(effectivePkr - originalPkr) >= 0.005 ? "Yes" : "No",
+        Status: b.status,
+      };
+    });
 
-    const paymentData = payments.map((p, i) => ({
-      "SR #": i + 1,
-      Date: formatDate(p.transaction_date),
-      "Receipt #": p.receipt_no || "-",
-      "From Account": p.from_account,
-      "To Account": p.to_account,
-      Description: p.description || "-",
-      Method: p.payment_type,
-      SAR: p.currency === "SAR" ? p.sar || 0 : "",
-      ROE: p.currency === "SAR" ? p.roe || 0 : "",
-      "PKR Amount": p.paid_amount || 0,
-      Status: p.status,
-    }));
+    const paymentData = payments.map((p, i) => {
+      const kind = inferPaymentKind(metaMap.get(p.id), party.account_type);
+      return {
+        "SR #": i + 1,
+        Date: formatDate(p.transaction_date),
+        "Receipt #": p.receipt_no || "-",
+        "From Account": p.from_account,
+        "To Account": p.to_account,
+        Description: p.description || "-",
+        Method: p.payment_type,
+        Type: paymentKindLabel(kind),
+        SAR: p.currency === "SAR" ? p.sar || 0 : "",
+        ROE: p.currency === "SAR" ? p.roe || 0 : "",
+        "PKR Amount": signedPaymentSettlement(p.paid_amount, kind),
+        Status: p.status,
+      };
+    });
 
     const summaryData = [
       {
@@ -411,27 +427,35 @@ export default function PartyLedger({
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((entry, index) => (
-                  <tr key={`${entry.service_type}-${entry.id}`} className={entry.status === "VOID" ? "void-row" : ""}>
-                    <td className="centered">{index + 1}</td>
-                    <td>{formatDate(entry.transaction_date)}</td>
-                    <td>
-                      <b>{entry.ub_number || "—"}</b>
-                    </td>
-                    <td>
-                      <b>{bookingServiceDisplayLabel(entry.service_type as BookingServiceName)}</b>
-                    </td>
-                    <td className="centered">{entry.transaction_type}</td>
-                    <td className="right">{entry.total_sar ? `SAR ${formatNumber(entry.total_sar)}` : "—"}</td>
-                    <td className="right">
-                      {entry.unconverted_sar ? `SAR ${formatNumber(entry.unconverted_sar)}` : "—"}
-                    </td>
-                    <td className="right total-pkr">{formatMoney(entry.total_pkr)}</td>
-                    <td>
-                      <span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span>
-                    </td>
-                  </tr>
-                ))}
+                {bookings.map((entry, index) => {
+                  const effectivePkr = effectiveBookingAmount(entry, latestAdjustments);
+                  const originalPkr = Number(entry.total_pkr || 0);
+                  const amended = Math.abs(effectivePkr - originalPkr) >= 0.005;
+                  return (
+                    <tr key={`${entry.service_type}-${entry.id}`} className={entry.status === "VOID" ? "void-row" : ""}>
+                      <td className="centered">{index + 1}</td>
+                      <td>{formatDate(entry.transaction_date)}</td>
+                      <td>
+                        <b>{entry.ub_number || "—"}</b>
+                      </td>
+                      <td>
+                        <b>{bookingServiceDisplayLabel(entry.service_type as BookingServiceName)}</b>
+                      </td>
+                      <td className="centered">{entry.transaction_type}</td>
+                      <td className="right">{entry.total_sar ? `SAR ${formatNumber(entry.total_sar)}` : "—"}</td>
+                      <td className="right">
+                        {entry.unconverted_sar ? `SAR ${formatNumber(entry.unconverted_sar)}` : "—"}
+                      </td>
+                      <td className="right total-pkr">
+                        <b>{formatMoney(effectivePkr)}</b>
+                        {amended ? <small className="ledger-amended-note">Was {formatMoney(originalPkr)}</small> : null}
+                      </td>
+                      <td>
+                        <span className={`status ${entry.status.toLowerCase()}`}>{entry.status}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -476,24 +500,31 @@ export default function PartyLedger({
                 </tr>
               </thead>
               <tbody>
-                {payments.map((entry, index) => (
-                  <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
-                    <td className="centered">{index + 1}</td>
-                    <td>{formatDate(entry.transaction_date)}</td>
-                    <td>{entry.receipt_no || "—"}</td>
-                    <td>{entry.from_account}</td>
-                    <td>{entry.to_account}</td>
-                    <td className="payment-description-cell">
-                      {entry.description || "—"}
-                      {entry.status === "VOID" && <small className="void-label">VOID</small>}
-                    </td>
-                    <td className="centered">{entry.payment_type}</td>
-                    <td className="right">{entry.currency === "SAR" ? formatNumber(entry.sar) : "—"}</td>
-                    <td className="right">{entry.currency === "SAR" ? formatNumber(entry.roe) : "—"}</td>
-                    <td className="right payment-paid-amount">{formatMoney(entry.paid_amount)}</td>
-                    <td>{renderPaymentActions(entry)}</td>
-                  </tr>
-                ))}
+                {payments.map((entry, index) => {
+                  const kind = inferPaymentKind(metaMap.get(entry.id), party.account_type);
+                  const signedPkr = signedPaymentSettlement(entry.paid_amount, kind);
+                  return (
+                    <tr key={entry.id} className={entry.status === "VOID" ? "void-row" : ""}>
+                      <td className="centered">{index + 1}</td>
+                      <td>{formatDate(entry.transaction_date)}</td>
+                      <td>{entry.receipt_no || "—"}</td>
+                      <td>{entry.from_account}</td>
+                      <td>{entry.to_account}</td>
+                      <td className="payment-description-cell">
+                        {entry.description || paymentKindLabel(kind)}
+                        {entry.status === "VOID" && <small className="void-label">VOID</small>}
+                        {kind === "PARTY_REFUND" || kind === "VENDOR_REFUND" ? (
+                          <small className="ledger-amended-note">Refund</small>
+                        ) : null}
+                      </td>
+                      <td className="centered">{entry.payment_type}</td>
+                      <td className="right">{entry.currency === "SAR" ? formatNumber(entry.sar) : "—"}</td>
+                      <td className="right">{entry.currency === "SAR" ? formatNumber(entry.roe) : "—"}</td>
+                      <td className="right payment-paid-amount">{formatMoney(signedPkr)}</td>
+                      <td>{renderPaymentActions(entry)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
