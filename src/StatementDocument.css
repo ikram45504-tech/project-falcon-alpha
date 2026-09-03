@@ -230,9 +230,14 @@
   display: block;
   margin-top: 2px;
   font-size: 10px;
+  font-weight: 500;
   color: #66788a;
   line-height: 1.35;
   word-break: break-word;
+}
+
+.statement-grid-cell.align-right .cell-secondary {
+  white-space: nowrap;
 }
 
 .statement-grid-row.adjustment {
@@ -659,6 +664,10 @@
 .statement-doc-print .statement-grid-cell .cell-secondary {
   font-size: 9px;
   margin-top: 2px;
+}
+
+.statement-doc-print .statement-grid-cell.align-right .cell-secondary {
+  white-space: nowrap;
 }
 
 .statement-doc-print .statement-grid-row {

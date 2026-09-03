@@ -142,9 +142,6 @@ function numberField(row: Obj, key: string) {
 function universalValues(row: unknown) {
   return object(object(row).values);
 }
-function inStatementPeriod(date: string, data: StatementPdfData) {
-  return date >= data.fromDate && date <= data.toDate;
-}
 function adjustmentTypeLabel(value: string) {
   if (value === "PARTIAL_CANCELLATION") return "Partial Cancellation";
   if (value === "FULL_CANCELLATION") return "Full Cancellation";
@@ -170,7 +167,16 @@ function adjustmentRateSummary(service: BookingServiceName, adjustment: Statemen
     const lines = array(object(parsed).lines).map(object);
     if (lines.length === 1) {
       const rate = numberField(lines[0], "ratePerPerson") || numberField(lines[0], "rate_per_person");
-      if (rate > 0) return `${money(rate)} / Pax`;
+      if (rate > 0) return money(rate);
+    }
+  } else if (service === "TICKET") {
+    const lines = array(object(parsed).lines).map(object);
+    if (lines.length === 1) {
+      const rate =
+        numberField(lines[0], "ratePerTicket") ||
+        numberField(lines[0], "rate_per_ticket") ||
+        numberField(lines[0], "rate");
+      if (rate > 0) return money(rate);
     }
   } else {
     const rows = array(parsed)
@@ -178,17 +184,22 @@ function adjustmentRateSummary(service: BookingServiceName, adjustment: Statemen
       .filter((row) => Object.keys(row).length > 0);
     if (rows.length === 1) {
       const row = rows[0];
-      if (service === "TICKET") return `${money(Number(row.rate || 0))} / Ticket`;
-      if (service === "HOTEL")
-        return `${sar(Number(row.rateSar || 0))} / Night${Number(row.roe || 0) > 0 ? ` @ ${number(Number(row.roe))}` : ""}`;
-      if (service === "VISA")
-        return `${sar(Number(row.visaRateSar || 0))} / Pax${Number(row.roe || 0) > 0 ? ` @ ${number(Number(row.roe))}` : ""}`;
-      if (service === "TRANSPORT")
-        return `${sar(Number(row.rateSar || 0))}${Number(row.roe || 0) > 0 ? ` @ ${number(Number(row.roe))}` : ""}`;
+      if (service === "HOTEL") {
+        const rate = sar(Number(row.rateSar || 0));
+        return Number(row.roe || 0) > 0 ? `${rate} @ ${number(Number(row.roe))}` : rate;
+      }
+      if (service === "VISA") {
+        const rate = sar(Number(row.visaRateSar || 0));
+        return Number(row.roe || 0) > 0 ? `${rate} @ ${number(Number(row.roe))}` : rate;
+      }
+      if (service === "TRANSPORT") {
+        const rate = sar(Number(row.rateSar || 0));
+        return Number(row.roe || 0) > 0 ? `${rate} @ ${number(Number(row.roe))}` : rate;
+      }
       if (service === "MISC")
         return Number(row.roe || 0) > 0
-          ? `SAR ${number(Number(row.rate || 0))} / Pax @ ${number(Number(row.roe))}`
-          : `${money(Number(row.rate || 0))} / Pax`;
+          ? `SAR ${number(Number(row.rate || 0))} @ ${number(Number(row.roe))}`
+          : money(Number(row.rate || 0));
     }
   }
   return `Revised Base ${money(adjustment.revised_base_pkr)}`;
@@ -196,10 +207,23 @@ function adjustmentRateSummary(service: BookingServiceName, adjustment: Statemen
 function adjustmentFinanceSecondary(adjustment: StatementAdjustmentRecord, accountType: Party["account_type"]) {
   const parts: string[] = [];
   if (adjustment.charge_pkr > 0)
-    parts.push(`${accountType === "VENDOR" ? "Supplier cost" : "Fee / charge"} +${money(adjustment.charge_pkr)}`);
+    parts.push(`${accountType === "VENDOR" ? "Cost" : "Fee"} +${money(adjustment.charge_pkr)}`);
   if (adjustment.credit_pkr > 0) parts.push(`Credit -${money(adjustment.credit_pkr)}`);
   if (!parts.length) parts.push("No separate fee / credit");
-  return parts.join(" | ");
+  return parts.join(" · ");
+}
+
+/** Rate primary; fee only as small secondary when present (no stacked “No separate…”). */
+function compactRateFinanceCell(
+  service: BookingServiceName,
+  adjustment: StatementAdjustmentRecord,
+  accountType: Party["account_type"],
+  align: Align = "right",
+): StatementViewCell {
+  const primary = adjustmentRateSummary(service, adjustment);
+  const hasFee = adjustment.charge_pkr > 0 || adjustment.credit_pkr > 0;
+  if (!hasFee) return { text: primary, align };
+  return { text: primary, secondary: adjustmentFinanceSecondary(adjustment, accountType), align };
 }
 function adjustmentReason(adjustment: StatementAdjustmentRecord) {
   const parts = [
@@ -208,24 +232,78 @@ function adjustmentReason(adjustment: StatementAdjustmentRecord) {
   ].filter(Boolean);
   return parts.join(" | ") || "Booking adjustment";
 }
-function adjustmentAmountSecondary(adjustment: StatementAdjustmentRecord, data: StatementPdfData, latest: boolean) {
-  if (!inStatementPeriod(adjustment.adjustment_date, data))
-    return `REV ${adjustment.revision_no} | Prior-period revision reference`;
-  const impact = `Period impact ${signedMoney(adjustment.account_delta_pkr)}`;
-  return latest ? `Booking total | ${impact}` : `REV ${adjustment.revision_no} effective | ${impact}`;
+
+/**
+ * DB revision_no: parent booking concept = 1, first amendment/cancellation = 2.
+ * Statement display on amendment rows only: Revision 1, 2, 3…
+ * Parent rows keep their normal SR number (no "Original" label in the UI).
+ */
+function displayRevisionLabel(revisionNo: number) {
+  const displayNo = Math.max(1, Number(revisionNo || 1) - 1);
+  return `Revision ${displayNo}`;
 }
 
-function referenceNotCountedCell(): StatementViewCell {
-  return { text: "—", secondary: "Reference · not in total", align: "right" };
+/**
+ * Note for original / intermediate amendment rows when a later revision owns the total.
+ */
+function bookingChangeNote(adjustmentType?: string) {
+  const kind = String(adjustmentType || "");
+  if (kind === "FULL_CANCELLATION") return "Booking cancelled";
+  if (kind === "PARTIAL_CANCELLATION") return "Partially cancelled";
+  return "Booking amended";
 }
 
-function chargeableTotalCell(value: number, superseded: boolean, bold = true): StatementViewCell {
-  if (superseded) return referenceNotCountedCell();
+function latestDisplayAdjustmentType(adjustments: StatementAdjustmentRecord[]) {
+  return adjustments[adjustments.length - 1]?.adjustment_type;
+}
+
+/**
+ * TOTAL PKR on amendment rows:
+ * - intermediate revisions → note only (avoids looking like multiple charges)
+ * - latest revision → current booking total
+ */
+function adjustmentTotalPkrCell(adjustment: StatementAdjustmentRecord, latest: boolean): StatementViewCell {
+  if (latest) {
+    return {
+      text: money(adjustment.effective_total_pkr),
+      align: "right",
+      bold: true,
+    };
+  }
+  return {
+    text: bookingChangeNote(adjustment.adjustment_type),
+    align: "right",
+  };
+}
+
+/** Original parent row after amendments — same note as intermediate revisions (no amount). */
+function supersededOriginalTotalCell(adjustments: StatementAdjustmentRecord[]): StatementViewCell {
+  return {
+    text: bookingChangeNote(latestDisplayAdjustmentType(adjustments)),
+    align: "right",
+  };
+}
+
+function referenceDashCell(): StatementViewCell {
+  return { text: "—", align: "right" };
+}
+
+function chargeableTotalCell(
+  value: number,
+  superseded: boolean,
+  adjustments: StatementAdjustmentRecord[] = [],
+  bold = true,
+): StatementViewCell {
+  if (superseded) return supersededOriginalTotalCell(adjustments);
   return { text: money(value), align: "right", bold };
 }
 
-function chargeableTotalOrPending(value: number, superseded: boolean): StatementViewCell {
-  if (superseded) return referenceNotCountedCell();
+function chargeableTotalOrPending(
+  value: number,
+  superseded: boolean,
+  adjustments: StatementAdjustmentRecord[] = [],
+): StatementViewCell {
+  if (superseded) return supersededOriginalTotalCell(adjustments);
   if (Math.abs(value) >= 0.005) return { text: money(value), align: "right", bold: true };
   return { text: "Pending", align: "right", bold: true };
 }
@@ -262,9 +340,7 @@ function packageAdjustmentQtyText(adjustment: StatementAdjustmentRecord) {
 }
 
 /**
- * RATE / PAX for package amendments:
- * primary = new rate (or revised base);
- * secondary = signed Δ rate/pax when comparable, else fee/credit line.
+ * RATE cell for package amendments — amount on primary; Δ as small secondary with unit.
  */
 function packageAdjustmentRateCell(
   adjustment: StatementAdjustmentRecord,
@@ -272,31 +348,98 @@ function packageAdjustmentRateCell(
 ): StatementViewCell {
   const primary = adjustmentRateSummary("PACKAGE", adjustment);
   const finance = adjustmentFinanceSecondary(adjustment, accountType);
+  const hasFee = adjustment.charge_pkr > 0 || adjustment.credit_pkr > 0;
   const before = packageSnapshotLines(adjustment.before_snapshot_json);
   const after = packageSnapshotLines(adjustment.after_snapshot_json);
 
+  let secondary: string | undefined;
   if (before.length === 1 && after.length === 1) {
     const delta = packageLineRate(after[0]) - packageLineRate(before[0]);
     if (Math.abs(delta) >= 0.005) {
-      const deltaText = `${signedMoney(delta)} / Pax`;
-      const hasFee = adjustment.charge_pkr > 0 || adjustment.credit_pkr > 0;
-      return {
-        text: primary,
-        secondary: hasFee ? `${deltaText} · ${finance}` : deltaText,
-        align: "right",
-      };
+      const deltaText = `${signedMoney(delta)} / pax`;
+      secondary = hasFee ? `${deltaText} · ${finance}` : deltaText;
     }
+  } else if (after.length > 1) {
+    secondary = hasFee ? `Mixed rates · ${finance}` : "Mixed rates";
   }
+  if (!secondary && hasFee) secondary = finance;
+  return { text: primary, secondary, align: "right" };
+}
 
-  if (after.length > 1) {
+function ticketSnapshotLines(json: string): Obj[] {
+  return packageSnapshotLines(json);
+}
+
+function ticketLineRate(line: Obj) {
+  return numberField(line, "ratePerTicket") || numberField(line, "rate_per_ticket") || numberField(line, "rate");
+}
+
+function ticketLineQty(line: Obj) {
+  return numberField(line, "ticketCount") || numberField(line, "ticket_count") || numberField(line, "qty");
+}
+
+function normalizeTicketSnapshotLine(line: Obj): Obj {
+  return {
+    passengerType: textField(line, "passengerType") || textField(line, "passenger_type"),
+    passengerName: textField(line, "passengerName") || textField(line, "passenger_name"),
+    airlineName: textField(line, "airlineName") || textField(line, "airline_name"),
+    pnr: textField(line, "pnr"),
+    flightType: textField(line, "flightType") || textField(line, "flight_type") || "RETURN",
+    ticketRoute: textField(line, "ticketRoute") || textField(line, "ticket_route"),
+    rate: ticketLineRate(line),
+    qty: Math.max(1, ticketLineQty(line) || 1),
+  };
+}
+
+function originalTicketRows(meta: StatementBookingMeta, fallback: Obj[]) {
+  const lines = ticketSnapshotLines(meta.statementOriginalSnapshotJson).map(normalizeTicketSnapshotLine);
+  return lines.length ? lines : fallback;
+}
+
+function ticketAdjustmentQtyText(adjustment: StatementAdjustmentRecord) {
+  const after = ticketSnapshotLines(adjustment.after_snapshot_json);
+  if (!after.length) return "—";
+  const qty = after.reduce((sum, line) => sum + Math.max(0, ticketLineQty(line)), 0);
+  return qty > 0 ? String(qty) : "—";
+}
+
+function ticketAdjustmentRateCell(
+  adjustment: StatementAdjustmentRecord,
+  accountType: Party["account_type"],
+): StatementViewCell {
+  const primary = adjustmentRateSummary("TICKET", adjustment);
+  const finance = adjustmentFinanceSecondary(adjustment, accountType);
+  const hasFee = adjustment.charge_pkr > 0 || adjustment.credit_pkr > 0;
+  const before = ticketSnapshotLines(adjustment.before_snapshot_json);
+  const after = ticketSnapshotLines(adjustment.after_snapshot_json);
+
+  let secondary: string | undefined;
+  if (before.length === 1 && after.length === 1) {
+    const delta = ticketLineRate(after[0]) - ticketLineRate(before[0]);
+    if (Math.abs(delta) >= 0.005) {
+      const deltaText = `${signedMoney(delta)} / ticket`;
+      secondary = hasFee ? `${deltaText} · ${finance}` : deltaText;
+    }
+  } else if (after.length > 1) {
+    secondary = hasFee ? `Mixed rates · ${finance}` : "Mixed rates";
+  }
+  if (!secondary && hasFee) secondary = finance;
+  return { text: primary, secondary, align: "right" };
+}
+
+function ticketAdjustmentRouteCell(adjustment: StatementAdjustmentRecord): StatementViewCell {
+  const after = ticketSnapshotLines(adjustment.after_snapshot_json);
+  if (after.length === 1) {
+    const line = normalizeTicketSnapshotLine(after[0]);
     return {
-      text: primary,
-      secondary: finance.includes("No separate") ? "Mixed passenger rates" : finance,
-      align: "right",
+      text: safeText(line.ticketRoute),
+      secondary: flightTypeLabel(String(line.flightType || "RETURN")),
     };
   }
-
-  return { text: primary, secondary: finance, align: "right" };
+  return {
+    text: "Revised booking",
+    secondary: `Base ${money(adjustment.revised_base_pkr)}`,
+  };
 }
 
 function packageAdjustmentRow(
@@ -317,15 +460,13 @@ function packageAdjustmentRow(
         bold: true,
       },
       { text: adjustmentTypeLabel(adjustment.adjustment_type), secondary: adjustmentReason(adjustment), bold: true },
-      { text: safeText(adjustment.category || "Booking change"), secondary: `REV ${adjustment.revision_no}` },
+      {
+        text: safeText(adjustment.category || "Booking change"),
+        secondary: displayRevisionLabel(adjustment.revision_no),
+      },
       packageAdjustmentRateCell(adjustment, data.party.account_type),
       { text: packageAdjustmentQtyText(adjustment), align: "center", bold: true },
-      {
-        text: money(adjustment.effective_total_pkr),
-        secondary: adjustmentAmountSecondary(adjustment, data, latest),
-        align: "right",
-        bold: true,
-      },
+      adjustmentTotalPkrCell(adjustment, latest),
     ],
   };
 }
@@ -349,21 +490,12 @@ function ticketAdjustmentRow(
       { text: adjustmentTypeLabel(adjustment.adjustment_type), secondary: adjustmentReason(adjustment), bold: true },
       {
         text: safeText(adjustment.category || "Booking change"),
-        secondary: adjustment.reference ? `Ref: ${adjustment.reference}` : `REV ${adjustment.revision_no}`,
+        secondary: displayRevisionLabel(adjustment.revision_no),
       },
-      { text: "Revised booking", secondary: `Base ${money(adjustment.revised_base_pkr)}` },
-      {
-        text: adjustmentRateSummary("TICKET", adjustment),
-        secondary: adjustmentFinanceSecondary(adjustment, data.party.account_type),
-        align: "right",
-      },
-      { text: `R${adjustment.revision_no}`, align: "center", bold: true },
-      {
-        text: money(adjustment.effective_total_pkr),
-        secondary: adjustmentAmountSecondary(adjustment, data, latest),
-        align: "right",
-        bold: true,
-      },
+      ticketAdjustmentRouteCell(adjustment),
+      ticketAdjustmentRateCell(adjustment, data.party.account_type),
+      { text: ticketAdjustmentQtyText(adjustment), align: "center", bold: true },
+      adjustmentTotalPkrCell(adjustment, latest),
     ],
   };
 }
@@ -387,20 +519,12 @@ function hotelAdjustmentRow(
       { text: adjustmentTypeLabel(adjustment.adjustment_type), secondary: adjustmentReason(adjustment), bold: true },
       {
         text: safeText(adjustment.category || "Booking change"),
-        secondary: adjustment.reference ? `Ref: ${adjustment.reference}` : "",
+        secondary: displayRevisionLabel(adjustment.revision_no),
       },
-      { text: `REV ${adjustment.revision_no}`, secondary: adjustment.lifecycle_status.replace(/_/g, " ") },
-      {
-        text: adjustmentRateSummary("HOTEL", adjustment),
-        secondary: adjustmentFinanceSecondary(adjustment, data.party.account_type),
-      },
+      { text: adjustment.lifecycle_status.replace(/_/g, " "), secondary: "Status" },
+      compactRateFinanceCell("HOTEL", adjustment, data.party.account_type, "left"),
       { text: signedMoney(adjustment.account_delta_pkr), secondary: "Account impact", align: "right" },
-      {
-        text: money(adjustment.effective_total_pkr),
-        secondary: adjustmentAmountSecondary(adjustment, data, latest),
-        align: "right",
-        bold: true,
-      },
+      adjustmentTotalPkrCell(adjustment, latest),
     ],
   };
 }
@@ -424,21 +548,13 @@ function visaAdjustmentRow(
       { text: adjustmentTypeLabel(adjustment.adjustment_type), secondary: adjustmentReason(adjustment), bold: true },
       {
         text: safeText(adjustment.category || "Visa change"),
-        secondary: adjustment.reference ? `Ref: ${adjustment.reference}` : "",
+        secondary: displayRevisionLabel(adjustment.revision_no),
       },
-      { text: `R${adjustment.revision_no}`, align: "center", bold: true },
-      {
-        text: adjustmentRateSummary("VISA", adjustment),
-        secondary: adjustmentFinanceSecondary(adjustment, data.party.account_type),
-      },
+      { text: "—", align: "center" },
+      compactRateFinanceCell("VISA", adjustment, data.party.account_type, "left"),
       { text: "-", align: "right" },
       { text: signedMoney(adjustment.account_delta_pkr), secondary: "Account impact", align: "right" },
-      {
-        text: money(adjustment.effective_total_pkr),
-        secondary: adjustmentAmountSecondary(adjustment, data, latest),
-        align: "right",
-        bold: true,
-      },
+      adjustmentTotalPkrCell(adjustment, latest),
     ],
   };
 }
@@ -462,20 +578,12 @@ function transportAdjustmentRow(
       { text: adjustmentTypeLabel(adjustment.adjustment_type), secondary: adjustmentReason(adjustment), bold: true },
       {
         text: safeText(adjustment.category || "Transport change"),
-        secondary: adjustment.reference ? `Ref: ${adjustment.reference}` : "",
+        secondary: displayRevisionLabel(adjustment.revision_no),
       },
-      { text: `REV ${adjustment.revision_no}`, secondary: adjustment.lifecycle_status.replace(/_/g, " ") },
-      {
-        text: adjustmentRateSummary("TRANSPORT", adjustment),
-        secondary: adjustmentFinanceSecondary(adjustment, data.party.account_type),
-      },
+      { text: adjustment.lifecycle_status.replace(/_/g, " "), secondary: "Status" },
+      compactRateFinanceCell("TRANSPORT", adjustment, data.party.account_type, "left"),
       { text: signedMoney(adjustment.account_delta_pkr), secondary: "Account impact", align: "right" },
-      {
-        text: money(adjustment.effective_total_pkr),
-        secondary: adjustmentAmountSecondary(adjustment, data, latest),
-        align: "right",
-        bold: true,
-      },
+      adjustmentTotalPkrCell(adjustment, latest),
     ],
   };
 }
@@ -499,20 +607,12 @@ function miscAdjustmentRow(
       { text: adjustmentTypeLabel(adjustment.adjustment_type), secondary: adjustmentReason(adjustment), bold: true },
       {
         text: safeText(adjustment.category || "Service change"),
-        secondary: adjustment.reference ? `Ref: ${adjustment.reference}` : "",
+        secondary: displayRevisionLabel(adjustment.revision_no),
       },
-      { text: `R${adjustment.revision_no}`, align: "center", bold: true },
-      {
-        text: adjustmentRateSummary("MISC", adjustment),
-        secondary: adjustmentFinanceSecondary(adjustment, data.party.account_type),
-      },
+      { text: "—", align: "center" },
+      compactRateFinanceCell("MISC", adjustment, data.party.account_type, "left"),
       { text: signedMoney(adjustment.account_delta_pkr), secondary: "Account impact", align: "right" },
-      {
-        text: money(adjustment.effective_total_pkr),
-        secondary: adjustmentAmountSecondary(adjustment, data, latest),
-        align: "right",
-        bold: true,
-      },
+      adjustmentTotalPkrCell(adjustment, latest),
     ],
   };
 }
@@ -607,7 +707,7 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
           },
           { text: money(rate), align: "right" },
           { text: String(qty), align: "center" },
-          chargeableTotalCell(total, superseded),
+          chargeableTotalCell(total, superseded, booking.statementDisplayAdjustments),
         ],
       } as StatementViewRow;
     });
@@ -656,7 +756,7 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
           qty: line.ticket_count,
         }) as Obj,
     );
-    const originals = hasOriginalSnapshot(booking) ? originalUniversalRows(booking, fallback) : fallback;
+    const originals = hasOriginalSnapshot(booking) ? originalTicketRows(booking, fallback) : fallback;
     const superseded = booking.statementDisplayAdjustments.length > 0;
     const rows = originals.map((line) => {
       ticketSr += 1;
@@ -678,7 +778,7 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
           { text: safeText(line.ticketRoute), secondary: flightTypeLabel(String(line.flightType || "RETURN")) },
           { text: money(rate), align: "right" },
           { text: String(qty), align: "center" },
-          chargeableTotalCell(rate * qty, superseded),
+          chargeableTotalCell(rate * qty, superseded, booking.statementDisplayAdjustments),
         ],
       } as StatementViewRow;
     });
@@ -759,10 +859,10 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
             text: titleCase(String(line.roomType || "")),
             secondary: String(line.roomType) === "SHARING" ? countLabel(qty, "Bed") : countLabel(qty, "Room"),
           },
-          { text: `${sar(rateSar)} / Night`, secondary: roe > 0 ? `ROE ${number(roe)}` : "ROE Pending" },
-          superseded ? referenceNotCountedCell() : { text: sar(totalSar), align: "right" },
+          { text: sar(rateSar), secondary: roe > 0 ? `ROE ${number(roe)}` : "ROE Pending" },
+          superseded ? referenceDashCell() : { text: sar(totalSar), align: "right" },
           superseded
-            ? referenceNotCountedCell()
+            ? supersededOriginalTotalCell(booking.statementDisplayAdjustments)
             : { text: roe > 0 ? money(totalSar * roe) : "Pending", align: "right", bold: true },
         ],
       } as StatementViewRow;
@@ -841,12 +941,12 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
           { text: visaTypeLabel(String(line.visaType || "")) },
           { text: String(pax), align: "center" },
           {
-            text: `Visa ${sar(rateSar)} / Pax`,
+            text: `Visa ${sar(rateSar)}`,
             secondary: transportPkr > 0 ? `Transport PKR ${money(transportPkr)}` : "Transport -",
           },
           { text: roe > 0 ? number(roe) : "Pending", align: "right" },
-          superseded ? referenceNotCountedCell() : { text: sar(totalSar), align: "right" },
-          chargeableTotalOrPending(totalPkr, superseded),
+          superseded ? referenceDashCell() : { text: sar(totalSar), align: "right" },
+          chargeableTotalOrPending(totalPkr, superseded, booking.statementDisplayAdjustments),
         ],
       } as StatementViewRow;
     });
@@ -937,8 +1037,8 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
             text: `${sar(rateSar)} / ${sharing ? "Pax" : "Vehicle"}`,
             secondary: roe > 0 ? `ROE ${number(roe)}` : "ROE Pending",
           },
-          superseded ? referenceNotCountedCell() : { text: sar(totalSar), align: "right" },
-          chargeableTotalOrPending(roe > 0 ? totalSar * roe : 0, superseded),
+          superseded ? referenceDashCell() : { text: sar(totalSar), align: "right" },
+          chargeableTotalOrPending(roe > 0 ? totalSar * roe : 0, superseded, booking.statementDisplayAdjustments),
         ],
       } as StatementViewRow;
     });
@@ -1014,7 +1114,7 @@ export function buildStatementViewSections(data: StatementPdfData): StatementVie
             secondary: roe > 0 ? `ROE ${number(roe)}` : "PKR direct",
           },
           { text: "-", align: "right" },
-          chargeableTotalCell(total, superseded),
+          chargeableTotalCell(total, superseded, booking.statementDisplayAdjustments),
         ],
       } as StatementViewRow;
     });
