@@ -13,6 +13,7 @@ import {
   setCompanyStatusForMaster,
   wipeCompanyForMaster,
 } from "../../platformMaster";
+import { ControlTheme } from "./controlTheme";
 
 const SEGMENTS = Object.keys(SEGMENT_LABELS) as SegmentKey[];
 
@@ -30,7 +31,14 @@ function statusTone(status: string) {
   }
 }
 
-export default function ControlHomeScreen({ masterEmail }: { masterEmail: string }) {
+type Props = {
+  masterEmail: string;
+  theme: ControlTheme;
+  onThemeChange: (theme: ControlTheme) => void;
+  onSignOut: () => void;
+};
+
+export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, onSignOut }: Props) {
   const [rows, setRows] = useState<MasterCompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,6 +47,17 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
   const [selectedId, setSelectedId] = useState<string>("");
   const [draft, setDraft] = useState<CompanyEntitlements | null>(null);
   const [busyId, setBusyId] = useState("");
+  const [isNarrow, setIsNarrow] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 900px)").matches : false,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const sync = () => setIsNarrow(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -72,12 +91,19 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
   }, [rows, filter]);
 
   const selected = rows.find((row) => row.id === selectedId) || null;
+  const showDetail = Boolean(selected && draft);
+  const layoutClass = isNarrow ? (showDetail ? "mobile-detail" : "mobile-list") : "";
 
   const openCompany = (row: MasterCompanyRow) => {
     setSelectedId(row.id);
     setDraft(normalizeEntitlements(row.entitlements));
     setMessage("");
     setError("");
+  };
+
+  const closeDetail = () => {
+    setSelectedId("");
+    setDraft(null);
   };
 
   const runStatus = async (companyId: string, status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "INACTIVE") => {
@@ -156,10 +182,23 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
           <p className="muted">Approve companies and set limits. No booking or payment access.</p>
         </div>
         <div className="master-control-top-meta">
-          <span>{masterEmail}</span>
+          <div className="master-theme-switch" role="group" aria-label="Control Panel theme">
+            <button type="button" className={theme === "dark" ? "active" : ""} onClick={() => onThemeChange("dark")}>
+              Dark
+            </button>
+            <button type="button" className={theme === "ocean" ? "active" : ""} onClick={() => onThemeChange("ocean")}>
+              Ocean
+            </button>
+          </div>
+          <span className="master-email-chip" title={masterEmail}>
+            {masterEmail}
+          </span>
           <span className="master-stat-pill">{pendingCount} pending</span>
           <button type="button" className="ghost" onClick={() => void load()} disabled={loading}>
             Refresh
+          </button>
+          <button type="button" className="ghost" onClick={onSignOut}>
+            Sign out
           </button>
         </div>
       </header>
@@ -167,8 +206,8 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
       {error && <div className="alert error">{error}</div>}
       {message && <div className="alert success">{message}</div>}
 
-      <div className="master-control-layout">
-        <section className="master-control-list card">
+      <div className={`master-control-layout ${layoutClass}`.trim()}>
+        <section className="master-control-list">
           <div className="master-filter-row">
             {(["ALL", "PENDING_APPROVAL", "ACTIVE", "SUSPENDED"] as const).map((item) => (
               <button
@@ -203,6 +242,7 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
                     </div>
                     <div className="muted">
                       {row.company_code} · {row.email || "no email"}
+                      {row.phone ? ` · ${row.phone}` : ""}
                     </div>
                   </button>
                 </li>
@@ -211,16 +251,25 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
           )}
         </section>
 
-        <section className="master-control-detail card">
+        <section className="master-control-detail">
           {!selected || !draft ? (
-            <p className="muted">Select a company to approve, suspend, or set capacity.</p>
+            <div className="master-empty-detail">
+              <p className="muted">Select a company to approve, suspend, set capacity, or delete.</p>
+            </div>
           ) : (
             <>
+              <div className="master-back-row">
+                <button type="button" className="ghost" onClick={closeDetail}>
+                  ← Back to companies
+                </button>
+              </div>
+
               <div className="master-detail-head">
                 <div>
                   <h2>{selected.name}</h2>
                   <p className="muted">
-                    {selected.company_code} · {selected.email} · {selected.phone}
+                    {selected.company_code} · {selected.email || "no email"}
+                    {selected.phone ? ` · ${selected.phone}` : ""}
                   </p>
                 </div>
                 <span className={`master-status ${statusTone(selected.status)}`}>
@@ -284,7 +333,7 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
                           })
                         }
                       />
-                      {SEGMENT_LABELS[key]}
+                      <span>{SEGMENT_LABELS[key]}</span>
                     </label>
                   ))}
                 </div>
@@ -302,7 +351,7 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
                         })
                       }
                     />
-                    Booking adjustments
+                    <span>Booking adjustments</span>
                   </label>
                   <label className="master-check">
                     <input
@@ -315,7 +364,7 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
                         })
                       }
                     />
-                    Statements
+                    <span>Statements</span>
                   </label>
                   <label className="master-check">
                     <input
@@ -328,7 +377,7 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
                         })
                       }
                     />
-                    P&amp;L
+                    <span>P&amp;L</span>
                   </label>
                 </div>
 

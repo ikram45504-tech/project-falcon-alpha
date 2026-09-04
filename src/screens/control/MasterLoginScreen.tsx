@@ -5,16 +5,23 @@ import { COMPANY_NAME, PRODUCT_NAME } from "../../brand";
 import { googleAuthErrorFromUrl, signInWithGoogleAsMaster } from "../../cloudAuth";
 import { supabase } from "../../supabaseClient";
 import { isPlatformMaster } from "../../platformMaster";
+import { useControlTheme } from "./controlTheme";
+import "./ControlPanel.css";
 
 export default function MasterLoginScreen() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { theme, setTheme } = useControlTheme();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     document.documentElement.classList.add("auth-screen");
-    return () => document.documentElement.classList.remove("auth-screen");
+    document.documentElement.classList.add("master-control-screen");
+    return () => {
+      document.documentElement.classList.remove("auth-screen");
+      document.documentElement.classList.remove("master-control-screen");
+    };
   }, []);
 
   useEffect(() => {
@@ -49,8 +56,16 @@ export default function MasterLoginScreen() {
   };
 
   return (
-    <main className="center master-control-page">
+    <main className="master-control-page" data-control-theme={theme}>
       <section className="card master-control-card">
+        <div className="master-theme-switch" style={{ marginBottom: 14 }} role="group" aria-label="Control Panel theme">
+          <button type="button" className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>
+            Dark
+          </button>
+          <button type="button" className={theme === "ocean" ? "active" : ""} onClick={() => setTheme("ocean")}>
+            Ocean
+          </button>
+        </div>
         <div className="mark product-logo-mark">
           <TravelHisabLogo size={48} />
         </div>

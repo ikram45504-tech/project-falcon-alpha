@@ -1,4 +1,4 @@
-@import "./App.dark-overrides.css";
+﻿@import "./App.dark-overrides.css";
 
 @import "./App.dark-overrides.css";
 
@@ -1006,7 +1006,7 @@ body.modal-scroll-locked,
   }
 }
 
-/* ===== PHASE 3 — ACCOMMODATION ===== */
+/* ===== PHASE 3 â€” ACCOMMODATION ===== */
 
 .stats .stat-money {
   font-size: 18px;
@@ -1278,7 +1278,7 @@ body.modal-scroll-locked,
 }
 
 /* =========================
-   PHASE 4 — SERVICES
+   PHASE 4 â€” SERVICES
    ========================= */
 .green-text {
   color: #1b744f !important;
@@ -1439,7 +1439,7 @@ body.modal-scroll-locked,
 }
 
 /* =========================
-   PHASE 5 — PAYMENTS
+   PHASE 5 â€” PAYMENTS
    ========================= */
 .purple-text {
   color: #643c8e !important;
@@ -1681,7 +1681,7 @@ body.modal-scroll-locked,
 }
 
 /* =========================================================
-   PHASE 6 — STATEMENT GENERATOR + A4 PRINT / PDF
+   PHASE 6 â€” STATEMENT GENERATOR + A4 PRINT / PDF
    ========================================================= */
 
 .module-grid {
@@ -2247,7 +2247,7 @@ body.modal-scroll-locked,
 }
 
 /* =========================================================
-   STATEMENT V6 — MANUAL jsPDF PREVIEW
+   STATEMENT V6 â€” MANUAL jsPDF PREVIEW
    The statement itself is NOT HTML.
    This CSS styles only the controls and actual PDF viewer.
    ========================================================= */
@@ -2406,7 +2406,7 @@ body.modal-scroll-locked,
 }
 
 /* =========================================================
-   PHASE 7A — CLEAR ACCOUNT + BOOKING ARCHITECTURE FOUNDATION
+   PHASE 7A â€” CLEAR ACCOUNT + BOOKING ARCHITECTURE FOUNDATION
    Appended to the complete V6 stylesheet. Do not replace the
    existing styles above this block.
    ========================================================= */
@@ -2841,7 +2841,7 @@ body.modal-scroll-locked,
   }
 }
 
-/* ===== Phase 7B — Package Booking Engine ===== */
+/* ===== Phase 7B â€” Package Booking Engine ===== */
 .booking-foundation-badge.active-engine {
   background: #e8f7ee;
   border-color: #bfe6ce;
@@ -3367,7 +3367,7 @@ body.modal-scroll-locked,
   }
 }
 
-/* ===== Phase 7C — Booking Guided Flow + Package Register ===== */
+/* ===== Phase 7C â€” Booking Guided Flow + Package Register ===== */
 .bookings-flow-v2 {
   min-height: 620px;
   padding: 22px;
@@ -3377,7 +3377,7 @@ body.modal-scroll-locked,
   min-height: 520px;
 }
 
-/* Front hubs (Counterparties / Bookings / Payments / Statements) — fit viewport, no forced scroll */
+/* Front hubs (Counterparties / Bookings / Payments / Statements) â€” fit viewport, no forced scroll */
 .booking-entry-screen.booking-direction-screen {
   min-height: 0;
   max-height: none;
@@ -4106,7 +4106,7 @@ html:has(.booking-direction-screen) .workspace {
 }
 
 /* =============================================================
-   PHASE 7D — PACKAGE BOOKING ENTRY REFINEMENT
+   PHASE 7D â€” PACKAGE BOOKING ENTRY REFINEMENT
    Keeps the existing app shell and V6 statement styles intact.
    ============================================================= */
 
@@ -4586,7 +4586,7 @@ html:has(.booking-direction-screen) .workspace {
   }
 }
 
-/* Phase 7E — Package passenger subtotal summary */
+/* Phase 7E â€” Package passenger subtotal summary */
 .package7e-pax-summary > div {
   align-content: center;
   justify-items: stretch;
@@ -4657,7 +4657,7 @@ html:has(.booking-direction-screen) .workspace {
 }
 
 /* ============================================================
-   PHASE 8 — COMPANY-SCOPED AUTH / USERS / PERMISSIONS
+   PHASE 8 â€” COMPANY-SCOPED AUTH / USERS / PERMISSIONS
    Appended only; existing app + V6 statement + Package styles stay intact.
    ============================================================ */
 .auth-login-page-v8 {
@@ -5511,7 +5511,7 @@ html.auth-screen .center {
   }
 }
 
-/* ===== PHASE 8B — PRECISE CREATE ACCOUNT + LOGIN ===== */
+/* ===== PHASE 8B â€” PRECISE CREATE ACCOUNT + LOGIN ===== */
 .auth-setup-v8b {
   grid-template-columns: minmax(330px, 0.78fr) minmax(620px, 1.5fr);
 }
@@ -5650,7 +5650,7 @@ html.auth-screen .center {
   }
 }
 
-/* ===== PHASE 8D — SAAS-STYLE ONBOARDING + REMEMBERED DEVICE SESSION ===== */
+/* ===== PHASE 8D â€” SAAS-STYLE ONBOARDING + REMEMBERED DEVICE SESSION ===== */
 .auth-setup-v8d .signup-form-v8b {
   max-width: 760px;
 }
@@ -5811,7 +5811,7 @@ html.auth-screen .center {
   }
 }
 
-/* ===== PHASE 9A — TICKET BOOKING MODULE ===== */
+/* ===== PHASE 9A â€” TICKET BOOKING MODULE ===== */
 .ticket9-screen {
   display: grid;
   gap: 14px;
@@ -6374,7 +6374,7 @@ html.auth-screen .center {
   line-height: 1.35;
 }
 
-/* ===== PHASE 10A — HOTEL BOOKING MODULE ===== */
+/* ===== PHASE 10A â€” HOTEL BOOKING MODULE ===== */
 .hotel10-screen {
   display: grid;
   gap: 14px;
@@ -6981,7 +6981,7 @@ html.auth-screen .center {
 }
 
 /* =========================================================
-   PHASE 10B — FINAL HOTEL ACCOMMODATION / GUEST POLISH
+   PHASE 10B â€” FINAL HOTEL ACCOMMODATION / GUEST POLISH
    ========================================================= */
 .hotel10-rate-table th:nth-child(10) {
   width: 92px;
@@ -7061,7 +7061,7 @@ html.auth-screen .center {
 }
 
 /* =========================================================
-   PHASE 11A — VISA BOOKING MODULE
+   PHASE 11A â€” VISA BOOKING MODULE
    ========================================================= */
 .visa11-screen {
   display: flex;
@@ -8259,7 +8259,7 @@ html.auth-screen .center {
 }
 
 /* ========================================================================== */
-/* PHASE 12A — TRANSPORT BOOKING MODULE                                       */
+/* PHASE 12A â€” TRANSPORT BOOKING MODULE                                       */
 /* ========================================================================== */
 .transport12a-page {
   display: grid;
@@ -8673,7 +8673,7 @@ html.auth-screen .center {
 }
 
 /* =========================================================
-   PHASE 12B — Transport Register + Capacity Validation
+   PHASE 12B â€” Transport Register + Capacity Validation
    ========================================================= */
 .transport12b-capacity {
   display: block;
@@ -9096,7 +9096,7 @@ table tbody tr:hover {
 :root[data-layout="layout-1"] .layout-content-wrapper {
   background: var(--bg-app);
   padding: 24px 32px;
-  /* Do not use calc(100vh - N) here — undercounting chrome forces a fake scrollbar. */
+  /* Do not use calc(100vh - N) here â€” undercounting chrome forces a fake scrollbar. */
   min-height: 0;
   flex: 1;
 }
@@ -9235,7 +9235,7 @@ button:hover:not(:disabled),
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.2);
 }
-/* Hub cards: no scale — scale expands the page and creates a fake scrollbar */
+/* Hub cards: no scale â€” scale expands the page and creates a fake scrollbar */
 .booking-direction-screen .booking-direction-card:hover {
   transform: translateY(-2px);
 }
@@ -9407,286 +9407,4 @@ textarea:focus {
 }
 :root[data-theme="midnight"] .secondary:hover {
   background: rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Master Control Panel */
-.master-control-screen,
-.master-control-screen body {
-  background: #0f1419;
-}
-
-.master-control-page {
-  min-height: 100vh;
-  background: radial-gradient(ellipse at top, rgba(56, 120, 180, 0.18), transparent 55%), #0f1419;
-  color: #e8eef4;
-}
-
-.master-control-card {
-  width: min(420px, 100%);
-  background: #171d24;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e8eef4;
-}
-
-.master-control-card h1 {
-  margin: 8px 0 6px;
-  font-size: 1.7rem;
-}
-
-.master-control-card .eyebrow {
-  letter-spacing: 0.08em;
-  color: #8eb6d8;
-}
-
-.master-inline-link {
-  color: #9ec9ef;
-  text-decoration: underline;
-}
-
-.master-control-root {
-  min-height: 100vh;
-  background: #0f1419;
-  color: #e8eef4;
-}
-
-.master-control-signout-bar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 12px 20px 0;
-}
-
-.master-control-shell {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 12px 20px 32px;
-}
-
-.master-control-topbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-
-.master-control-topbar h1 {
-  margin: 0;
-  font-size: 1.8rem;
-}
-
-.master-control-kicker {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #8eb6d8;
-}
-
-.master-control-top-meta {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.master-stat-pill {
-  border: 1px solid rgba(255, 200, 80, 0.35);
-  color: #ffd27a;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 12px;
-}
-
-.master-control-layout {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
-  gap: 16px;
-}
-
-.master-control-list,
-.master-control-detail {
-  background: #171d24;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 16px;
-}
-
-.master-filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.master-filter {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
-  color: #c9d5e0;
-  border-radius: 999px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-.master-filter.active {
-  background: rgba(120, 170, 220, 0.18);
-  border-color: rgba(120, 170, 220, 0.45);
-  color: #e8eef4;
-}
-
-.master-company-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 70vh;
-  overflow: auto;
-}
-
-.master-company-item {
-  width: 100%;
-  text-align: left;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #12171d;
-  color: inherit;
-  border-radius: 10px;
-  padding: 10px 12px;
-  cursor: pointer;
-}
-
-.master-company-item.active,
-.master-company-item:hover {
-  border-color: rgba(120, 170, 220, 0.45);
-  background: #15202b;
-}
-
-.master-company-item-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.master-status {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 2px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.master-status.ok {
-  color: #8fdbb0;
-  border-color: rgba(80, 180, 120, 0.4);
-}
-
-.master-status.warn {
-  color: #ffd27a;
-  border-color: rgba(220, 170, 60, 0.4);
-}
-
-.master-status.bad {
-  color: #ff9b9b;
-  border-color: rgba(220, 90, 90, 0.4);
-}
-
-.master-detail-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 12px;
-}
-
-.master-detail-head h2 {
-  margin: 0 0 4px;
-}
-
-.master-action-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-
-.master-danger-zone {
-  margin: 0 0 20px;
-  padding: 14px;
-  border: 1px solid rgba(220, 80, 80, 0.35);
-  border-radius: 12px;
-  background: rgba(120, 24, 24, 0.18);
-}
-
-.master-danger-zone h3 {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
-  color: #f3b4b4;
-}
-
-.master-danger-button {
-  margin-top: 8px;
-  border: 1px solid rgba(240, 120, 120, 0.55);
-  background: #8b1e1e;
-  color: #fff;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-weight: 700;
-}
-
-.master-danger-button:hover:not(:disabled) {
-  background: #a52424;
-}
-
-.master-entitlements-form h3 {
-  margin: 16px 0 8px;
-  font-size: 0.95rem;
-}
-
-.master-check-grid,
-.master-limit-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.master-check {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 0.92rem;
-}
-
-.master-limit-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.9rem;
-}
-
-.master-limit-grid input {
-  background: #0f1419;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #e8eef4;
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-
-.master-control-root .alert.success {
-  background: rgba(60, 140, 90, 0.18);
-  border: 1px solid rgba(90, 180, 120, 0.35);
-  color: #c8efd6;
-}
-
-@media (max-width: 900px) {
-  .master-control-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .master-control-topbar {
-    flex-direction: column;
-  }
-
-  .master-check-grid,
-  .master-limit-grid {
-    grid-template-columns: 1fr;
-  }
 }

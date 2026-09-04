@@ -7,9 +7,12 @@ import { isPlatformMaster } from "../../platformMaster";
 import { clearAuthStorage } from "../../desktopReset";
 import MasterLoginScreen from "./MasterLoginScreen";
 import ControlHomeScreen from "./ControlHomeScreen";
+import { useControlTheme } from "./controlTheme";
+import "./ControlPanel.css";
 
 function ControlGate() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useControlTheme();
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [email, setEmail] = useState("");
@@ -74,7 +77,7 @@ function ControlGate() {
 
   if (checking) {
     return (
-      <main className="center master-control-page">
+      <main className="master-control-page" data-control-theme={theme}>
         <section className="card master-control-card">
           <div className="mark product-logo-mark">
             <TravelHisabLogo size={48} />
@@ -89,7 +92,7 @@ function ControlGate() {
   if (!allowed) {
     if (!error) return <Navigate to="/control/login" replace />;
     return (
-      <main className="center master-control-page">
+      <main className="master-control-page" data-control-theme={theme}>
         <section className="card master-control-card">
           <div className="mark product-logo-mark">
             <TravelHisabLogo size={48} />
@@ -112,13 +115,13 @@ function ControlGate() {
   }
 
   return (
-    <div className="master-control-root">
-      <div className="master-control-signout-bar">
-        <button type="button" className="ghost" onClick={() => void signOutMaster()}>
-          Sign out Master
-        </button>
-      </div>
-      <ControlHomeScreen masterEmail={email} />
+    <div className="master-control-root" data-control-theme={theme}>
+      <ControlHomeScreen
+        masterEmail={email}
+        theme={theme}
+        onThemeChange={setTheme}
+        onSignOut={() => void signOutMaster()}
+      />
     </div>
   );
 }
