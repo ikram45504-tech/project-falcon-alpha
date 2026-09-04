@@ -28,6 +28,7 @@ import {
   type MasterCompanyUsage,
 } from "../../platformMaster";
 import { accessDaysRemaining, formatAccessEndsAt } from "../../companyAccess";
+import { hardResetPwaCache } from "../../registerPwa";
 import { ControlTheme } from "./controlTheme";
 import MasterCreateCompany, { CreatedCredentialsCard, type CreatedCredentials } from "./MasterCreateCompany";
 
@@ -107,6 +108,7 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
   const [createOpen, setCreateOpen] = useState(false);
   const [createdCreds, setCreatedCreds] = useState<CreatedCredentials | null>(null);
   const [busyId, setBusyId] = useState("");
+  const [cacheBusy, setCacheBusy] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<MasterCompanyRow | null>(null);
 
   const load = async () => {
@@ -454,6 +456,18 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
     }
   };
 
+  const clearCacheAndReload = async () => {
+    setCacheBusy(true);
+    setError("");
+    setMessage("Refreshing Control Panel…");
+    try {
+      await hardResetPwaCache({ path: "/control" });
+    } catch (err) {
+      setCacheBusy(false);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   return (
     <div className="master-control-shell">
       <header className="master-control-topbar">
@@ -499,13 +513,13 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
           <button
             type="button"
             className="ghost master-tool-btn"
-            onClick={() => void load()}
-            disabled={loading}
-            title="Reload company list"
+            onClick={() => void clearCacheAndReload()}
+            disabled={loading || cacheBusy}
+            title="Clear cache and reload the latest Control Panel"
           >
-            {loading ? "Refreshing…" : "Refresh"}
+            {cacheBusy ? "Updating…" : "Refresh"}
           </button>
-          <button type="button" className="ghost master-tool-btn" onClick={onSignOut}>
+          <button type="button" className="ghost master-tool-btn" onClick={onSignOut} disabled={cacheBusy}>
             Sign out
           </button>
         </div>
