@@ -10,7 +10,8 @@ import { isOfflineOnlyBuild } from "../appMode";
 import { getCompanyById, loginUser, OFFLINE_SESSION_STORAGE_KEY } from "../db";
 import { googleAuthErrorFromUrl, signInWithGoogle } from "../cloudAuth";
 import { consumePasswordUpdatedNotice } from "../authSessionFlags";
-import { companyStatusLabel } from "../companyEntitlements";
+import type { UserRole } from "../permissions";
+import type { Company } from "../db";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -122,27 +123,61 @@ export default function LoginScreen({
         if (userRow?.company_id) {
           const { data: companyRow } = await supabase
             .from("companies")
-            .select("status, name, company_code")
+            .select(
+              "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, created_at, updated_at",
+            )
             .eq("id", userRow.company_id)
             .maybeSingle();
 
           const status = String(companyRow?.status || "").toUpperCase();
-          if (status && status !== "ACTIVE") {
+          if (companyRow && status && status !== "ACTIVE") {
             if (rememberCredentials) {
               localStorage.setItem("travelAccountingLastCompanyCode", loginCompanyCode.trim());
               localStorage.setItem("travelAccountingLastIdentifier", loginName.trim());
+            } else {
+              localStorage.removeItem("travelAccountingLastCompanyCode");
+              localStorage.removeItem("travelAccountingLastIdentifier");
             }
+
+            const metadata = (data.user.user_metadata || {}) as Record<string, unknown>;
+            const roleRaw = String(metadata.role || "OWNER").toUpperCase();
+            const role = (
+              ["OWNER", "ADMIN", "ACCOUNTS", "DATA_ENTRY", "VIEW_ONLY"].includes(roleRaw) ? roleRaw : "OWNER"
+            ) as UserRole;
+            const pendingCompany: Company = {
+              id: String(companyRow.id),
+              company_code: String(companyRow.company_code || ""),
+              name: String(companyRow.name || ""),
+              dts_license: String(companyRow.dts_license || ""),
+              logo_data: (companyRow.logo_data as string | null) ?? null,
+              address: String(companyRow.address || ""),
+              phone: String(companyRow.phone || ""),
+              whatsapp: String(companyRow.whatsapp || ""),
+              email: String(companyRow.email || ""),
+              base_currency: String(companyRow.base_currency || "PKR"),
+              foreign_currency: String(companyRow.foreign_currency || "SAR"),
+              status: status as Company["status"],
+              entitlements: (companyRow.entitlements as Company["entitlements"]) ?? null,
+              created_at: String(companyRow.created_at || ""),
+              updated_at: String(companyRow.updated_at || ""),
+            };
+            setSessionData(
+              {
+                userId: data.user.id,
+                companyId: pendingCompany.id,
+                companyCode: pendingCompany.company_code,
+                companyName: pendingCompany.name,
+                fullName: String(metadata.full_name || metadata.username || loginName.trim()),
+                username: String(metadata.username || loginName.trim()),
+                email: data.user.email || emailToUse,
+                phone: String(metadata.phone || pendingCompany.phone || ""),
+                role,
+              },
+              pendingCompany,
+            );
             setAccountCreatedNotice(null);
             setGlobalAuthError("");
-            if (status === "PENDING_APPROVAL") {
-              setError(
-                `Your registration is under review. ${COMPANY_NAME} will contact you shortly once your account is activated.`,
-              );
-            } else if (status === "SUSPENDED") {
-              setError(`This company account is suspended. Please contact ${COMPANY_NAME} for help.`);
-            } else {
-              setError(`This company is ${companyStatusLabel(status)}. Please contact ${COMPANY_NAME} for help.`);
-            }
+            setError("");
             navigate("/", { replace: true });
             return;
           }

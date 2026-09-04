@@ -66,7 +66,6 @@ function isGoogleAuthUser(user: SupabaseAuthUser) {
 }
 
 async function resolveAuthUser(): Promise<SupabaseAuthUser | null> {
-  await supabase.auth.refreshSession();
   const {
     data: { user },
     error,
@@ -202,8 +201,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const user = (await resolveAuthUser()) || initialUser;
+        // Prefer the auth event user so we skip an extra refresh round-trip (pending screens feel late otherwise).
+        const user = (initialUser as SupabaseAuthUser | null) || (await resolveAuthUser());
         if (!mounted || gen !== loadGen) return;
+        if (!user) {
+          clearPasswordRecoveryPending();
+          authGateRef.current = "none";
+          setAuthGate("none");
+          setPendingAuthEmail("");
+          setSession(null);
+          setCompany(null);
+          setError("");
+          setIsInitialized(true);
+          return;
+        }
         const profile = await resolveCompanyId(user);
 
         if (!profile.companyId) {
@@ -248,7 +259,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { data: companyData, error: companyError } = await supabase
           .from("companies")
-          .select("*")
+          .select(
+            "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, created_at, updated_at",
+          )
           .eq("id", profile.companyId)
           .maybeSingle();
 
