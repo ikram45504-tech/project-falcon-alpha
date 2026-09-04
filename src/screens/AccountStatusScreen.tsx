@@ -28,7 +28,7 @@ export default function AccountStatusScreen() {
         const { data } = await supabase
           .from("companies")
           .select(
-            "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, created_at, updated_at",
+            "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, access_ends_at, created_at, updated_at",
           )
           .eq("id", company.id)
           .maybeSingle();
@@ -59,7 +59,7 @@ export default function AccountStatusScreen() {
   const lead = pending
     ? `Your request has been delivered to the relevant department at ${COMPANY_NAME}. They will contact you shortly once your account is activated.`
     : suspended
-      ? `This company account is suspended. Please contact ${COMPANY_NAME} if you need it reactivated.`
+      ? `This company account is suspended (including after a trial or access period ends). Please contact ${COMPANY_NAME} if you need it reactivated.`
       : `This company cannot open the workspace right now. Please contact ${COMPANY_NAME} for help.`;
 
   return (

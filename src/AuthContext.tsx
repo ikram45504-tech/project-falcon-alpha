@@ -22,6 +22,7 @@ import {
   markPasswordRecoveryPending,
   urlLooksLikePasswordRecovery,
 } from "./authSessionFlags";
+import { applyCompanyAccessExpiry } from "./companyAccess";
 
 const USER_ROLES: UserRole[] = ["OWNER", "ADMIN", "ACCOUNTS", "DATA_ENTRY", "VIEW_ONLY"];
 
@@ -280,7 +281,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: companyData, error: companyError } = await supabase
           .from("companies")
           .select(
-            "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, created_at, updated_at",
+            "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, access_ends_at, created_at, updated_at",
           )
           .eq("id", profile.companyId)
           .maybeSingle();
@@ -315,6 +316,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setError("");
           setIsInitialized(true);
           return;
+        }
+
+        // Auto-suspend when trial/access end date has passed.
+        try {
+          const expiry = await applyCompanyAccessExpiry(profile.companyId);
+          if (expiry?.changed) {
+            (companyData as Company).status = "SUSPENDED";
+          }
+        } catch {
+          // Non-blocking — status check below still applies.
         }
 
         if (!mounted || gen !== loadGen) return;

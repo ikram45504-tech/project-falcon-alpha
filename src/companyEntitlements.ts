@@ -163,6 +163,7 @@ export type MasterCompanyRow = {
   phone: string;
   status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "INACTIVE" | string;
   entitlements: CompanyEntitlements;
+  access_ends_at: string | null;
   created_at: string;
   updated_at: string;
 };

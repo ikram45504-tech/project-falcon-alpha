@@ -124,7 +124,7 @@ export default function LoginScreen({
           const { data: companyRow } = await supabase
             .from("companies")
             .select(
-              "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, created_at, updated_at",
+              "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, access_ends_at, created_at, updated_at",
             )
             .eq("id", userRow.company_id)
             .maybeSingle();

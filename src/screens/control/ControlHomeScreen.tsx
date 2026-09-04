@@ -13,17 +13,43 @@ import {
 import {
   listCompaniesForMaster,
   getCompanyUsageForMaster,
+  listCompanyAuditForMaster,
+  extendCompanyAccessForMaster,
+  setCompanyAccessEndsAtForMaster,
   setCompanyEntitlementsForMaster,
   setCompanyStatusForMaster,
   wipeCompanyForMaster,
+  type MasterAuditRow,
   type MasterCompanyUsage,
 } from "../../platformMaster";
+import { accessDaysRemaining, formatAccessEndsAt } from "../../companyAccess";
 import { hardResetPwaCache } from "../../registerPwa";
 import { ControlTheme } from "./controlTheme";
 
 const SEGMENTS = Object.keys(SEGMENT_LABELS) as SegmentKey[];
 
 type CompanySort = "name_asc" | "status" | "newest";
+
+function auditActionLabel(action: string) {
+  switch (action) {
+    case "set_status":
+      return "Status change";
+    case "set_entitlements":
+      return "Capacity saved";
+    case "set_access_ends_at":
+      return "Access end set";
+    case "extend_access":
+      return "Access extended";
+    case "wipe_company":
+      return "Company wiped";
+    case "auto_suspend_expired":
+      return "Auto-suspended (expired)";
+    case "create_company":
+      return "Company created";
+    default:
+      return action || "Action";
+  }
+}
 
 function statusTone(status: string) {
   switch (String(status || "").toUpperCase()) {
@@ -111,6 +137,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   const [draft, setDraft] = useState<CompanyEntitlements | null>(null);
   const [usage, setUsage] = useState<MasterCompanyUsage | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [auditRows, setAuditRows] = useState<MasterAuditRow[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
   const [busyId, setBusyId] = useState("");
   const [cacheBusy, setCacheBusy] = useState(false);
   const [isNarrow, setIsNarrow] = useState(() =>
@@ -178,6 +206,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
     setDraft(normalizeEntitlements(row.entitlements));
     setPlanId("");
     setUsage(null);
+    setAuditRows([]);
     setMessage("");
     setError("");
   };
@@ -187,12 +216,14 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
     setDraft(null);
     setPlanId("");
     setUsage(null);
+    setAuditRows([]);
   };
 
   useEffect(() => {
     if (!selectedId) return;
     let cancelled = false;
     setUsageLoading(true);
+    setAuditLoading(true);
     void getCompanyUsageForMaster(selectedId)
       .then((data) => {
         if (!cancelled) {
@@ -207,10 +238,31 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
           setError(err instanceof Error ? err.message : String(err));
         }
       });
+    void listCompanyAuditForMaster(selectedId)
+      .then((rows) => {
+        if (!cancelled) {
+          setAuditRows(rows);
+          setAuditLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuditRows([]);
+          setAuditLoading(false);
+        }
+      });
     return () => {
       cancelled = true;
     };
   }, [selectedId]);
+
+  const refreshAudit = async (companyId: string) => {
+    try {
+      setAuditRows(await listCompanyAuditForMaster(companyId));
+    } catch {
+      // Keep previous rows on refresh failure.
+    }
+  };
 
   const applyPlanToDraft = () => {
     if (!planId || !draft) return;
@@ -232,6 +284,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
       await setCompanyStatusForMaster(companyId, status);
       setMessage(`Status set to ${companyStatusLabel(status)}.`);
       await load();
+      await refreshAudit(companyId);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -249,6 +302,65 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
       await setCompanyEntitlementsForMaster(selected.id, draft);
       setMessage("Capacity saved.");
       await load();
+      await refreshAudit(selected.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const extendAccess = async (days: number) => {
+    if (!selected) return;
+    setBusyId(selected.id);
+    setError("");
+    setMessage("");
+    try {
+      await extendCompanyAccessForMaster(selected.id, days);
+      setMessage(
+        `Access extended by ${days} days${String(selected.status).toUpperCase() === "SUSPENDED" ? " and reactivated" : ""}.`,
+      );
+      await load();
+      await refreshAudit(selected.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const clearAccessEnd = async () => {
+    if (!selected) return;
+    const confirmed = window.confirm(
+      `Remove the access end date for "${selected.name}"?\n\nThe company will have no trial/expiry until you set one again.`,
+    );
+    if (!confirmed) return;
+    setBusyId(selected.id);
+    setError("");
+    setMessage("");
+    try {
+      await setCompanyAccessEndsAtForMaster(selected.id, null);
+      setMessage("Access end date cleared (no expiry).");
+      await load();
+      await refreshAudit(selected.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const setAccessEndDaysFromNow = async (days: number) => {
+    if (!selected) return;
+    const ends = new Date(Date.now() + days * 86_400_000).toISOString();
+    setBusyId(selected.id);
+    setError("");
+    setMessage("");
+    try {
+      await setCompanyAccessEndsAtForMaster(selected.id, ends);
+      setMessage(`Access end set to ${formatAccessEndsAt(ends)}.`);
+      await load();
+      await refreshAudit(selected.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -281,6 +393,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
       setSelectedId("");
       setDraft(null);
       setUsage(null);
+      setAuditRows([]);
       setMessage(
         `Deleted ${result.company_name} (${result.company_code}). Removed ${result.users_removed} user row(s) and ${result.auth_users_removed} login account(s).`,
       );
@@ -467,6 +580,54 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                 </button>
               </div>
 
+              <div className="master-health-card master-trial-card">
+                <h3>Trial / access end</h3>
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Agency sees a warning within 7 days of this date. When the date passes, the company auto-suspends.
+                  Extend reactivates if currently suspended.
+                </p>
+                <div className="master-trial-meta">
+                  <div>
+                    <small>Ends</small>
+                    <b>{formatAccessEndsAt(selected.access_ends_at)}</b>
+                  </div>
+                  <div>
+                    <small>Days left</small>
+                    <b>
+                      {(() => {
+                        const days = accessDaysRemaining(selected.access_ends_at);
+                        if (days == null) return "Unlimited";
+                        if (days < 0) return `Expired ${Math.abs(days)}d ago`;
+                        if (days === 0) return "Ends today";
+                        return `${days} day${days === 1 ? "" : "s"}`;
+                      })()}
+                    </b>
+                  </div>
+                </div>
+                <div className="master-action-row master-trial-actions">
+                  <button type="button" disabled={busyId === selected.id} onClick={() => void extendAccess(30)}>
+                    Extend +30 days
+                  </button>
+                  <button type="button" disabled={busyId === selected.id} onClick={() => void extendAccess(90)}>
+                    Extend +90 days
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === selected.id}
+                    onClick={() => void setAccessEndDaysFromNow(14)}
+                  >
+                    Set 14-day trial
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === selected.id || !selected.access_ends_at}
+                    onClick={() => void clearAccessEnd()}
+                  >
+                    Clear expiry
+                  </button>
+                </div>
+              </div>
+
               <div className="master-health-card">
                 <h3>Company health</h3>
                 {usageLoading ? (
@@ -501,6 +662,30 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                   </>
                 ) : (
                   <p className="muted">Usage unavailable for this company.</p>
+                )}
+              </div>
+
+              <div className="master-health-card master-audit-card">
+                <h3>Audit trail</h3>
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Master actions for this company (approve, capacity, extend, wipe).
+                </p>
+                {auditLoading ? (
+                  <p className="muted">Loading audit…</p>
+                ) : auditRows.length === 0 ? (
+                  <p className="muted">No Master actions recorded yet.</p>
+                ) : (
+                  <ul className="master-audit-list">
+                    {auditRows.map((row) => (
+                      <li key={row.id}>
+                        <div className="master-audit-main">
+                          <b>{auditActionLabel(row.action)}</b>
+                          <span className="muted">{formatLoginAt(row.created_at)}</span>
+                        </div>
+                        <small className="muted">{row.actor_email || "unknown"}</small>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
 

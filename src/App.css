@@ -389,6 +389,17 @@ select:focus {
   padding: 26px;
   background: #f3f6fa;
 }
+.access-expiry-banner {
+  max-width: 1500px;
+  margin: 0 auto 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(217, 119, 6, 0.45);
+  background: rgba(251, 191, 36, 0.18);
+  color: #92400e;
+  font-size: 0.92rem;
+  font-weight: 650;
+}
 .app-header {
   width: 100%;
   max-width: 1500px;

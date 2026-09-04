@@ -10,20 +10,71 @@ import {
   type CompanyEntitlements,
 } from "./companyEntitlements";
 
+/** Show agency warning when access ends within this many days (inclusive). */
+export const ACCESS_EXPIRY_BANNER_DAYS = 7;
+
 async function loadCompanyAccess(companyId: string): Promise<{
   status: string;
   entitlements: CompanyEntitlements;
+  access_ends_at: string | null;
 } | null> {
   if (isOfflineOnlyBuild()) return null;
   const { data, error } = await supabase
     .from("companies")
-    .select("status, entitlements")
+    .select("status, entitlements, access_ends_at")
     .eq("id", companyId)
     .maybeSingle();
   if (error || !data) return null;
   return {
     status: String(data.status || "").toUpperCase(),
     entitlements: normalizeEntitlements(data.entitlements),
+    access_ends_at: data.access_ends_at ? String(data.access_ends_at) : null,
+  };
+}
+
+/** Whole days remaining until access_ends_at. null = no expiry set. */
+export function accessDaysRemaining(accessEndsAt: string | null | undefined): number | null {
+  if (!accessEndsAt) return null;
+  const ends = Date.parse(accessEndsAt);
+  if (!Number.isFinite(ends)) return null;
+  return Math.ceil((ends - Date.now()) / 86_400_000);
+}
+
+export function shouldShowAccessExpiryBanner(accessEndsAt: string | null | undefined): boolean {
+  const days = accessDaysRemaining(accessEndsAt);
+  return days != null && days >= 0 && days <= ACCESS_EXPIRY_BANNER_DAYS;
+}
+
+export function formatAccessEndsAt(accessEndsAt: string | null | undefined): string {
+  if (!accessEndsAt) return "No expiry";
+  const parsed = Date.parse(accessEndsAt);
+  if (!Number.isFinite(parsed)) return accessEndsAt;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(parsed));
+}
+
+/** Suspend company when access_ends_at has passed. Returns new status if changed. */
+export async function applyCompanyAccessExpiry(companyId: string): Promise<{
+  changed: boolean;
+  status: string;
+  access_ends_at: string | null;
+} | null> {
+  if (isOfflineOnlyBuild()) return null;
+  const { data, error } = await supabase.rpc("apply_company_access_expiry", {
+    p_company_id: companyId,
+  });
+  if (error) {
+    console.warn("apply_company_access_expiry failed", error.message);
+    return null;
+  }
+  const row = (data || {}) as Record<string, unknown>;
+  return {
+    changed: Boolean(row.changed),
+    status: String(row.status || "").toUpperCase(),
+    access_ends_at: row.access_ends_at ? String(row.access_ends_at) : null,
   };
 }
 
@@ -42,19 +93,22 @@ export async function assertEmailNotReservedForMaster(email: string) {
 }
 
 export async function enforceCompanyActive(companyId: string) {
+  await applyCompanyAccessExpiry(companyId);
   const access = await loadCompanyAccess(companyId);
   if (!access) return;
   if (access.status !== "ACTIVE") {
     throw new Error("This company is not active. Workspace changes are blocked until approval.");
+  }
+  const days = accessDaysRemaining(access.access_ends_at);
+  if (days != null && days < 0) {
+    throw new Error("This company access period has ended. Contact Travel Hisab support.");
   }
 }
 
 export async function enforceSegmentCreate(companyId: string, segment: SegmentKey) {
+  await enforceCompanyActive(companyId);
   const access = await loadCompanyAccess(companyId);
   if (!access) return;
-  if (access.status !== "ACTIVE") {
-    throw new Error("This company is not active. Workspace changes are blocked until approval.");
-  }
   assertSegmentEnabled(access.entitlements, segment);
 
   const limit = access.entitlements.limits.bookings_per_segment;
@@ -81,11 +135,9 @@ export async function enforceSegmentCreate(companyId: string, segment: SegmentKe
 }
 
 export async function enforcePartyCreate(companyId: string, accountType: "PARTY" | "VENDOR" | "UNASSIGNED") {
+  await enforceCompanyActive(companyId);
   const access = await loadCompanyAccess(companyId);
   if (!access) return;
-  if (access.status !== "ACTIVE") {
-    throw new Error("This company is not active. Workspace changes are blocked until approval.");
-  }
   const limitKey = accountType === "VENDOR" ? "vendors" : "parties";
   const table = accountType === "VENDOR" ? "vendors" : accountType === "UNASSIGNED" ? "unassigned_accounts" : "parties";
   const label = accountType === "VENDOR" ? "Vendors" : "Parties";
@@ -101,11 +153,9 @@ export async function enforcePartyCreate(companyId: string, accountType: "PARTY"
 }
 
 export async function enforceStaffCreate(companyId: string) {
+  await enforceCompanyActive(companyId);
   const access = await loadCompanyAccess(companyId);
   if (!access) return;
-  if (access.status !== "ACTIVE") {
-    throw new Error("This company is not active. Workspace changes are blocked until approval.");
-  }
   const { count, error } = await supabase
     .from("users")
     .select("id", { count: "exact", head: true })

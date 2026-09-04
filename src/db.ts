@@ -35,6 +35,7 @@ export type Company = {
   foreign_currency: string;
   status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "INACTIVE";
   entitlements?: CompanyEntitlements | null;
+  access_ends_at?: string | null;
   created_at: string;
   updated_at: string;
 };

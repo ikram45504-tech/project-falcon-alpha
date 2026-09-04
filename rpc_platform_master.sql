@@ -425,3 +425,7 @@ $$;
 
 revoke all on function public.master_company_usage(text) from public;
 grant execute on function public.master_company_usage(text) to authenticated;
+
+-- Wave C (audit + trial): see rpc_master_audit_trial.sql
+-- Adds companies.access_ends_at, platform_audit_logs, extend/set access RPCs,
+-- master_list_company_audit, apply_company_access_expiry, and audit writes on Master actions.

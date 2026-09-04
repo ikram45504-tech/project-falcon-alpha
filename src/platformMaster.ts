@@ -30,6 +30,7 @@ export async function listCompaniesForMaster(): Promise<MasterCompanyRow[]> {
       phone: String(item.phone || ""),
       status: String(item.status || ""),
       entitlements: normalizeEntitlements(item.entitlements),
+      access_ends_at: item.access_ends_at ? String(item.access_ends_at) : null,
       created_at: String(item.created_at || ""),
       updated_at: String(item.updated_at || ""),
     };
@@ -119,4 +120,54 @@ export async function getCompanyUsageForMaster(companyId: string): Promise<Maste
     },
     last_user_login_at: String(row.last_user_login_at || ""),
   };
+}
+
+export type MasterAuditRow = {
+  id: string;
+  actor_email: string;
+  action: string;
+  company_id: string;
+  company_code: string;
+  details: Record<string, unknown>;
+  created_at: string;
+};
+
+export async function listCompanyAuditForMaster(companyId: string, limit = 40): Promise<MasterAuditRow[]> {
+  const { data, error } = await supabaseMaster.rpc("master_list_company_audit", {
+    p_company_id: companyId,
+    p_limit: limit,
+  });
+  if (error) throw new Error(error.message || "Could not load audit trail.");
+  const rows = Array.isArray(data) ? data : [];
+  return rows.map((row) => {
+    const item = row as Record<string, unknown>;
+    const details = item.details && typeof item.details === "object" ? (item.details as Record<string, unknown>) : {};
+    return {
+      id: String(item.id || ""),
+      actor_email: String(item.actor_email || ""),
+      action: String(item.action || ""),
+      company_id: String(item.company_id || ""),
+      company_code: String(item.company_code || ""),
+      details,
+      created_at: String(item.created_at || ""),
+    };
+  });
+}
+
+export async function extendCompanyAccessForMaster(companyId: string, days: number) {
+  const { data, error } = await supabaseMaster.rpc("master_extend_company_access", {
+    p_company_id: companyId,
+    p_days: Math.max(1, Math.floor(days || 30)),
+  });
+  if (error) throw new Error(error.message || "Could not extend access.");
+  return data;
+}
+
+export async function setCompanyAccessEndsAtForMaster(companyId: string, accessEndsAt: string | null) {
+  const { data, error } = await supabaseMaster.rpc("master_set_company_access_ends_at", {
+    p_company_id: companyId,
+    p_access_ends_at: accessEndsAt,
+  });
+  if (error) throw new Error(error.message || "Could not update access end date.");
+  return data;
 }
