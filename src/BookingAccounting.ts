@@ -66,45 +66,51 @@ async function ready() {
 
 const bookingUnion = `
   SELECT b.id,b.company_id,'PACKAGE' AS service_type,b.transaction_type,b.counterparty_id,
-         COALESCE(p.name,'') AS counterparty_name,b.transaction_date,b.ub_number,
+         COALESCE(p.name, v.name, '') AS counterparty_name,b.transaction_date,b.ub_number,
          0 AS total_sar,b.total_pkr,0 AS unconverted_sar,b.status,b.created_at
   FROM package_bookings b
   LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+  LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
   WHERE b.company_id=$1
   UNION ALL
   SELECT b.id,b.company_id,'TICKET' AS service_type,b.transaction_type,b.counterparty_id,
-         COALESCE(p.name,'') AS counterparty_name,b.transaction_date,b.ub_number,
+         COALESCE(p.name, v.name, '') AS counterparty_name,b.transaction_date,b.ub_number,
          0 AS total_sar,b.total_pkr,0 AS unconverted_sar,b.status,b.created_at
   FROM ticket_bookings b
   LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+  LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
   WHERE b.company_id=$1
   UNION ALL
   SELECT b.id,b.company_id,'HOTEL' AS service_type,b.transaction_type,b.counterparty_id,
-         COALESCE(p.name,'') AS counterparty_name,b.transaction_date,b.ub_number,
+         COALESCE(p.name, v.name, '') AS counterparty_name,b.transaction_date,b.ub_number,
          b.total_sar,b.total_pkr,b.unconverted_sar,b.status,b.created_at
   FROM hotel_bookings b
   LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+  LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
   WHERE b.company_id=$1
   UNION ALL
   SELECT b.id,b.company_id,'VISA' AS service_type,b.transaction_type,b.counterparty_id,
-         COALESCE(p.name,'') AS counterparty_name,b.transaction_date,b.ub_number,
+         COALESCE(p.name, v.name, '') AS counterparty_name,b.transaction_date,b.ub_number,
          b.total_sar,b.total_pkr,b.unconverted_sar,b.status,b.created_at
   FROM visa_bookings b
   LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+  LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
   WHERE b.company_id=$1
   UNION ALL
   SELECT b.id,b.company_id,'TRANSPORT' AS service_type,b.transaction_type,b.counterparty_id,
-         COALESCE(p.name,'') AS counterparty_name,b.transaction_date,b.ub_number,
+         COALESCE(p.name, v.name, '') AS counterparty_name,b.transaction_date,b.ub_number,
          b.total_sar,b.total_pkr,b.unconverted_sar,b.status,b.created_at
   FROM transport_bookings b
   LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+  LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
   WHERE b.company_id=$1
   UNION ALL
   SELECT b.id,b.company_id,'MISC' AS service_type,b.transaction_type,b.counterparty_id,
-         COALESCE(p.name,'') AS counterparty_name,b.transaction_date,b.ub_number,
+         COALESCE(p.name, v.name, '') AS counterparty_name,b.transaction_date,b.ub_number,
          b.total_sar,b.total_pkr,b.unconverted_sar,b.status,b.created_at
   FROM misc_bookings b
   LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+  LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
   WHERE b.company_id=$1
 `;
 

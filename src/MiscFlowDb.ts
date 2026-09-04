@@ -236,13 +236,14 @@ export async function getMiscBookings(companyId: string, search = "", scope?: Bo
   const term = `%${clean}%`;
   const scopeFilter = bookingListScopeSql(scope, 3);
   const headers = await database.select<Omit<MiscBooking, "lines">[]>(
-    `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name,'') AS counterparty_name,
+    `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name, v.name, '') AS counterparty_name,
             b.transaction_date,b.ub_number,b.total_sar,b.total_pkr,b.unconverted_sar,b.status,
             b.created_at,b.updated_at,b.created_by_user_id,b.updated_by_user_id
      FROM misc_bookings b
      LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+     LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
      WHERE b.company_id=$1
-       AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR
+       AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR COALESCE(p.name, v.name, '') LIKE $3 COLLATE NOCASE OR
             EXISTS (SELECT 1 FROM misc_booking_lines l WHERE l.booking_id=b.id AND l.service_name LIKE $3 COLLATE NOCASE))
        ${scopeFilter.sql}
      ORDER BY b.transaction_date DESC,b.created_at DESC`,

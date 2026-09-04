@@ -213,13 +213,14 @@ export async function getPackageBookings(companyId: string, search = "", scope?:
   const headers = await database.select<Omit<PackageBooking, "lines">[]>(
     `SELECT
        b.id, b.company_id, b.transaction_type, b.counterparty_id,
-       COALESCE(p.name, '') AS counterparty_name,
+       COALESCE(p.name, v.name, '') AS counterparty_name,
        b.transaction_date, b.ub_number, b.package_description,
        b.departure_date, b.return_date, b.no_of_days, b.ziarat_included,
        b.customer_contact, b.notes, b.total_pkr,
        b.status, b.created_at, b.updated_at
      FROM package_bookings b
      LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+     LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
      WHERE b.company_id=$1
        AND (
          $2='' OR
@@ -227,7 +228,7 @@ export async function getPackageBookings(companyId: string, search = "", scope?:
          b.package_description LIKE $3 COLLATE NOCASE OR
          b.customer_contact LIKE $3 COLLATE NOCASE OR
          b.notes LIKE $3 COLLATE NOCASE OR
-         COALESCE(p.name, '') LIKE $3 COLLATE NOCASE OR
+         COALESCE(p.name, v.name, '') LIKE $3 COLLATE NOCASE OR
          EXISTS (
            SELECT 1 FROM package_booking_lines l
            WHERE l.booking_id=b.id AND (l.package_type LIKE $3 COLLATE NOCASE OR l.passenger_name LIKE $3 COLLATE NOCASE)

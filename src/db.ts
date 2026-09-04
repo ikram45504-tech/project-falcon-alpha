@@ -2716,13 +2716,14 @@ export async function getPayments(companyId: string, search = "", partyId = "") 
   const term = `%${clean}%`;
   return database.select<PaymentEntry[]>(
     `SELECT pay.id, pay.company_id, pay.party_id,
-            COALESCE(p.name, '') AS ledger_party_name,
+            COALESCE(p.name, v.name, '') AS ledger_party_name,
             pay.transaction_date, pay.receipt_no, pay.from_account,
             pay.to_account, pay.description, pay.payment_type,
             pay.currency, pay.amount_entered, pay.sar, pay.roe,
             pay.paid_amount, pay.status, pay.created_at, pay.updated_at
      FROM payment_entries pay
      LEFT JOIN parties p ON p.id = pay.party_id AND p.company_id = pay.company_id
+     LEFT JOIN vendors v ON v.id = pay.party_id AND v.company_id = pay.company_id
      WHERE pay.company_id = $1
        AND ($2 = '' OR pay.party_id = $2)
        AND (
@@ -2732,7 +2733,7 @@ export async function getPayments(companyId: string, search = "", partyId = "") 
          pay.to_account LIKE $4 COLLATE NOCASE OR
          pay.description LIKE $4 COLLATE NOCASE OR
          pay.payment_type LIKE $4 COLLATE NOCASE OR
-         COALESCE(p.name, '') LIKE $4 COLLATE NOCASE
+         COALESCE(p.name, v.name, '') LIKE $4 COLLATE NOCASE
        )
      ORDER BY pay.transaction_date DESC, pay.created_at DESC`,
     [companyId, partyId, clean, term],

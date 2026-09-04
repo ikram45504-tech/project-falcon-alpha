@@ -332,14 +332,15 @@ export async function getTransportBookings(companyId: string, search = "", scope
   const term = `%${clean}%`;
   const scopeFilter = bookingListScopeSql(scope, 3);
   const headers = await database.select<Omit<TransportBooking, "lines">[]>(
-    `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name,'') AS counterparty_name,
+    `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name, v.name, '') AS counterparty_name,
             b.transaction_date,b.ub_number,b.pax_saudi_number,b.notes,b.total_sar,b.total_pkr,b.unconverted_sar,
             b.status,b.created_at,b.updated_at
      FROM transport_bookings b
      LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+     LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
      WHERE b.company_id=$1
        AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR b.pax_saudi_number LIKE $3 COLLATE NOCASE OR
-            b.notes LIKE $3 COLLATE NOCASE OR COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR
+            b.notes LIKE $3 COLLATE NOCASE OR COALESCE(p.name, v.name, '') LIKE $3 COLLATE NOCASE OR
             EXISTS (SELECT 1 FROM transport_booking_lines l WHERE l.booking_id=b.id AND
               (l.from_location LIKE $3 COLLATE NOCASE OR l.to_location LIKE $3 COLLATE NOCASE OR
                l.transport_type LIKE $3 COLLATE NOCASE OR l.vehicle_type LIKE $3 COLLATE NOCASE OR

@@ -3,7 +3,7 @@ import type { BookingTransactionType, TicketPassengerType } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { isDesktopApp, syncTicketBookingBundle, syncTicketBookingVoid, flushDesktopSyncQueue } from "./cloudSync";
 import { applyBookingListScope, bookingListScopeSql, type BookingListScope } from "./bookingListScope";
-import { validateBookingCounterparty } from "./CounterpartyDb";
+import { validateBookingCounterparty, fetchCounterpartyNameMap } from "./CounterpartyDb";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -276,14 +276,7 @@ export async function getTicketCommercialBookings(companyId: string, search = ""
     if (error) throw new Error(error.message);
     if (!data) return [];
 
-    const partyNames = scope?.counterpartyId
-      ? new Map<string, string>()
-      : new Map(
-          ((await supabase.from("parties").select("id, name").eq("company_id", companyId)).data || []).map((p) => [
-            String(p.id),
-            String(p.name || ""),
-          ]),
-        );
+    const partyNames = scope?.counterpartyId ? new Map<string, string>() : await fetchCounterpartyNameMap(companyId);
 
     const bookingIds = data.map((row) => String(row.id));
     const { data: lineRows, error: lineError } = bookingIds.length
@@ -312,11 +305,12 @@ export async function getTicketCommercialBookings(companyId: string, search = ""
   const term = `%${clean}%`;
   const scopeFilter = bookingListScopeSql(scope, 3);
   const headers = await database.select<Array<Omit<TicketCommercialBooking, "lines">>>(
-    `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name,'') AS counterparty_name,
+    `SELECT b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name, v.name, '') AS counterparty_name,
             b.transaction_date,b.ub_number,b.airline_name,b.pnr,b.sector,b.departure_date,b.return_date,b.flight_no,b.departure_time,b.arrival_time,b.baggage,b.ticket_status,b.customer_contact,b.notes,b.total_pkr,b.status,b.created_at,b.updated_at
      FROM ticket_bookings b
      LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
-     WHERE b.company_id=$1 AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR EXISTS (
+     LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
+     WHERE b.company_id=$1 AND ($2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR COALESCE(p.name, v.name, '') LIKE $3 COLLATE NOCASE OR EXISTS (
        SELECT 1 FROM ticket_booking_lines l WHERE l.booking_id=b.id AND (l.passenger_name LIKE $3 COLLATE NOCASE OR l.airline_name LIKE $3 COLLATE NOCASE OR l.pnr LIKE $3 COLLATE NOCASE OR l.ticket_route LIKE $3 COLLATE NOCASE)
      ))
      ${scopeFilter.sql}

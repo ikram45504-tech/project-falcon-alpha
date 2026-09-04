@@ -479,17 +479,18 @@ export async function getVisaBookings(companyId: string, search = "", scope?: Bo
 
   const headers = await database.select<Omit<VisaBooking, "lines" | "fleet" | "passports">[]>(
     `SELECT
-       b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name,'') AS counterparty_name,
+       b.id,b.company_id,b.transaction_type,b.counterparty_id,COALESCE(p.name, v.name, '') AS counterparty_name,
        b.transaction_date,b.ub_number,b.expected_entry_date,b.private_vehicle_type,b.private_transport_total_sar,
        b.intercity_bus_rate_sar,b.intercity_bus_total_sar,b.applicable_private_pax,b.applicable_full_bus_pax,
        b.visa_total_sar,b.transport_total_sar,b.total_sar,b.total_pkr,b.unconverted_sar,b.notes,
        b.status,b.created_at,b.updated_at
      FROM visa_bookings b
      LEFT JOIN parties p ON p.id=b.counterparty_id AND p.company_id=b.company_id
+     LEFT JOIN vendors v ON v.id=b.counterparty_id AND v.company_id=b.company_id
      WHERE b.company_id=$1
        AND (
          $2='' OR b.ub_number LIKE $3 COLLATE NOCASE OR b.notes LIKE $3 COLLATE NOCASE OR
-         b.private_vehicle_type LIKE $3 COLLATE NOCASE OR COALESCE(p.name,'') LIKE $3 COLLATE NOCASE OR
+         b.private_vehicle_type LIKE $3 COLLATE NOCASE OR COALESCE(p.name, v.name, '') LIKE $3 COLLATE NOCASE OR
          EXISTS (
            SELECT 1 FROM visa_booking_lines l
            WHERE l.booking_id=b.id
