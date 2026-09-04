@@ -9,6 +9,7 @@ type CommonEntry = {
   transaction_type: string;
   counterparty_id: string;
   ub_number: string;
+  status?: string;
 };
 
 export type Mode = "FORM" | "REGISTER";
@@ -69,13 +70,14 @@ export function useBookingFlowState<T extends CommonEntry>(
       return false;
     }
 
-    const duplicate = entries.find(
-      (entry) =>
-        normalizeBookingUb(entry.ub_number) === formatted &&
-        (tx === "SALE"
-          ? entry.transaction_type === "SALE"
-          : entry.transaction_type === "PURCHASE" && entry.counterparty_id === counterpartyId),
-    );
+    const duplicate = entries.find((entry) => {
+      if (editingId && entry.id === editingId) return false;
+      if (entry.status && entry.status !== "ACTIVE") return false;
+      if (normalizeBookingUb(entry.ub_number) !== formatted) return false;
+      return tx === "SALE"
+        ? entry.transaction_type === "SALE"
+        : entry.transaction_type === "PURCHASE" && entry.counterparty_id === counterpartyId;
+    });
 
     if (duplicate) {
       setError(

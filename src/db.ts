@@ -2815,19 +2815,25 @@ export async function voidPayment(companyId: string, entryId: string) {
 
 export async function getPartyPaymentTotals(companyId: string) {
   if (!isDesktopApp()) {
-    const [{ data: payments, error }, { data: metas, error: metaError }, { data: parties, error: partyError }] =
-      await Promise.all([
-        supabase
-          .from("payment_entries")
-          .select("id,party_id,paid_amount")
-          .eq("company_id", companyId)
-          .eq("status", "ACTIVE"),
-        supabase.from("payment_v2_meta").select("payment_id,transaction_kind").eq("company_id", companyId),
-        supabase.from("parties").select("id,account_type").eq("company_id", companyId),
-      ]);
+    const [
+      { data: payments, error },
+      { data: metas, error: metaError },
+      { data: parties, error: partyError },
+      { data: vendors, error: vendorError },
+    ] = await Promise.all([
+      supabase
+        .from("payment_entries")
+        .select("id,party_id,paid_amount")
+        .eq("company_id", companyId)
+        .eq("status", "ACTIVE"),
+      supabase.from("payment_v2_meta").select("payment_id,transaction_kind").eq("company_id", companyId),
+      supabase.from("parties").select("id,account_type").eq("company_id", companyId),
+      supabase.from("vendors").select("id").eq("company_id", companyId),
+    ]);
     if (error) throw new Error(error.message);
     if (metaError) throw new Error(metaError.message);
     if (partyError) throw new Error(partyError.message);
+    if (vendorError) throw new Error(vendorError.message);
 
     const metaByPayment = new Map<string, PaymentTransactionKind>();
     for (const row of metas || []) {
@@ -2837,18 +2843,29 @@ export async function getPartyPaymentTotals(companyId: string) {
     for (const row of parties || []) {
       accountTypeByParty.set(String(row.id), row.account_type as Party["account_type"]);
     }
+    for (const row of vendors || []) {
+      accountTypeByParty.set(String(row.id), "VENDOR");
+    }
 
     return aggregatePartySignedPaymentTotals(payments || [], metaByPayment, accountTypeByParty);
   }
 
   const database = await db();
   const rows = await database.select<
-    Array<{ id: string; party_id: string; paid_amount: number; transaction_kind: string | null; account_type: string }>
+    Array<{
+      id: string;
+      party_id: string;
+      paid_amount: number;
+      transaction_kind: string | null;
+      account_type: string | null;
+    }>
   >(
-    `SELECT p.id,p.party_id,p.paid_amount,m.transaction_kind,a.account_type
+    `SELECT p.id,p.party_id,p.paid_amount,m.transaction_kind,
+            COALESCE(a.account_type, CASE WHEN v.id IS NOT NULL THEN 'VENDOR' END) AS account_type
      FROM payment_entries p
      LEFT JOIN payment_v2_meta m ON m.payment_id=p.id
      LEFT JOIN parties a ON a.id=p.party_id AND a.company_id=p.company_id
+     LEFT JOIN vendors v ON v.id=p.party_id AND v.company_id=p.company_id
      WHERE p.company_id=$1 AND p.status='ACTIVE'`,
     [companyId],
   );
@@ -2857,7 +2874,9 @@ export async function getPartyPaymentTotals(companyId: string) {
   const accountTypeByParty = new Map<string, Party["account_type"]>();
   for (const row of rows) {
     if (row.transaction_kind) metaByPayment.set(row.id, row.transaction_kind as PaymentTransactionKind);
-    accountTypeByParty.set(row.party_id, (row.account_type || "PARTY") as Party["account_type"]);
+    if (row.account_type) {
+      accountTypeByParty.set(row.party_id, row.account_type as Party["account_type"]);
+    }
   }
   return aggregatePartySignedPaymentTotals(rows, metaByPayment, accountTypeByParty);
 }

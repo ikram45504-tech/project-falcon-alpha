@@ -153,14 +153,15 @@ async function validateUniqueTransportUb(
   if (isDesktopApp()) {
     const database = await db();
     rows = await database.select(
-      `SELECT id,transaction_type,counterparty_id,ub_number FROM transport_bookings WHERE company_id=$1`,
+      `SELECT id,transaction_type,counterparty_id,ub_number FROM transport_bookings WHERE company_id=$1 AND status='ACTIVE'`,
       [companyId],
     );
   } else {
     const { data, error } = await supabase
       .from("transport_bookings")
       .select("id,transaction_type,counterparty_id,ub_number")
-      .eq("company_id", companyId);
+      .eq("company_id", companyId)
+      .eq("status", "ACTIVE");
     if (error) throw new Error(error.message);
     rows = (data || []) as typeof rows;
   }

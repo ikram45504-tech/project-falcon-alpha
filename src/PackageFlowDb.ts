@@ -511,6 +511,14 @@ export async function updatePackageCommercialBooking(
     created_at: string;
     transaction_type: string;
     counterparty_id: string;
+    package_description?: string | null;
+    departure_date?: string | null;
+    return_date?: string | null;
+    no_of_days?: number | null;
+    ziarat_included?: string | null;
+    customer_contact?: string | null;
+    notes?: string | null;
+    created_by_user_id?: string | null;
   };
   let current: CurrentBooking | null;
 
@@ -523,16 +531,29 @@ export async function updatePackageCommercialBooking(
         created_at: string;
         transaction_type: string;
         counterparty_id: string;
+        package_description: string | null;
+        departure_date: string | null;
+        return_date: string | null;
+        no_of_days: number | null;
+        ziarat_included: string | null;
+        customer_contact: string | null;
+        notes: string | null;
+        created_by_user_id: string | null;
       }>
     >(
-      `SELECT ub_number,status,created_at,transaction_type,counterparty_id FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
+      `SELECT ub_number,status,created_at,transaction_type,counterparty_id,
+              package_description,departure_date,return_date,no_of_days,ziarat_included,
+              customer_contact,notes,created_by_user_id
+       FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
       [bookingId, companyId],
     );
     current = rows[0] || null;
   } else {
     const { data, error } = await supabase
       .from("package_bookings")
-      .select("ub_number,status,created_at,transaction_type,counterparty_id")
+      .select(
+        "ub_number,status,created_at,transaction_type,counterparty_id,package_description,departure_date,return_date,no_of_days,ziarat_included,customer_contact,notes,created_by_user_id",
+      )
       .eq("id", bookingId)
       .eq("company_id", companyId)
       .maybeSingle();
@@ -588,10 +609,18 @@ export async function updatePackageCommercialBooking(
       counterparty_id: current.counterparty_id,
       transaction_date: input.transactionDate,
       ub_number: current.ub_number,
+      package_description: current.package_description || "",
+      departure_date: current.departure_date || "",
+      return_date: current.return_date || "",
+      no_of_days: Math.max(0, Math.trunc(Number(current.no_of_days) || 0)),
+      ziarat_included: current.ziarat_included || "",
+      customer_contact: current.customer_contact || "",
+      notes: current.notes || "",
       total_pkr: totalPkr,
       status: "ACTIVE",
       created_at: current.created_at,
       updated_at: now,
+      created_by_user_id: current.created_by_user_id || actorUserId,
       updated_by_user_id: actorUserId,
     },
     lineRows,
@@ -621,12 +650,13 @@ export async function updatePackageAdditionalDetails(
     counterparty_id: string;
     transaction_date: string;
     total_pkr: number;
+    created_by_user_id?: string;
   } | null = null;
 
   if (isDesktopApp()) {
     const database = await db();
     const rows = await database.select<NonNullable<typeof current>[]>(
-      `SELECT ub_number,status,created_at,transaction_type,counterparty_id,transaction_date,total_pkr
+      `SELECT ub_number,status,created_at,transaction_type,counterparty_id,transaction_date,total_pkr,created_by_user_id
        FROM package_bookings WHERE id=$1 AND company_id=$2 LIMIT 1`,
       [bookingId, companyId],
     );
@@ -634,7 +664,9 @@ export async function updatePackageAdditionalDetails(
   } else {
     const { data, error } = await supabase
       .from("package_bookings")
-      .select("ub_number,status,created_at,transaction_type,counterparty_id,transaction_date,total_pkr")
+      .select(
+        "ub_number,status,created_at,transaction_type,counterparty_id,transaction_date,total_pkr,created_by_user_id",
+      )
       .eq("id", bookingId)
       .eq("company_id", companyId)
       .maybeSingle();
@@ -700,6 +732,7 @@ export async function updatePackageAdditionalDetails(
     total_pkr: current.total_pkr,
     status: "ACTIVE",
     created_at: current.created_at,
+    created_by_user_id: current.created_by_user_id || actorUserId,
     ...details,
   });
 }
