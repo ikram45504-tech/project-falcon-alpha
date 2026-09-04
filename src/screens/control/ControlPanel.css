@@ -670,6 +670,73 @@
   padding: 8px 12px;
 }
 
+.master-usage-meta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cp-muted);
+}
+
+.master-usage-meta.warn {
+  color: #d97706;
+}
+
+.master-usage-meta.full {
+  color: var(--cp-bad);
+}
+
+.master-health-card {
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid var(--cp-border);
+  border-radius: 12px;
+  background: var(--cp-panel);
+}
+
+.master-health-card h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: var(--cp-text);
+}
+
+.master-health-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.master-health-grid small {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--cp-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.master-health-grid b {
+  font-size: 0.95rem;
+  color: var(--cp-text);
+}
+
+.master-health-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.master-health-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--cp-border);
+  background: var(--cp-input);
+  color: var(--cp-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .master-entitlements-form .primary {
   width: 100%;
   margin-top: 14px;
@@ -817,6 +884,24 @@
 .master-control-root[data-control-theme="ocean"] .master-check,
 .master-control-root[data-control-theme="ocean"] .master-check span,
 .master-control-root[data-control-theme="ocean"] .master-limit-grid label {
+  color: var(--cp-text) !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-usage-meta {
+  color: var(--cp-muted) !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-usage-meta.warn {
+  color: #d97706 !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-usage-meta.full {
+  color: var(--cp-bad) !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-health-card h3,
+.master-control-root[data-control-theme="ocean"] .master-health-grid b,
+.master-control-root[data-control-theme="ocean"] .master-health-chip {
   color: var(--cp-text) !important;
 }
 

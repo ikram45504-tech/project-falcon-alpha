@@ -1,5 +1,11 @@
 import { supabaseMaster } from "./supabaseClient";
-import { CompanyEntitlements, MasterCompanyRow, CompanyStatus, normalizeEntitlements } from "./companyEntitlements";
+import {
+  CompanyEntitlements,
+  MasterCompanyRow,
+  CompanyStatus,
+  SegmentKey,
+  normalizeEntitlements,
+} from "./companyEntitlements";
 
 export async function isPlatformMaster(): Promise<boolean> {
   const { data, error } = await supabaseMaster.rpc("master_is_platform_admin");
@@ -69,5 +75,48 @@ export async function wipeCompanyForMaster(companyId: string): Promise<WipeCompa
     company_name: String(row.company_name || ""),
     users_removed: Number(row.users_removed || 0),
     auth_users_removed: Number(row.auth_users_removed || 0),
+  };
+}
+
+export type MasterCompanyUsage = {
+  parties: number;
+  vendors: number;
+  staff_users: number;
+  payments_active: number;
+  bookings_active_total: number;
+  bookings_by_segment: Record<SegmentKey, number>;
+  last_user_login_at: string;
+};
+
+function asCount(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+}
+
+export async function getCompanyUsageForMaster(companyId: string): Promise<MasterCompanyUsage> {
+  const { data, error } = await supabaseMaster.rpc("master_company_usage", {
+    p_company_id: companyId,
+  });
+  if (error) throw new Error(error.message || "Could not load company usage.");
+  const row = (data || {}) as Record<string, unknown>;
+  const segmentsRaw =
+    row.bookings_by_segment && typeof row.bookings_by_segment === "object"
+      ? (row.bookings_by_segment as Record<string, unknown>)
+      : {};
+  return {
+    parties: asCount(row.parties),
+    vendors: asCount(row.vendors),
+    staff_users: asCount(row.staff_users),
+    payments_active: asCount(row.payments_active),
+    bookings_active_total: asCount(row.bookings_active_total),
+    bookings_by_segment: {
+      PACKAGE: asCount(segmentsRaw.PACKAGE),
+      TICKET: asCount(segmentsRaw.TICKET),
+      HOTEL: asCount(segmentsRaw.HOTEL),
+      VISA: asCount(segmentsRaw.VISA),
+      TRANSPORT: asCount(segmentsRaw.TRANSPORT),
+      MISC: asCount(segmentsRaw.MISC),
+    },
+    last_user_login_at: String(row.last_user_login_at || ""),
   };
 }

@@ -12,9 +12,11 @@ import {
 } from "../../companyEntitlements";
 import {
   listCompaniesForMaster,
+  getCompanyUsageForMaster,
   setCompanyEntitlementsForMaster,
   setCompanyStatusForMaster,
   wipeCompanyForMaster,
+  type MasterCompanyUsage,
 } from "../../platformMaster";
 import { hardResetPwaCache } from "../../registerPwa";
 import { ControlTheme } from "./controlTheme";
@@ -59,6 +61,36 @@ function companyMatchesSearch(row: MasterCompanyRow, query: string) {
   return haystack.includes(clean);
 }
 
+function formatUsage(used: number, limit: number | null) {
+  if (limit == null) return `${used} / Unlimited`;
+  return `${used} / ${limit}`;
+}
+
+function usageTone(used: number, limit: number | null) {
+  if (limit == null) return "";
+  if (used >= limit) return "full";
+  if (used / limit >= 0.9) return "warn";
+  return "";
+}
+
+function formatLoginAt(value: string) {
+  if (!value) return "Never";
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(parsed));
+}
+
+function maxSegmentBookings(usage: MasterCompanyUsage | null) {
+  if (!usage) return 0;
+  return Math.max(0, ...Object.values(usage.bookings_by_segment));
+}
+
 type Props = {
   masterEmail: string;
   theme: ControlTheme;
@@ -77,6 +109,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   const [planId, setPlanId] = useState<EntitlementPlanId | "">("");
   const [selectedId, setSelectedId] = useState<string>("");
   const [draft, setDraft] = useState<CompanyEntitlements | null>(null);
+  const [usage, setUsage] = useState<MasterCompanyUsage | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
   const [busyId, setBusyId] = useState("");
   const [cacheBusy, setCacheBusy] = useState(false);
   const [isNarrow, setIsNarrow] = useState(() =>
@@ -143,6 +177,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
     setSelectedId(row.id);
     setDraft(normalizeEntitlements(row.entitlements));
     setPlanId("");
+    setUsage(null);
     setMessage("");
     setError("");
   };
@@ -151,7 +186,31 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
     setSelectedId("");
     setDraft(null);
     setPlanId("");
+    setUsage(null);
   };
+
+  useEffect(() => {
+    if (!selectedId) return;
+    let cancelled = false;
+    setUsageLoading(true);
+    void getCompanyUsageForMaster(selectedId)
+      .then((data) => {
+        if (!cancelled) {
+          setUsage(data);
+          setUsageLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setUsage(null);
+          setUsageLoading(false);
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
 
   const applyPlanToDraft = () => {
     if (!planId || !draft) return;
@@ -221,6 +280,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
       const result = await wipeCompanyForMaster(selected.id);
       setSelectedId("");
       setDraft(null);
+      setUsage(null);
       setMessage(
         `Deleted ${result.company_name} (${result.company_code}). Removed ${result.users_removed} user row(s) and ${result.auth_users_removed} login account(s).`,
       );
@@ -407,6 +467,43 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                 </button>
               </div>
 
+              <div className="master-health-card">
+                <h3>Company health</h3>
+                {usageLoading ? (
+                  <p className="muted">Loading usage…</p>
+                ) : usage ? (
+                  <>
+                    <div className="master-health-grid">
+                      <div>
+                        <small>Last staff login</small>
+                        <b>{formatLoginAt(usage.last_user_login_at)}</b>
+                      </div>
+                      <div>
+                        <small>Active bookings</small>
+                        <b>{usage.bookings_active_total}</b>
+                      </div>
+                      <div>
+                        <small>Active payments</small>
+                        <b>{usage.payments_active}</b>
+                      </div>
+                      <div>
+                        <small>Staff users</small>
+                        <b>{usage.staff_users}</b>
+                      </div>
+                    </div>
+                    <div className="master-health-segments">
+                      {SEGMENTS.map((key) => (
+                        <span key={key} className="master-health-chip">
+                          {SEGMENT_LABELS[key]} {usage.bookings_by_segment[key]}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="muted">Usage unavailable for this company.</p>
+                )}
+              </div>
+
               <div className="master-danger-zone">
                 <h3>Delete company</h3>
                 <p className="muted">
@@ -526,7 +623,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
 
                 <h3>Limits</h3>
                 <p className="muted" style={{ marginTop: 0 }}>
-                  Leave blank for unlimited. Limits apply when creating parties, staff, and bookings.
+                  Leave blank for unlimited. Limits apply when creating parties, staff, and bookings. Usage shows live
+                  cloud counts (bookings use the busiest segment vs the per-segment cap).
                 </p>
                 <div className="master-limit-grid">
                   {(
@@ -536,27 +634,42 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                       ["vendors", "Vendors"],
                       ["staff_users", "Staff users"],
                     ] as const
-                  ).map(([key, label]) => (
-                    <label key={key}>
-                      {label}
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder="Unlimited"
-                        value={draft.limits[key] ?? ""}
-                        onChange={(e) => {
-                          const raw = e.target.value.trim();
-                          setDraft({
-                            ...draft,
-                            limits: {
-                              ...draft.limits,
-                              [key]: raw === "" ? null : Math.max(0, Math.floor(Number(raw) || 0)),
-                            },
-                          });
-                        }}
-                      />
-                    </label>
-                  ))}
+                  ).map(([key, label]) => {
+                    const used =
+                      key === "bookings_per_segment"
+                        ? maxSegmentBookings(usage)
+                        : key === "parties"
+                          ? (usage?.parties ?? 0)
+                          : key === "vendors"
+                            ? (usage?.vendors ?? 0)
+                            : (usage?.staff_users ?? 0);
+                    const cap = draft.limits[key];
+                    const tone = usageTone(used, cap);
+                    return (
+                      <label key={key}>
+                        {label}
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder="Unlimited"
+                          value={draft.limits[key] ?? ""}
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            setDraft({
+                              ...draft,
+                              limits: {
+                                ...draft.limits,
+                                [key]: raw === "" ? null : Math.max(0, Math.floor(Number(raw) || 0)),
+                              },
+                            });
+                          }}
+                        />
+                        <span className={`master-usage-meta${tone ? ` ${tone}` : ""}`}>
+                          {usageLoading ? "Usage…" : formatUsage(used, cap)}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
 
                 <button className="primary" type="submit" disabled={busyId === selected.id}>
