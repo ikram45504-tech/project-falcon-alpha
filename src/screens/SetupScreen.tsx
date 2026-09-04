@@ -72,7 +72,7 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
 
   const finishSetup = async () => {
     if (!setup.companyName.trim()) return setError("Please enter the Company Name.");
-    if (!setup.username.trim()) return setError("Please enter the Master Username.");
+    if (!setup.username.trim()) return setError("Please enter the Owner Username.");
     if (!setup.email.trim()) return setError("Please enter the Email Address.");
     if (!/^\S+@\S+\.\S+$/.test(setup.email.trim())) return setError("Please enter a valid Email Address.");
     if (!setup.phone.trim()) return setError("Please enter the Phone / WhatsApp Number.");
@@ -173,8 +173,8 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
               {googleCreated
                 ? `Your request has been delivered to ${COMPANY_NAME}. Save your Company Code while your account is under review.`
                 : googleSetup
-                  ? `This company will be created for your Google account. ${COMPANY_NAME} will review and activate it shortly.`
-                  : `A unique Company Code is issued after registration. ${COMPANY_NAME} will review cloud accounts before activation.`}
+                  ? `This company will be created for your Google account. ${COMPANY_NAME} will contact you shortly after review.`
+                  : `A unique Company Code is issued after registration. ${COMPANY_NAME} will contact you shortly once your account is reviewed.`}
             </p>
           </div>
 
@@ -237,7 +237,7 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
               </label>
 
               <label className="auth-setup-field auth-setup-field-medium">
-                Master Username *
+                Owner Username *
                 <input
                   value={setup.username}
                   onChange={(e) => updateSetup("username", e.target.value)}

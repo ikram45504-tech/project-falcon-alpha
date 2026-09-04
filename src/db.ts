@@ -1645,6 +1645,29 @@ async function ensureAuthSession(email: string, password: string) {
   }
 }
 
+async function settleAuthAfterProvision(signOutAfter: boolean) {
+  if (signOutAfter) {
+    try {
+      await Promise.race([
+        supabase.auth.signOut({ scope: "local" }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("sign-out timeout")), 4000)),
+      ]);
+    } catch {
+      // Registration already succeeded; local sign-out is best-effort.
+    }
+    return;
+  }
+
+  try {
+    await Promise.race([
+      supabase.auth.refreshSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("refresh timeout")), 4000)),
+    ]);
+  } catch {
+    // Session refresh is best-effort after company provisioning.
+  }
+}
+
 async function acquireAuthUserIdForSetup(
   ownerEmail: string,
   password: string,
@@ -1769,28 +1792,30 @@ async function provisionCompanyForAuthUser(input: {
     });
     if (userError) throw new Error(userError.message);
 
-    if (input.ensurePasswordSession) {
-      await ensureAuthSession(input.ensurePasswordSession.email, input.ensurePasswordSession.password);
-    }
+    // Company + owner rows are committed. Auth metadata / sign-out must not undo registration.
+    try {
+      if (input.ensurePasswordSession) {
+        await ensureAuthSession(input.ensurePasswordSession.email, input.ensurePasswordSession.password);
+      }
 
-    const { error: metadataError } = await supabase.auth.updateUser({
-      data: {
-        company_id: companyId,
-        company_code: companyCode,
-        company_name: input.companyName,
-        username: input.username,
-        full_name: input.username,
-        phone: input.ownerPhone,
-        role: "OWNER",
-      },
-    });
-    if (metadataError) throw new Error(metadataError.message);
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          company_id: companyId,
+          company_code: companyCode,
+          company_name: input.companyName,
+          username: input.username,
+          full_name: input.username,
+          phone: input.ownerPhone,
+          role: "OWNER",
+        },
+      });
+      if (metadataError) {
+        console.warn("Could not write auth metadata after company create:", metadataError.message);
+      }
 
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) throw new Error(refreshError.message);
-
-    if (input.signOutAfter) {
-      await supabase.auth.signOut({ scope: "local" });
+      await settleAuthAfterProvision(input.signOutAfter);
+    } catch (authSettleError) {
+      console.warn("Auth settle after company create failed:", authSettleError);
     }
 
     return {

@@ -10,6 +10,7 @@ import { isOfflineOnlyBuild } from "../appMode";
 import { getCompanyById, loginUser, OFFLINE_SESSION_STORAGE_KEY } from "../db";
 import { googleAuthErrorFromUrl, signInWithGoogle } from "../cloudAuth";
 import { consumePasswordUpdatedNotice } from "../authSessionFlags";
+import { companyStatusLabel } from "../companyEntitlements";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -111,6 +112,41 @@ export default function LoginScreen({
         if (authError || !data.user) {
           throw new Error(authError?.message || "Invalid credentials.");
         }
+
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("company_id")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+        if (userRow?.company_id) {
+          const { data: companyRow } = await supabase
+            .from("companies")
+            .select("status, name, company_code")
+            .eq("id", userRow.company_id)
+            .maybeSingle();
+
+          const status = String(companyRow?.status || "").toUpperCase();
+          if (status && status !== "ACTIVE") {
+            if (rememberCredentials) {
+              localStorage.setItem("travelAccountingLastCompanyCode", loginCompanyCode.trim());
+              localStorage.setItem("travelAccountingLastIdentifier", loginName.trim());
+            }
+            setAccountCreatedNotice(null);
+            setGlobalAuthError("");
+            if (status === "PENDING_APPROVAL") {
+              setError(
+                `Your registration is under review. ${COMPANY_NAME} will contact you shortly once your account is activated.`,
+              );
+            } else if (status === "SUSPENDED") {
+              setError(`This company account is suspended. Please contact ${COMPANY_NAME} for help.`);
+            } else {
+              setError(`This company is ${companyStatusLabel(status)}. Please contact ${COMPANY_NAME} for help.`);
+            }
+            navigate("/", { replace: true });
+            return;
+          }
+        }
       }
 
       if (rememberCredentials) {
@@ -138,14 +174,14 @@ export default function LoginScreen({
     if (!accountCreatedNotice || accountCreatedNotice.accountStatus !== "ACTIVE") return;
     const text = [
       `Company Code: ${accountCreatedNotice.companyCode}`,
-      `Master Username: ${accountCreatedNotice.username}`,
+      `Owner Username: ${accountCreatedNotice.username}`,
       `Email Address: ${accountCreatedNotice.email}`,
     ].join("\n");
     try {
       await navigator.clipboard.writeText(text);
       setMessage("Login details copied. Your password is never included in copied details.");
     } catch {
-      setMessage("Please write down your Company Code, Master Username and Email Address.");
+      setMessage("Please write down your Company Code, Owner Username and Email Address.");
     }
   };
 
@@ -304,7 +340,7 @@ export default function LoginScreen({
                     <b>{accountCreatedNotice.companyCode}</b>
                   </div>
                   <div>
-                    <span>Master Username</span>
+                    <span>Owner Username</span>
                     <b>{accountCreatedNotice.username}</b>
                   </div>
                   <div>
