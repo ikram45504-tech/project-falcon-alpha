@@ -171,3 +171,56 @@ export async function setCompanyAccessEndsAtForMaster(companyId: string, accessE
   if (error) throw new Error(error.message || "Could not update access end date.");
   return data;
 }
+
+export const MASTER_BULK_LIMIT = 50;
+
+export type MasterBulkAction = "APPROVE" | "SUSPEND" | "APPLY_PLAN" | "EXTEND";
+
+export type MasterBulkResult = {
+  action: MasterBulkAction;
+  updated: number;
+  skipped: number;
+  errors: string[];
+};
+
+/** Runs existing Master RPCs one company at a time. No wipe. */
+export async function bulkCompaniesForMaster(input: {
+  companyIds: string[];
+  action: MasterBulkAction;
+  entitlements?: CompanyEntitlements;
+  days?: number;
+}): Promise<MasterBulkResult> {
+  const ids = [...new Set(input.companyIds.map((id) => id.trim()).filter(Boolean))];
+  if (!ids.length) throw new Error("Select at least one company.");
+  if (ids.length > MASTER_BULK_LIMIT) {
+    throw new Error(`Bulk actions are limited to ${MASTER_BULK_LIMIT} companies at a time.`);
+  }
+  if (input.action === "APPLY_PLAN" && !input.entitlements) {
+    throw new Error("Choose a plan to apply.");
+  }
+
+  const days = Math.max(1, Math.floor(input.days || 30));
+  let updated = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const companyId of ids) {
+    try {
+      if (input.action === "APPROVE") {
+        await setCompanyStatusForMaster(companyId, "ACTIVE");
+      } else if (input.action === "SUSPEND") {
+        await setCompanyStatusForMaster(companyId, "SUSPENDED");
+      } else if (input.action === "APPLY_PLAN") {
+        await setCompanyEntitlementsForMaster(companyId, input.entitlements!);
+      } else {
+        await extendCompanyAccessForMaster(companyId, days);
+      }
+      updated += 1;
+    } catch (err) {
+      skipped += 1;
+      errors.push(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  return { action: input.action, updated, skipped, errors };
+}

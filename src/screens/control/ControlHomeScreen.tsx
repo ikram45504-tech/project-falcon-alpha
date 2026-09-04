@@ -19,7 +19,10 @@ import {
   setCompanyEntitlementsForMaster,
   setCompanyStatusForMaster,
   wipeCompanyForMaster,
+  bulkCompaniesForMaster,
+  MASTER_BULK_LIMIT,
   type MasterAuditRow,
+  type MasterBulkAction,
   type MasterCompanyUsage,
 } from "../../platformMaster";
 import { accessDaysRemaining, formatAccessEndsAt } from "../../companyAccess";
@@ -139,6 +142,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   const [usageLoading, setUsageLoading] = useState(false);
   const [auditRows, setAuditRows] = useState<MasterAuditRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [checkedIds, setCheckedIds] = useState<string[]>([]);
+  const [bulkPlanId, setBulkPlanId] = useState<EntitlementPlanId | "">("");
   const [busyId, setBusyId] = useState("");
   const [cacheBusy, setCacheBusy] = useState(false);
   const [isNarrow, setIsNarrow] = useState(() =>
@@ -159,6 +164,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
     try {
       const list = await listCompaniesForMaster();
       setRows(list);
+      const liveIds = new Set(list.map((row) => row.id));
+      setCheckedIds((prev) => prev.filter((id) => liveIds.has(id)));
       if (selectedId && !list.some((row) => row.id === selectedId)) {
         setSelectedId("");
         setDraft(null);
@@ -198,6 +205,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
 
   const selected = rows.find((row) => row.id === selectedId) || null;
   const showDetail = Boolean(selected && draft);
+  const checkedVisible = useMemo(() => visible.filter((row) => checkedIds.includes(row.id)), [visible, checkedIds]);
+  const allVisibleChecked = visible.length > 0 && checkedVisible.length === visible.length;
   const layoutClass = isNarrow ? (showDetail ? "mobile-detail" : "mobile-list") : "";
   const selectedPlan = planId ? ENTITLEMENT_PLANS.find((plan) => plan.id === planId) : undefined;
 
@@ -261,6 +270,80 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
       setAuditRows(await listCompanyAuditForMaster(companyId));
     } catch {
       // Keep previous rows on refresh failure.
+    }
+  };
+
+  const toggleChecked = (companyId: string) => {
+    setCheckedIds((prev) => (prev.includes(companyId) ? prev.filter((id) => id !== companyId) : [...prev, companyId]));
+  };
+
+  const toggleAllVisible = () => {
+    if (allVisibleChecked) {
+      const visibleIds = new Set(visible.map((row) => row.id));
+      setCheckedIds((prev) => prev.filter((id) => !visibleIds.has(id)));
+      return;
+    }
+    const next = new Set(checkedIds);
+    visible.forEach((row) => next.add(row.id));
+    setCheckedIds([...next]);
+  };
+
+  const runBulk = async (action: MasterBulkAction, days = 30) => {
+    const ids = checkedVisible.map((row) => row.id);
+    if (!ids.length) {
+      setError("Select at least one company in this list.");
+      return;
+    }
+    if (ids.length > MASTER_BULK_LIMIT) {
+      setError(`Bulk actions are limited to ${MASTER_BULK_LIMIT} companies at a time.`);
+      return;
+    }
+
+    const plan = bulkPlanId ? ENTITLEMENT_PLANS.find((item) => item.id === bulkPlanId) : undefined;
+    if (action === "APPLY_PLAN" && !plan) {
+      setError("Choose a plan before applying it to the selected companies.");
+      return;
+    }
+
+    const count = ids.length;
+    const confirmText =
+      action === "APPROVE"
+        ? `Approve ${count} selected compan${count === 1 ? "y" : "ies"}?`
+        : action === "SUSPEND"
+          ? `Suspend ${count} selected compan${count === 1 ? "y" : "ies"}?`
+          : action === "APPLY_PLAN"
+            ? `Apply ${plan?.label} plan to ${count} compan${count === 1 ? "y" : "ies"} now? This saves capacity immediately.`
+            : `Extend access by ${days} days for ${count} compan${count === 1 ? "y" : "ies"}? Suspended companies will be reactivated.`;
+    if (!window.confirm(confirmText)) return;
+
+    setBusyId("bulk");
+    setError("");
+    setMessage("");
+    try {
+      const result = await bulkCompaniesForMaster({
+        companyIds: ids,
+        action,
+        entitlements: action === "APPLY_PLAN" && bulkPlanId ? entitlementsFromPlan(bulkPlanId) : undefined,
+        days,
+      });
+      const skipNote = result.skipped ? ` ${result.skipped} skipped.` : "";
+      setMessage(
+        action === "APPROVE"
+          ? `Approved ${result.updated} compan${result.updated === 1 ? "y" : "ies"}.${skipNote}`
+          : action === "SUSPEND"
+            ? `Suspended ${result.updated} compan${result.updated === 1 ? "y" : "ies"}.${skipNote}`
+            : action === "APPLY_PLAN"
+              ? `Applied ${plan?.label} to ${result.updated} compan${result.updated === 1 ? "y" : "ies"}.${skipNote}`
+              : `Extended ${result.updated} compan${result.updated === 1 ? "y" : "ies"} by ${days} days.${skipNote}`,
+      );
+      if (result.errors[0]) setError(result.errors[0]);
+      setCheckedIds([]);
+      await load();
+      if (selectedId) await refreshAudit(selectedId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId("");
     }
   };
 
@@ -497,6 +580,67 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
             </label>
           </div>
 
+          {visible.length > 0 ? (
+            <div className="master-bulk-bar">
+              <label className="master-pick-all">
+                <input
+                  type="checkbox"
+                  checked={allVisibleChecked}
+                  onChange={toggleAllVisible}
+                  disabled={loading || busyId === "bulk"}
+                />
+                <span>{checkedVisible.length ? `${checkedVisible.length} selected` : "Select companies"}</span>
+              </label>
+              <label className="master-sort-box">
+                Bulk plan
+                <select
+                  value={bulkPlanId}
+                  onChange={(e) => setBulkPlanId(e.target.value as EntitlementPlanId | "")}
+                  aria-label="Bulk entitlement plan"
+                  disabled={busyId === "bulk"}
+                >
+                  <option value="">Choose plan</option>
+                  {ENTITLEMENT_PLANS.map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="master-bulk-actions">
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={!checkedVisible.length || busyId === "bulk"}
+                  onClick={() => void runBulk("APPROVE")}
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  disabled={!checkedVisible.length || busyId === "bulk"}
+                  onClick={() => void runBulk("SUSPEND")}
+                >
+                  Suspend
+                </button>
+                <button
+                  type="button"
+                  disabled={!checkedVisible.length || !bulkPlanId || busyId === "bulk"}
+                  onClick={() => void runBulk("APPLY_PLAN")}
+                >
+                  Apply plan
+                </button>
+                <button
+                  type="button"
+                  disabled={!checkedVisible.length || busyId === "bulk"}
+                  onClick={() => void runBulk("EXTEND", 30)}
+                >
+                  Extend +30
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {loading ? (
             <p className="muted">Loading companies...</p>
           ) : visible.length === 0 ? (
@@ -506,7 +650,16 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
           ) : (
             <ul className="master-company-list">
               {visible.map((row) => (
-                <li key={row.id}>
+                <li key={row.id} className="master-company-row">
+                  <label className="master-pick" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={checkedIds.includes(row.id)}
+                      onChange={() => toggleChecked(row.id)}
+                      disabled={busyId === "bulk"}
+                      aria-label={`Select ${row.name}`}
+                    />
+                  </label>
                   <button
                     type="button"
                     className={selectedId === row.id ? "master-company-item active" : "master-company-item"}
