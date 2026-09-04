@@ -16,7 +16,9 @@ import { clearAuthStorage } from "./desktopReset";
 import { UserRole } from "./permissions";
 import {
   clearPasswordRecoveryPending,
+  isPasswordRecoveryCompleted,
   isPasswordRecoveryPending,
+  markPasswordRecoveryCompleted,
   markPasswordRecoveryPending,
   urlLooksLikePasswordRecovery,
 } from "./authSessionFlags";
@@ -40,6 +42,7 @@ type AuthContextType = {
   setError: (msg: string) => void;
   setSessionData: (session: UserSession | null, company: Company | null) => void;
   logout: () => Promise<void>;
+  finishPasswordRecovery: () => Promise<void>;
   refreshAuth: () => Promise<void>;
 };
 
@@ -141,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let loadGen = 0;
 
     function enterRecovery(email = "") {
+      if (isPasswordRecoveryCompleted()) return;
       markPasswordRecoveryPending();
       authGateRef.current = "recovery";
       if (!mounted) return;
@@ -171,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const force = Boolean(options?.force);
 
       if (!initialUser) {
-        if (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending()) {
+        if (!isPasswordRecoveryCompleted() && (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending())) {
           enterRecovery("");
           return;
         }
@@ -187,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending()) {
+      if (!isPasswordRecoveryCompleted() && (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending())) {
         enterRecovery(initialUser.email || "");
         return;
       }
@@ -352,7 +356,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { subscription },
         } = supabase.auth.onAuthStateChange((event, currentSession) => {
-          if (event === "PASSWORD_RECOVERY" || urlLooksLikePasswordRecovery() || isPasswordRecoveryPending()) {
+          if (event === "PASSWORD_RECOVERY") {
+            markPasswordRecoveryPending();
+            enterRecovery(currentSession?.user?.email || "");
+            return;
+          }
+          if (!isPasswordRecoveryCompleted() && (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending())) {
             markPasswordRecoveryPending();
             enterRecovery(currentSession?.user?.email || "");
             return;
@@ -361,7 +370,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         authSubscription = subscription;
 
-        if (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending()) {
+        if (!isPasswordRecoveryCompleted() && (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending())) {
           enterRecovery(currentSession?.user?.email || "");
           return;
         }
@@ -412,6 +421,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError("");
   };
 
+  const finishPasswordRecovery = async () => {
+    markPasswordRecoveryCompleted();
+    await logout();
+  };
+
   const refreshAuth = async () => {
     await refreshAuthRef.current();
   };
@@ -428,6 +442,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError,
         setSessionData,
         logout,
+        finishPasswordRecovery,
         refreshAuth,
       }}
     >

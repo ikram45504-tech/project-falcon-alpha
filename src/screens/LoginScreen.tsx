@@ -9,6 +9,7 @@ import { resolveLoginEmail } from "../loginAuth";
 import { isOfflineOnlyBuild } from "../appMode";
 import { getCompanyById, loginUser, OFFLINE_SESSION_STORAGE_KEY } from "../db";
 import { googleAuthErrorFromUrl, signInWithGoogle } from "../cloudAuth";
+import { consumePasswordUpdatedNotice } from "../authSessionFlags";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -46,7 +47,7 @@ export default function LoginScreen({
       setError(oauthError);
     }
     const navState = location.state as { passwordUpdated?: boolean } | null;
-    if (navState?.passwordUpdated) {
+    if (navState?.passwordUpdated || consumePasswordUpdatedNotice()) {
       setMessage("Password updated. Sign in with your new password.");
       navigate(location.pathname, { replace: true, state: {} });
     }

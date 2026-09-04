@@ -5,7 +5,7 @@ import { COMPANY_NAME, PRODUCT_NAME } from "../brand";
 import { useAuth } from "../AuthContext";
 import { supabase } from "../supabaseClient";
 import { validateStrongPassword } from "../db";
-import { clearPasswordRecoveryPending } from "../authSessionFlags";
+import { stripRecoveryTokensFromUrl } from "../authSessionFlags";
 
 function passwordChecks(value: string) {
   return {
@@ -19,7 +19,7 @@ function passwordChecks(value: string) {
 
 export default function ResetPasswordScreen() {
   const navigate = useNavigate();
-  const { authGate, logout } = useAuth();
+  const { authGate, logout, finishPasswordRecovery } = useAuth();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -69,8 +69,8 @@ export default function ResetPasswordScreen() {
       validateStrongPassword(password);
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw new Error(updateError.message);
-      clearPasswordRecoveryPending();
-      await supabase.auth.signOut();
+      stripRecoveryTokensFromUrl("/login");
+      await finishPasswordRecovery();
       navigate("/login", { replace: true, state: { passwordUpdated: true } });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -80,6 +80,7 @@ export default function ResetPasswordScreen() {
   };
 
   const cancelReset = async () => {
+    stripRecoveryTokensFromUrl("/login");
     await logout();
     navigate("/login", { replace: true });
   };

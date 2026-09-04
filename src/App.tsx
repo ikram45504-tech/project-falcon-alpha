@@ -3,6 +3,7 @@ import "./App.css";
 import "./App.mobile.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
+import { isPasswordRecoveryCompleted } from "./authSessionFlags";
 import { WorkspaceProvider } from "./WorkspaceContext";
 import TravelHisabLogo from "./TravelHisabLogo";
 import { PRODUCT_NAME } from "./brand";
@@ -48,7 +49,14 @@ function RouterContent() {
     );
   }
 
-  if (authGate === "recovery" || location.pathname.replace(/\/$/, "") === "/reset-password") {
+  const onResetPath = location.pathname.replace(/\/$/, "") === "/reset-password";
+  const recoveryDone = isPasswordRecoveryCompleted();
+
+  if (recoveryDone && onResetPath) {
+    return <Navigate to="/login" replace state={{ passwordUpdated: true }} />;
+  }
+
+  if (!recoveryDone && (authGate === "recovery" || onResetPath)) {
     return (
       <Routes>
         <Route path="/reset-password" element={<ResetPasswordScreen />} />
