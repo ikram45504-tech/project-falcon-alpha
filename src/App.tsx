@@ -48,7 +48,7 @@ function RouterContent() {
     );
   }
 
-  if (authGate === "recovery") {
+  if (authGate === "recovery" || location.pathname.replace(/\/$/, "") === "/reset-password") {
     return (
       <Routes>
         <Route path="/reset-password" element={<ResetPasswordScreen />} />

@@ -171,6 +171,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const force = Boolean(options?.force);
 
       if (!initialUser) {
+        if (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending()) {
+          enterRecovery("");
+          return;
+        }
         if (!mounted || gen !== loadGen) return;
         clearPasswordRecoveryPending();
         authGateRef.current = "none";
@@ -348,10 +352,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { subscription },
         } = supabase.auth.onAuthStateChange((event, currentSession) => {
-          if (event === "PASSWORD_RECOVERY" || urlLooksLikePasswordRecovery()) {
+          if (event === "PASSWORD_RECOVERY" || urlLooksLikePasswordRecovery() || isPasswordRecoveryPending()) {
             markPasswordRecoveryPending();
-          }
-          if (event === "PASSWORD_RECOVERY" || isPasswordRecoveryPending()) {
             enterRecovery(currentSession?.user?.email || "");
             return;
           }
