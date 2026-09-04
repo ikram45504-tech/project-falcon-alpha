@@ -18,3 +18,7 @@ export function passwordResetRedirectTo() {
 export function googleOAuthRedirectTo() {
   return `${getAuthAppOrigin()}/login`;
 }
+
+export function masterGoogleOAuthRedirectTo() {
+  return `${getAuthAppOrigin()}/control`;
+}

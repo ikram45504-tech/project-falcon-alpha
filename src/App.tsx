@@ -18,6 +18,8 @@ import SetupScreen from "./screens/SetupScreen";
 import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import GoogleLinkCompanyScreen from "./screens/GoogleLinkCompanyScreen";
+import AccountStatusScreen from "./screens/AccountStatusScreen";
+import ControlApp from "./screens/control/ControlApp";
 
 function AppLayout() {
   const isPhone = usePhoneUi();
@@ -34,6 +36,12 @@ function RouterContent() {
   const { isInitialized, session, company, error, authGate } = useAuth();
   const [accountCreatedNotice, setAccountCreatedNotice] = useState<any>(null);
   const location = useLocation();
+  const offline = isOfflineOnlyBuild();
+  const onControlPath = location.pathname.replace(/\/$/, "").startsWith("/control");
+
+  if (!offline && onControlPath) {
+    return <ControlApp />;
+  }
 
   if (!isInitialized) {
     return (
@@ -75,8 +83,11 @@ function RouterContent() {
     );
   }
 
+  if (session && company && String(company.status || "").toUpperCase() !== "ACTIVE") {
+    return <AccountStatusScreen />;
+  }
+
   if (!session || !company) {
-    const offline = isOfflineOnlyBuild();
     return (
       <Routes>
         <Route path="/setup" element={<SetupScreen onAccountCreated={setAccountCreatedNotice} />} />

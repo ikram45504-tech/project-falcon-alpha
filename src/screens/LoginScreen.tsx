@@ -333,13 +333,33 @@ export default function LoginScreen({
             ) : (
               <>
                 <div className="account-created-check">✓</div>
-                <span className="eyebrow blue">ACCOUNT REQUEST SUBMITTED</span>
+                <span className="eyebrow blue">WAITING FOR MASTER APPROVAL</span>
                 <h2>Company registration received</h2>
-                <p className="account-created-intro">Your company account creation has been successfully completed.</p>
+                <p className="account-created-intro">
+                  Your account was created. A Master must approve it before you can open Travel Hisab.
+                </p>
+                <div className="account-created-details">
+                  <div>
+                    <span>Company</span>
+                    <b>{accountCreatedNotice.companyName}</b>
+                  </div>
+                  <div className="confidential-code-row">
+                    <span>Company Code</span>
+                    <b>{accountCreatedNotice.companyCode}</b>
+                  </div>
+                  <div>
+                    <span>Username</span>
+                    <b>{accountCreatedNotice.username}</b>
+                  </div>
+                  <div>
+                    <span>Email Address</span>
+                    <b>{accountCreatedNotice.email}</b>
+                  </div>
+                </div>
                 <div className="confidential-warning neutral">
                   <p>
-                    Please wait while the relevant staff reviews your registration. You will be contacted with your
-                    Company Code and account credentials after activation.
+                    Save your Company Code and password. After Master approval, sign in as usual or use Continue with
+                    Google with the same email.
                   </p>
                 </div>
                 <div className="account-created-actions single">

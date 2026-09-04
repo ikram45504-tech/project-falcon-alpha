@@ -285,6 +285,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (!mounted || gen !== loadGen) return;
+
+        const companyStatus = String((companyData as Company).status || "").toUpperCase();
+        if (companyStatus !== "ACTIVE") {
+          setBackgroundSyncCompanyId("");
+          authGateRef.current = "none";
+          setAuthGate("none");
+          setPendingAuthEmail("");
+          setSession(newSession);
+          setCompany(companyData as Company);
+          setError("");
+          setIsInitialized(true);
+          return;
+        }
+
         await syncCloudSessionToLocal(companyData as Company, newSession);
         setBackgroundSyncCompanyId(profile.companyId);
         authGateRef.current = "none";

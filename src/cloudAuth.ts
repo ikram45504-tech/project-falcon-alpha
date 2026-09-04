@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import { googleOAuthRedirectTo, passwordResetRedirectTo } from "./authRedirect";
+import { googleOAuthRedirectTo, masterGoogleOAuthRedirectTo, passwordResetRedirectTo } from "./authRedirect";
 import { resolveLoginEmail } from "./loginAuth";
 
 export type CompanyMembershipMatch = {
@@ -35,6 +35,23 @@ export async function signInWithGoogle() {
     const message = error.message || "Google sign-in failed.";
     if (/provider is not enabled|unsupported provider/i.test(message)) {
       throw new Error("Google sign-in is not enabled yet. Use Company Code and password, or Forgot password.");
+    }
+    throw new Error(message);
+  }
+}
+
+export async function signInWithGoogleAsMaster() {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: masterGoogleOAuthRedirectTo(),
+      queryParams: { prompt: "select_account" },
+    },
+  });
+  if (error) {
+    const message = error.message || "Google sign-in failed.";
+    if (/provider is not enabled|unsupported provider/i.test(message)) {
+      throw new Error("Google sign-in is not enabled yet.");
     }
     throw new Error(message);
   }

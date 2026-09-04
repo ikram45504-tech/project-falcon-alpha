@@ -168,13 +168,13 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
 
         <section className="auth-setup-form-panel">
           <div className="auth-setup-form-head">
-            <h1>{googleCreated ? "Company account ready" : "Create company account"}</h1>
+            <h1>{googleCreated ? "Request submitted" : "Create company account"}</h1>
             <p className="muted">
               {googleCreated
-                ? "Write down your Company Code before opening the workspace."
+                ? "Your company is waiting for Master approval. Save your Company Code."
                 : googleSetup
-                  ? "This company will be created for your Google account. No password is needed."
-                  : "A unique Company Code is issued after registration."}
+                  ? "This company will be created for your Google account and needs Master approval before use."
+                  : "A unique Company Code is issued after registration. Cloud accounts need Master approval before use."}
             </p>
           </div>
 
@@ -202,7 +202,7 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
                       });
                   }}
                 >
-                  {busy ? "Opening workspace..." : "Continue to workspace"}
+                  {busy ? "Opening..." : "Continue"}
                 </button>
               </div>
             </div>

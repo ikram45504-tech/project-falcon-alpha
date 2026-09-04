@@ -13,6 +13,7 @@ import {
 } from "./cloudSync";
 import { inferPaymentKind, signedPaymentSettlement } from "./accountBalance";
 import type { PaymentTransactionKind } from "./PaymentV2Db";
+import type { CompanyEntitlements } from "./companyEntitlements";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -31,6 +32,7 @@ export type Company = {
   base_currency: string;
   foreign_currency: string;
   status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "INACTIVE";
+  entitlements?: CompanyEntitlements | null;
   created_at: string;
   updated_at: string;
 };
@@ -1730,7 +1732,7 @@ async function provisionCompanyForAuthUser(input: {
       email: input.ownerEmail,
       base_currency: "PKR",
       foreign_currency: "SAR",
-      status: "ACTIVE",
+      status: "PENDING_APPROVAL",
       created_at: now,
       updated_at: now,
     });
@@ -1796,7 +1798,7 @@ async function provisionCompanyForAuthUser(input: {
       userId: input.userId,
       username: input.username,
       email: input.ownerEmail,
-      accountStatus: "ACTIVE" as const,
+      accountStatus: "PENDING_APPROVAL" as const,
     };
   } catch (error) {
     await supabase.from("users").delete().eq("id", input.userId);
