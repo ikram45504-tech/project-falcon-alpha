@@ -8,6 +8,7 @@ import {
   isDeprecatedCloudTable,
   isDesktopApp,
   queueSync as enqueueCloudSync,
+  sortSyncQueueJobs,
   syncClearBookingChildren,
   type SyncOperation as CloudSyncOperation,
 } from "./cloudSync";
@@ -2649,27 +2650,6 @@ export async function deleteBooking(bookingId: string, companyId: string, actorU
   }
 }
 
-function calculatePayment(input: PaymentInput) {
-  const amount = Math.max(0, Number(input.amount) || 0);
-  if (input.currency === "SAR") {
-    const roe = Math.max(0, Number(input.roe) || 0);
-    return { amount, sar: amount, roe, paidAmount: amount * roe };
-  }
-  return { amount, sar: 0, roe: 0, paidAmount: amount };
-}
-
-function validatePayment(input: PaymentInput) {
-  if (!input.partyId) throw new Error("Select a Party / Vendor account.");
-  if (!input.transactionDate) throw new Error("Payment date is required.");
-  if (!input.fromAccount.trim()) throw new Error("From Account is required.");
-  if (!input.toAccount.trim()) throw new Error("To Account is required.");
-  if (!input.paymentType) throw new Error("Payment Type is required.");
-  if ((Number(input.amount) || 0) <= 0) throw new Error("Amount must be greater than zero.");
-  if (input.currency === "SAR" && (Number(input.roe) || 0) <= 0) {
-    throw new Error("ROE is required for a SAR payment.");
-  }
-}
-
 async function fetchPartyNameMap(companyId: string) {
   const { fetchCounterpartyNameMap } = await import("./CounterpartyDb");
   return fetchCounterpartyNameMap(companyId);
@@ -2740,77 +2720,26 @@ export async function getPayments(companyId: string, search = "", partyId = "") 
   );
 }
 
-export async function createPayment(companyId: string, input: PaymentInput) {
-  validatePayment(input);
-  const database = await db();
-  const calculated = calculatePayment(input);
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  await database.execute(
-    `INSERT INTO payment_entries
-     (id, company_id, party_id, transaction_date, receipt_no,
-      from_account, to_account, description, payment_type, currency,
-      amount_entered, sar, roe, paid_amount, status, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'ACTIVE',$15,$15)`,
-    [
-      id,
-      companyId,
-      input.partyId,
-      input.transactionDate,
-      input.receiptNo.trim(),
-      input.fromAccount.trim(),
-      input.toAccount.trim(),
-      input.description.trim(),
-      input.paymentType,
-      input.currency,
-      calculated.amount,
-      calculated.sar,
-      calculated.roe,
-      calculated.paidAmount,
-      now,
-    ],
-  );
-  return id;
+/**
+ * @deprecated Use `createPaymentV2` from PaymentV2Db. Legacy path has no PARTY/VENDOR
+ * validation, no payment_v2_meta, and no cloud sync.
+ */
+export async function createPayment(_companyId: string, _input: PaymentInput): Promise<string> {
+  throw new Error("Legacy createPayment is disabled. Use createPaymentV2 from the Payments screen.");
 }
 
-export async function updatePayment(companyId: string, entryId: string, input: PaymentInput) {
-  validatePayment(input);
-  const database = await db();
-  const calculated = calculatePayment(input);
-  await database.execute(
-    `UPDATE payment_entries
-     SET party_id=$1, transaction_date=$2, receipt_no=$3,
-         from_account=$4, to_account=$5, description=$6,
-         payment_type=$7, currency=$8, amount_entered=$9,
-         sar=$10, roe=$11, paid_amount=$12, updated_at=$13
-     WHERE id=$14 AND company_id=$15 AND status='ACTIVE'`,
-    [
-      input.partyId,
-      input.transactionDate,
-      input.receiptNo.trim(),
-      input.fromAccount.trim(),
-      input.toAccount.trim(),
-      input.description.trim(),
-      input.paymentType,
-      input.currency,
-      calculated.amount,
-      calculated.sar,
-      calculated.roe,
-      calculated.paidAmount,
-      new Date().toISOString(),
-      entryId,
-      companyId,
-    ],
-  );
+/**
+ * @deprecated Use `updatePaymentV2` from PaymentV2Db.
+ */
+export async function updatePayment(_companyId: string, _entryId: string, _input: PaymentInput) {
+  throw new Error("Legacy updatePayment is disabled. Use updatePaymentV2 from the Payments screen.");
 }
 
-export async function voidPayment(companyId: string, entryId: string) {
-  const database = await db();
-  await database.execute(
-    `UPDATE payment_entries SET status='VOID', updated_at=$1
-     WHERE id=$2 AND company_id=$3 AND status='ACTIVE'`,
-    [new Date().toISOString(), entryId, companyId],
-  );
+/**
+ * @deprecated Use `voidPaymentV2` from PaymentV2Db.
+ */
+export async function voidPayment(_companyId: string, _entryId: string) {
+  throw new Error("Legacy voidPayment is disabled. Use voidPaymentV2 from the Payments screen.");
 }
 
 export async function getPartyPaymentTotals(companyId: string) {
@@ -3100,7 +3029,7 @@ export async function processSyncQueue() {
 
     if (pending.length === 0) return;
 
-    for (const job of pending) {
+    for (const job of sortSyncQueueJobs(pending)) {
       try {
         if (isDeprecatedCloudTable(job.table_name)) {
           await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);

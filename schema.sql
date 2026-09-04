@@ -58,27 +58,37 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at TEXT NOT NULL
   );
 
+-- Counterparties: parties / vendors / unassigned_accounts are separate tables at runtime.
+-- parties.account_type remains for desktop migration compatibility (live party rows are PARTY).
 CREATE TABLE IF NOT EXISTS parties (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,
     name TEXT NOT NULL,
+    contact_person TEXT NOT NULL DEFAULT '',
     phone TEXT NOT NULL DEFAULT '',
     whatsapp TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
     address TEXT NOT NULL DEFAULT '',
+    reference TEXT NOT NULL DEFAULT '',
     notes TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'ACTIVE',
-    account_type TEXT NOT NULL DEFAULT 'UNASSIGNED',
+    account_type TEXT NOT NULL DEFAULT 'PARTY',
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    created_by_user_id TEXT NOT NULL DEFAULT '',
+    updated_by_user_id TEXT NOT NULL DEFAULT ''
   );
 
 CREATE TABLE IF NOT EXISTS vendors (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,
     name TEXT NOT NULL,
+    contact_person TEXT NOT NULL DEFAULT '',
     phone TEXT NOT NULL DEFAULT '',
     whatsapp TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
     address TEXT NOT NULL DEFAULT '',
+    reference TEXT NOT NULL DEFAULT '',
     notes TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     created_at TEXT NOT NULL,
@@ -91,9 +101,12 @@ CREATE TABLE IF NOT EXISTS unassigned_accounts (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL,
     name TEXT NOT NULL,
+    contact_person TEXT NOT NULL DEFAULT '',
     phone TEXT NOT NULL DEFAULT '',
     whatsapp TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
     address TEXT NOT NULL DEFAULT '',
+    reference TEXT NOT NULL DEFAULT '',
     notes TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     created_at TEXT NOT NULL,
@@ -122,7 +135,9 @@ CREATE TABLE IF NOT EXISTS payment_entries (
     paid_amount REAL NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    created_by_user_id TEXT NOT NULL DEFAULT '',
+    updated_by_user_id TEXT NOT NULL DEFAULT ''
   );
 
 CREATE TABLE IF NOT EXISTS package_bookings (
@@ -142,7 +157,9 @@ CREATE TABLE IF NOT EXISTS package_bookings (
     total_pkr REAL NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    created_by_user_id TEXT NOT NULL DEFAULT '',
+    updated_by_user_id TEXT NOT NULL DEFAULT ''
   );
 
 CREATE TABLE IF NOT EXISTS package_booking_lines (

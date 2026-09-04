@@ -6,6 +6,43 @@ const DB_PATH = "sqlite:travel-accounting.db";
 
 export type SyncOperation = "INSERT" | "UPDATE" | "DELETE" | "UPSERT" | "REPLACE_CHILDREN";
 
+/**
+ * Lower number = push earlier. Counterparties must reach the cloud before booking /
+ * payment rows that reference their IDs (no FK enforcement, but avoids orphan UX).
+ */
+export function syncTablePriority(tableName: string): number {
+  if (tableName === "parties" || tableName === "vendors" || tableName === "unassigned_accounts") return 10;
+  if (tableName === "companies" || tableName === "users") return 5;
+  if (tableName.endsWith("_bookings")) return 40;
+  if (tableName === "payment_entries") return 50;
+  if (tableName === "payment_v2_meta" || tableName === "payment_corrections") return 60;
+  if (
+    tableName.includes("_lines") ||
+    tableName.includes("operational") ||
+    tableName.includes("adjustments") ||
+    tableName.includes("passport") ||
+    tableName.includes("fleet") ||
+    tableName.includes("movement") ||
+    tableName.includes("guest") ||
+    tableName.includes("family") ||
+    tableName.includes("sector")
+  ) {
+    return 80;
+  }
+  return 70;
+}
+
+/** Stable sort: dependency priority first, then original queue order. */
+export function sortSyncQueueJobs<T extends { table_name: string }>(jobs: T[]): T[] {
+  return jobs
+    .map((job, index) => ({ job, index }))
+    .sort((a, b) => {
+      const priority = syncTablePriority(a.job.table_name) - syncTablePriority(b.job.table_name);
+      return priority !== 0 ? priority : a.index - b.index;
+    })
+    .map(({ job }) => job);
+}
+
 /** Allowlist mirrored by `public.replace_booking_children` on Supabase. */
 const REPLACE_CHILDREN_TABLES = new Set([
   "package_booking_lines",
@@ -1004,8 +1041,9 @@ export async function flushDesktopSyncQueue() {
     "SELECT id, operation, table_name, record_id, payload FROM sync_queue WHERE status = 'PENDING' ORDER BY created_at ASC",
   );
 
+  const ordered = sortSyncQueueJobs(pending);
   let failedCount = 0;
-  for (const job of pending) {
+  for (const job of ordered) {
     try {
       if (isDeprecatedCloudTable(job.table_name)) {
         await database.execute("DELETE FROM sync_queue WHERE id = $1", [job.id]);

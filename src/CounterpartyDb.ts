@@ -1,6 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import { supabase } from "./supabaseClient";
-import { isDesktopApp, queueSync } from "./cloudSync";
+import { isDesktopApp, queueSync, flushDesktopSyncQueue } from "./cloudSync";
 import type { Party, PartyInput, BookingTransactionType } from "./db";
 import { normalizePartyInput } from "./db";
 
@@ -438,6 +438,7 @@ export async function createAccount(companyId: string, input: PartyInput, actorU
       created_by_user_id: actorUserId,
     });
   }
+  if (isDesktopApp()) await flushDesktopSyncQueue();
   return id;
 }
 
@@ -482,6 +483,25 @@ export async function updateAccount(accountId: string, companyId: string, input:
         ],
       );
       await queueSync("DELETE", currentTable, accountId, {});
+      await queueSync("INSERT", targetTable, accountId, {
+        id: accountId,
+        company_id: companyId,
+        name: row.name,
+        contact_person: row.contact_person,
+        phone: row.phone,
+        whatsapp: row.whatsapp,
+        email: row.email,
+        address: row.address,
+        reference: row.reference,
+        notes: row.notes,
+        status: row.status,
+        created_at: source.created_at,
+        updated_at: now,
+        created_by_user_id: source.created_by_user_id || actorUserId,
+        updated_by_user_id: actorUserId,
+      });
+      if (isDesktopApp()) await flushDesktopSyncQueue();
+      return;
     } else {
       await database.execute(
         `UPDATE ${targetTable}
@@ -530,6 +550,7 @@ export async function updateAccount(accountId: string, companyId: string, input:
 
   const { table: syncTable, payload } = syncPayload(row, input.accountType, actorUserId);
   await queueSync("UPDATE", syncTable, accountId, payload);
+  if (isDesktopApp()) await flushDesktopSyncQueue();
 }
 
 export async function deleteAccount(accountId: string, companyId: string) {
@@ -541,6 +562,7 @@ export async function deleteAccount(accountId: string, companyId: string) {
     await database.execute(`DELETE FROM ${table} WHERE id=$1 AND company_id=$2`, [accountId, companyId]);
   }
   await queueSync("DELETE", table, accountId, {});
+  if (isDesktopApp()) await flushDesktopSyncQueue();
 }
 
 export { getAllAccounts as getParties };
