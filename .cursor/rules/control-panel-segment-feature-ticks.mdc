@@ -1,0 +1,31 @@
+---
+description: Lock Control Panel Segments/Features tick UI — do not redesign unless user explicitly asks
+globs: src/screens/control/**
+alwaysApply: true
+---
+
+# Control Panel Segments / Features ticks — LOCKED
+
+Do **not** change the design of Segments or Features tickable rows unless Ikram (the user) **personally and explicitly** asks to change that design.
+
+## Locked setup (keep as-is)
+
+- Square checkbox with the tick **inside** the box
+- **Bright** checkbox interior in both themes (Dark: `#f0fdfa`; Ocean: `#ffffff`) — must use `!important` so App.css / midnight input overrides cannot darken them
+- Dark checked fill `#2dd4bf` with dark tick; Ocean checked fill `#0284c7` with white tick
+- **On / Off** is status text only (`master-check-state`): not a button, `pointer-events: none`, shows On when ticked and Off when not
+- Whole row remains the click target via the `<label className="master-check">`
+
+## Files
+
+- `src/screens/control/ControlPanel.css` — `.master-check*` rules
+- `src/screens/control/ControlHomeScreen.tsx` — Segments / Features markup
+
+## Allowed without redesign request
+
+- Bug fixes that preserve this look (e.g. override regressions, accessibility)
+- Unrelated Control Panel work (lists, delete zone, limits, theme switcher chrome)
+
+## Not allowed without explicit user request
+
+- Circles, switches, pill On/Off buttons, new colors, layout of these tabs/tiles, or “refreshing” this UI

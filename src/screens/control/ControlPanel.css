@@ -397,10 +397,11 @@
 }
 
 .master-check {
-  --cp-tick-box: transparent;
+  --cp-tick-box: #ffffff;
   --cp-tick-ring: var(--cp-accent);
   --cp-tick-fill: var(--cp-accent);
   --cp-tick-mark: #ffffff;
+  --cp-tick-glow: var(--cp-accent-soft);
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) auto;
   gap: 12px;
@@ -419,29 +420,32 @@
   transition:
     border-color 0.15s ease,
     background 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.12s ease;
+    box-shadow 0.15s ease;
 }
 
+/* Dark: bright square so the tick stays readable */
 .master-control-root[data-control-theme="dark"] .master-check {
-  --cp-tick-box: rgba(236, 254, 255, 0.08);
-  --cp-tick-ring: #67e8f9;
-  --cp-tick-fill: #22d3ee;
+  --cp-tick-box: #f0fdfa;
+  --cp-tick-ring: #5eead4;
+  --cp-tick-fill: #2dd4bf;
   --cp-tick-mark: #042f2e;
+  --cp-tick-glow: rgba(45, 212, 191, 0.35);
   background: rgba(236, 254, 255, 0.04);
-  border-color: rgba(103, 232, 249, 0.35);
+  border-color: rgba(103, 232, 249, 0.3);
 }
 
+/* Ocean: bright white square */
 .master-control-root[data-control-theme="ocean"] .master-check {
   --cp-tick-box: #ffffff;
   --cp-tick-ring: #0284c7;
   --cp-tick-fill: #0284c7;
   --cp-tick-mark: #ffffff;
+  --cp-tick-glow: rgba(14, 165, 233, 0.22);
 }
 
 .master-check:hover {
   border-color: var(--cp-tick-ring);
-  box-shadow: 0 0 0 3px var(--cp-accent-soft);
+  box-shadow: 0 0 0 3px var(--cp-tick-glow);
 }
 
 .master-check:has(input:checked) {
@@ -450,19 +454,26 @@
   box-shadow: inset 0 0 0 1px var(--cp-tick-ring);
 }
 
+/* !important beats App.css / midnight input background overrides */
 .master-check input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 26px;
-  height: 26px;
-  margin: 0;
-  border-radius: 8px;
-  border: 2.5px solid var(--cp-tick-ring);
-  background: var(--cp-tick-box);
-  display: grid;
-  place-items: center;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 26px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 7px !important;
+  border: 2.5px solid var(--cp-tick-ring) !important;
+  background: var(--cp-tick-box) !important;
+  background-color: var(--cp-tick-box) !important;
+  color: transparent !important;
+  display: grid !important;
+  place-items: center !important;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18) !important;
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
@@ -476,19 +487,19 @@
   margin-top: -2px;
   border: solid transparent;
   border-width: 0 3px 3px 0;
-  transform: rotate(45deg) scale(0.35);
+  transform: rotate(45deg) scale(0.25);
   opacity: 0;
   transition:
     transform 0.15s ease,
-    opacity 0.15s ease;
+    opacity 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .master-check input[type="checkbox"]:checked {
-  background: var(--cp-tick-fill);
-  border-color: var(--cp-tick-fill);
-  box-shadow:
-    0 0 0 3px var(--cp-accent-soft),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  background: var(--cp-tick-fill) !important;
+  background-color: var(--cp-tick-fill) !important;
+  border-color: var(--cp-tick-fill) !important;
+  box-shadow: 0 0 0 3px var(--cp-tick-glow) !important;
 }
 
 .master-check input[type="checkbox"]:checked::after {
@@ -497,35 +508,63 @@
   transform: rotate(45deg) scale(1);
 }
 
+.master-check input[type="checkbox"]:focus {
+  outline: none !important;
+  border-color: var(--cp-tick-ring) !important;
+  box-shadow: 0 0 0 3px var(--cp-tick-glow) !important;
+}
+
+.master-control-root[data-control-theme="dark"] .master-check input[type="checkbox"] {
+  background: #f0fdfa !important;
+  background-color: #f0fdfa !important;
+  border-color: #5eead4 !important;
+}
+
+.master-control-root[data-control-theme="dark"] .master-check input[type="checkbox"]:checked {
+  background: #2dd4bf !important;
+  background-color: #2dd4bf !important;
+  border-color: #2dd4bf !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-check input[type="checkbox"] {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-check input[type="checkbox"]:checked {
+  background: #0284c7 !important;
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+}
+
 .master-check-label {
   min-width: 0;
   line-height: 1.25;
 }
 
+/* Status only — not a separate control */
 .master-check-state {
+  pointer-events: none;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-radius: 999px;
-  padding: 4px 8px;
-  border: 1px solid var(--cp-border);
   color: var(--cp-muted);
-  background: transparent;
+  opacity: 0.85;
 }
 
 .master-check:has(input:checked) .master-check-state {
-  color: var(--cp-tick-mark);
-  background: var(--cp-tick-fill);
-  border-color: var(--cp-tick-fill);
+  color: var(--cp-tick-ring);
+  opacity: 1;
 }
 
 .master-control-root[data-control-theme="dark"] .master-check:has(input:checked) .master-check-state {
-  color: #042f2e;
+  color: #5eead4;
 }
 
 .master-control-root[data-control-theme="ocean"] .master-check:has(input:checked) .master-check-state {
-  color: #ffffff;
+  color: #0284c7;
 }
 
 .master-limit-grid {
@@ -709,7 +748,7 @@
 }
 
 .master-control-root[data-control-theme="ocean"] .master-check:has(input:checked) .master-check-state {
-  color: #ffffff !important;
+  color: #0284c7 !important;
 }
 
 .master-control-root[data-control-theme="ocean"] .master-danger-zone h3 {
