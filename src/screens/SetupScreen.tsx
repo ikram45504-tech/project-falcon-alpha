@@ -3,7 +3,7 @@ import { createCompanyAccount, createCompanyAccountForCurrentAuthUser, createOff
 import { isOfflineOnlyBuild } from "../appMode";
 import { useNavigate } from "react-router-dom";
 import TravelHisabLogo from "../TravelHisabLogo";
-import { PRODUCT_BYLINE, PRODUCT_HIGHLIGHTS, PRODUCT_NAME, PRODUCT_TAGLINE } from "../brand";
+import { PRODUCT_BYLINE, PRODUCT_HIGHLIGHTS, PRODUCT_NAME, PRODUCT_TAGLINE, COMPANY_NAME } from "../brand";
 import { useAuth } from "../AuthContext";
 
 const blankSetup = {
@@ -168,13 +168,13 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
 
         <section className="auth-setup-form-panel">
           <div className="auth-setup-form-head">
-            <h1>{googleCreated ? "Request submitted" : "Create company account"}</h1>
+            <h1>{googleCreated ? "Registration received" : "Create company account"}</h1>
             <p className="muted">
               {googleCreated
-                ? "Your company is waiting for Master approval. Save your Company Code."
+                ? `Your request has been delivered to ${COMPANY_NAME}. Save your Company Code while your account is under review.`
                 : googleSetup
-                  ? "This company will be created for your Google account and needs Master approval before use."
-                  : "A unique Company Code is issued after registration. Cloud accounts need Master approval before use."}
+                  ? `This company will be created for your Google account. ${COMPANY_NAME} will review and activate it shortly.`
+                  : `A unique Company Code is issued after registration. ${COMPANY_NAME} will review cloud accounts before activation.`}
             </p>
           </div>
 

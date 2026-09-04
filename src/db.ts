@@ -1,4 +1,4 @@
-import Database from "@tauri-apps/plugin-sql";
+﻿import Database from "@tauri-apps/plugin-sql";
 import { isCloudSyncEnabled } from "./appMode";
 import { supabase } from "./supabaseClient";
 import { createPasswordRecord, verifyPassword } from "./security";
@@ -14,6 +14,7 @@ import {
 import { inferPaymentKind, signedPaymentSettlement } from "./accountBalance";
 import type { PaymentTransactionKind } from "./PaymentV2Db";
 import type { CompanyEntitlements } from "./companyEntitlements";
+import { COMPANY_NAME } from "./brand";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -2003,10 +2004,12 @@ export async function loginUser(
   const company = companies[0];
   if (!company) return null;
   if (company.status === "PENDING_APPROVAL") {
-    throw new Error("This company account is pending activation. Please wait for account approval.");
+    throw new Error(
+      `Your registration is under review. ${COMPANY_NAME} will contact you shortly once your account is activated.`,
+    );
   }
   if (company.status === "SUSPENDED") {
-    throw new Error("This company account is suspended. Please contact support.");
+    throw new Error(`This company account is suspended. Please contact ${COMPANY_NAME} for help.`);
   }
   if (company.status !== "ACTIVE") return null;
 

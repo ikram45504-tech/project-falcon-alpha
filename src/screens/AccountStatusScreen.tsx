@@ -16,13 +16,13 @@ export default function AccountStatusScreen() {
     return () => document.documentElement.classList.remove("auth-screen");
   }, []);
 
-  const title = pending ? "Waiting for Master approval" : suspended ? "Account suspended" : "Account not active";
+  const title = pending ? "Registration under review" : suspended ? "Account suspended" : "Account not active";
 
   const lead = pending
-    ? "Your company was created successfully. A Master account must approve it before you can open Travel Hisab."
+    ? `Your request has been delivered to the relevant department at ${COMPANY_NAME}. They will contact you shortly once your account is activated.`
     : suspended
-      ? "This company is suspended. Contact Travel Hisab support if you need it reactivated."
-      : "This company cannot open the workspace right now.";
+      ? `This company account is suspended. Please contact ${COMPANY_NAME} if you need it reactivated.`
+      : `This company cannot open the workspace right now. Please contact ${COMPANY_NAME} for help.`;
 
   return (
     <main className="center auth-login-page-v8">
