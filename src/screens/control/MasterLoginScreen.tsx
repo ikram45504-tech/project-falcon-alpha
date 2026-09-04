@@ -5,6 +5,7 @@ import { COMPANY_NAME, PRODUCT_NAME } from "../../brand";
 import { googleAuthErrorFromUrl, signInWithGoogleAsMaster } from "../../cloudAuth";
 import { supabase } from "../../supabaseClient";
 import { isPlatformMaster } from "../../platformMaster";
+import { hardResetPwaCache } from "../../registerPwa";
 import { useControlTheme } from "./controlTheme";
 import "./ControlPanel.css";
 
@@ -13,6 +14,7 @@ export default function MasterLoginScreen() {
   const navigate = useNavigate();
   const { theme, setTheme } = useControlTheme();
   const [busy, setBusy] = useState(false);
+  const [cacheBusy, setCacheBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -78,8 +80,22 @@ export default function MasterLoginScreen() {
 
         {error && <div className="alert error">{error}</div>}
 
-        <button className="primary" type="button" disabled={busy} onClick={() => void startMasterGoogle()}>
+        <button className="primary" type="button" disabled={busy || cacheBusy} onClick={() => void startMasterGoogle()}>
           {busy ? "Opening Google..." : "Continue with Google"}
+        </button>
+
+        <button
+          className="ghost master-cache-refresh"
+          type="button"
+          disabled={busy || cacheBusy}
+          style={{ width: "100%", marginTop: 10 }}
+          title="Clear PWA/browser cache and reload the latest deployment"
+          onClick={() => {
+            setCacheBusy(true);
+            void hardResetPwaCache({ path: "/control/login" });
+          }}
+        >
+          {cacheBusy ? "Updating…" : "Clear cache & reload"}
         </button>
 
         <p className="muted" style={{ marginTop: 16, fontSize: 13 }}>

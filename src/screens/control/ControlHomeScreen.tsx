@@ -13,6 +13,7 @@ import {
   setCompanyStatusForMaster,
   wipeCompanyForMaster,
 } from "../../platformMaster";
+import { hardResetPwaCache } from "../../registerPwa";
 import { ControlTheme } from "./controlTheme";
 
 const SEGMENTS = Object.keys(SEGMENT_LABELS) as SegmentKey[];
@@ -47,6 +48,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   const [selectedId, setSelectedId] = useState<string>("");
   const [draft, setDraft] = useState<CompanyEntitlements | null>(null);
   const [busyId, setBusyId] = useState("");
+  const [cacheBusy, setCacheBusy] = useState(false);
   const [isNarrow, setIsNarrow] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(max-width: 900px)").matches : false,
   );
@@ -173,6 +175,18 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
     }
   };
 
+  const clearCacheAndReload = async () => {
+    setCacheBusy(true);
+    setError("");
+    setMessage("Clearing cache and loading the latest Control Panel…");
+    try {
+      await hardResetPwaCache({ path: "/control" });
+    } catch (err) {
+      setCacheBusy(false);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   return (
     <div className="master-control-shell">
       <header className="master-control-topbar">
@@ -194,10 +208,19 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
             {masterEmail}
           </span>
           <span className="master-stat-pill">{pendingCount} pending</span>
-          <button type="button" className="ghost" onClick={() => void load()} disabled={loading}>
-            Refresh
+          <button type="button" className="ghost" onClick={() => void load()} disabled={loading || cacheBusy}>
+            Reload list
           </button>
-          <button type="button" className="ghost" onClick={onSignOut}>
+          <button
+            type="button"
+            className="ghost master-cache-refresh"
+            onClick={() => void clearCacheAndReload()}
+            disabled={cacheBusy}
+            title="Clear PWA/browser cache and reload the latest deployment"
+          >
+            {cacheBusy ? "Updating…" : "Clear cache & reload"}
+          </button>
+          <button type="button" className="ghost" onClick={onSignOut} disabled={cacheBusy}>
             Sign out
           </button>
         </div>

@@ -79,7 +79,25 @@ export async function checkAndApplyPwaUpdate(): Promise<"updated" | "current" | 
 }
 
 /** Unregister workers + wipe Cache Storage, then reload (escape hatch for white screens). */
-export async function hardResetPwaCache() {
+export async function hardResetPwaCache(options?: { path?: string }) {
   const { hardResetWebCache } = await import("./AppErrorBoundary");
+  if (options?.path) {
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((reg) => reg.unregister()));
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+    } catch (error) {
+      console.warn("PWA cache reset failed:", error);
+    }
+    const next = new URL(options.path, window.location.origin);
+    next.searchParams.set("v", String(Date.now()));
+    window.location.replace(next.toString());
+    return;
+  }
   await hardResetWebCache();
 }
