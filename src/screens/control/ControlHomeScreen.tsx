@@ -128,7 +128,7 @@ type Props = {
   onSignOut: () => void;
 };
 
-export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, onSignOut }: Props) {
+export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: Props) {
   const [rows, setRows] = useState<MasterCompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -513,7 +513,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   const clearCacheAndReload = async () => {
     setCacheBusy(true);
     setError("");
-    setMessage("Clearing cache and loading the latest Control Panel…");
+    setMessage("Refreshing Control Panel…");
     try {
       await hardResetPwaCache({ path: "/control" });
     } catch (err) {
@@ -525,12 +525,13 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   return (
     <div className="master-control-shell">
       <header className="master-control-topbar">
-        <div>
+        <div className="master-control-brand">
           <div className="master-control-kicker">Master account</div>
-          <h1>Control Panel</h1>
-          <p className="muted">Approve companies and set limits. No booking or payment access.</p>
+          <h1>Master Control Panel</h1>
+          <p className="muted master-control-tagline">Approve companies and set limits. No booking or payment access.</p>
         </div>
         <div className="master-control-top-meta">
+          <span className="master-stat-pill">{pendingCount} pending</span>
           <div className="master-theme-switch" role="group" aria-label="Control Panel theme">
             <button type="button" className={theme === "dark" ? "active" : ""} onClick={() => onThemeChange("dark")}>
               Dark
@@ -539,23 +540,16 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
               Ocean
             </button>
           </div>
-          <span className="master-email-chip" title={masterEmail}>
-            {masterEmail}
-          </span>
-          <span className="master-stat-pill">{pendingCount} pending</span>
-          <button type="button" className="ghost" onClick={() => void load()} disabled={loading || cacheBusy}>
-            Reload list
-          </button>
           <button
             type="button"
-            className="ghost master-cache-refresh"
+            className="ghost master-tool-btn"
             onClick={() => void clearCacheAndReload()}
-            disabled={cacheBusy}
-            title="Clear PWA/browser cache and reload the latest deployment"
+            disabled={loading || cacheBusy}
+            title="Clear cache and reload the latest Control Panel"
           >
-            {cacheBusy ? "Updating…" : "Clear cache & reload"}
+            {cacheBusy ? "Updating…" : "Refresh"}
           </button>
-          <button type="button" className="ghost" onClick={onSignOut} disabled={cacheBusy}>
+          <button type="button" className="ghost master-tool-btn" onClick={onSignOut} disabled={cacheBusy}>
             Sign out
           </button>
         </div>
@@ -566,51 +560,53 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
 
       <div className={`master-control-layout ${layoutClass}`.trim()}>
         <section className="master-control-list">
-          <div className="master-filter-row">
-            {(["ALL", "PENDING_APPROVAL", "ACTIVE", "SUSPENDED"] as const).map((item) => (
+          <div className="master-list-toolbar">
+            <div className="master-filter-row">
+              {(["ALL", "PENDING_APPROVAL", "ACTIVE", "SUSPENDED"] as const).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={filter === item ? "master-filter active" : "master-filter"}
+                  onClick={() => setFilter(item)}
+                >
+                  {item === "ALL" ? "All" : companyStatusLabel(item)}
+                </button>
+              ))}
+            </div>
+
+            <div className="master-list-tools">
+              <label className="master-search-box">
+                <span className="master-search-icon" aria-hidden="true">
+                  ⌕
+                </span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search name, code, email…"
+                  aria-label="Search companies"
+                />
+              </label>
+              <label className="master-sort-box">
+                Sort
+                <select value={sort} onChange={(e) => setSort(e.target.value as CompanySort)} aria-label="Sort companies">
+                  <option value="newest">Newest first</option>
+                  <option value="name_asc">Name A–Z</option>
+                  <option value="status">Status</option>
+                </select>
+              </label>
               <button
-                key={item}
                 type="button"
-                className={filter === item ? "master-filter active" : "master-filter"}
-                onClick={() => setFilter(item)}
+                className="primary master-create-open"
+                onClick={openCreate}
+                disabled={busyId === "bulk"}
               >
-                {item === "ALL" ? "All" : companyStatusLabel(item)}
+                Create company
               </button>
-            ))}
+            </div>
           </div>
 
-          <div className="master-list-tools">
-            <label className="master-search-box">
-              <span className="master-search-icon" aria-hidden="true">
-                ⌕
-              </span>
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name, code, email…"
-                aria-label="Search companies"
-              />
-            </label>
-            <label className="master-sort-box">
-              Sort
-              <select value={sort} onChange={(e) => setSort(e.target.value as CompanySort)} aria-label="Sort companies">
-                <option value="newest">Newest first</option>
-                <option value="name_asc">Name A–Z</option>
-                <option value="status">Status</option>
-              </select>
-            </label>
-            <button
-              type="button"
-              className="primary master-create-open"
-              onClick={openCreate}
-              disabled={busyId === "bulk"}
-            >
-              Create company
-            </button>
-          </div>
-
-          {visible.length > 0 ? (
+          {checkedVisible.length > 0 ? (
             <div className="master-bulk-bar">
               <label className="master-pick-all">
                 <input
@@ -619,7 +615,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                   onChange={toggleAllVisible}
                   disabled={loading || busyId === "bulk"}
                 />
-                <span>{checkedVisible.length ? `${checkedVisible.length} selected` : "Select companies"}</span>
+                <span>{checkedVisible.length} selected</span>
               </label>
               <label className="master-sort-box">
                 Bulk plan
@@ -641,33 +637,37 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                 <button
                   type="button"
                   className="primary"
-                  disabled={!checkedVisible.length || busyId === "bulk"}
+                  disabled={busyId === "bulk"}
                   onClick={() => void runBulk("APPROVE")}
                 >
                   Approve
                 </button>
-                <button
-                  type="button"
-                  disabled={!checkedVisible.length || busyId === "bulk"}
-                  onClick={() => void runBulk("SUSPEND")}
-                >
+                <button type="button" disabled={busyId === "bulk"} onClick={() => void runBulk("SUSPEND")}>
                   Suspend
                 </button>
                 <button
                   type="button"
-                  disabled={!checkedVisible.length || !bulkPlanId || busyId === "bulk"}
+                  disabled={!bulkPlanId || busyId === "bulk"}
                   onClick={() => void runBulk("APPLY_PLAN")}
                 >
                   Apply plan
                 </button>
-                <button
-                  type="button"
-                  disabled={!checkedVisible.length || busyId === "bulk"}
-                  onClick={() => void runBulk("EXTEND", 30)}
-                >
+                <button type="button" disabled={busyId === "bulk"} onClick={() => void runBulk("EXTEND", 30)}>
                   Extend +30
                 </button>
               </div>
+            </div>
+          ) : visible.length > 0 ? (
+            <div className="master-bulk-hint">
+              <label className="master-pick-all">
+                <input
+                  type="checkbox"
+                  checked={false}
+                  onChange={toggleAllVisible}
+                  disabled={loading || busyId === "bulk"}
+                />
+                <span className="muted">Select companies for bulk actions</span>
+              </label>
             </div>
           ) : null}
 
@@ -774,33 +774,36 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                 </span>
               </div>
 
-              <div className="master-action-row">
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={busyId === selected.id || String(selected.status).toUpperCase() === "ACTIVE"}
-                  onClick={() => void runStatus(selected.id, "ACTIVE")}
-                >
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  disabled={busyId === selected.id || String(selected.status).toUpperCase() === "SUSPENDED"}
-                  onClick={() => void runStatus(selected.id, "SUSPENDED")}
-                >
-                  Suspend
-                </button>
-                <button
-                  type="button"
-                  disabled={busyId === selected.id || String(selected.status).toUpperCase() === "PENDING_APPROVAL"}
-                  onClick={() => void runStatus(selected.id, "PENDING_APPROVAL")}
-                >
-                  Set pending
-                </button>
-              </div>
+              <section className="master-detail-section" aria-label="Actions">
+                <h3 className="master-detail-section-title">Actions</h3>
+                <div className="master-action-row">
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={busyId === selected.id || String(selected.status).toUpperCase() === "ACTIVE"}
+                    onClick={() => void runStatus(selected.id, "ACTIVE")}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === selected.id || String(selected.status).toUpperCase() === "SUSPENDED"}
+                    onClick={() => void runStatus(selected.id, "SUSPENDED")}
+                  >
+                    Suspend
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === selected.id || String(selected.status).toUpperCase() === "PENDING_APPROVAL"}
+                    onClick={() => void runStatus(selected.id, "PENDING_APPROVAL")}
+                  >
+                    Set pending
+                  </button>
+                </div>
+              </section>
 
-              <div className="master-health-card master-trial-card">
-                <h3>Trial / access end</h3>
+              <section className="master-detail-section master-health-card master-trial-card" aria-label="Trial">
+                <h3 className="master-detail-section-title">Trial / access end</h3>
                 <p className="muted" style={{ marginTop: 0 }}>
                   Agency sees a warning within 7 days of this date. When the date passes, the company auto-suspends.
                   Extend reactivates if currently suspended.
@@ -845,10 +848,10 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                     Clear expiry
                   </button>
                 </div>
-              </div>
+              </section>
 
-              <div className="master-health-card">
-                <h3>Company health</h3>
+              <section className="master-detail-section master-health-card" aria-label="Health">
+                <h3 className="master-detail-section-title">Company health</h3>
                 {usageLoading ? (
                   <p className="muted">Loading usage…</p>
                 ) : usage ? (
@@ -882,10 +885,10 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                 ) : (
                   <p className="muted">Usage unavailable for this company.</p>
                 )}
-              </div>
+              </section>
 
-              <div className="master-health-card master-audit-card">
-                <h3>Audit trail</h3>
+              <section className="master-detail-section master-health-card master-audit-card" aria-label="Audit">
+                <h3 className="master-detail-section-title">Audit trail</h3>
                 <p className="muted" style={{ marginTop: 0 }}>
                   Master actions for this company (approve, capacity, extend, wipe).
                 </p>
@@ -906,26 +909,12 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                     ))}
                   </ul>
                 )}
-              </div>
+              </section>
 
-              <div className="master-danger-zone">
-                <h3>Delete company</h3>
-                <p className="muted">
-                  Permanently wipe this company from the cloud database — bookings, payments, parties, staff, and login
-                  accounts. Frees Supabase storage for this tenant.
-                </p>
-                <button
-                  type="button"
-                  className="master-danger-button"
-                  disabled={busyId === selected.id}
-                  onClick={() => void wipeCompany()}
-                >
-                  {busyId === selected.id ? "Deleting..." : "Delete company & all data"}
-                </button>
-              </div>
-
+              <section className="master-detail-section master-entitlements-wrap" aria-label="Capacity">
               <form className="master-entitlements-form" onSubmit={(e) => void saveEntitlements(e)}>
-                <h3>Plan template</h3>
+                <h3 className="master-detail-section-title">Capacity</h3>
+                <h4 className="master-detail-subhead">Plan template</h4>
                 <p className="muted" style={{ marginTop: 0 }}>
                   Apply a preset into this form, then click <strong>Save capacity</strong> to store it.
                 </p>
@@ -951,7 +940,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                 </div>
                 {selectedPlan ? <p className="master-plan-hint muted">{selectedPlan.description}</p> : null}
 
-                <h3>Segments</h3>
+                <h4 className="master-detail-subhead">Segments</h4>
                 <div className="master-check-grid">
                   {SEGMENTS.map((key) => (
                     <label key={key} className="master-check">
@@ -973,7 +962,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                   ))}
                 </div>
 
-                <h3>Features</h3>
+                <h4 className="master-detail-subhead">Features</h4>
                 <div className="master-check-grid">
                   <label className="master-check">
                     <input
@@ -1025,7 +1014,7 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                   </label>
                 </div>
 
-                <h3>Limits</h3>
+                <h4 className="master-detail-subhead">Limits</h4>
                 <p className="muted" style={{ marginTop: 0 }}>
                   Leave blank for unlimited. Limits apply when creating parties, staff, and bookings. Usage shows live
                   cloud counts (bookings use the busiest segment vs the per-segment cap).
@@ -1080,6 +1069,23 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                   {busyId === selected.id ? "Saving..." : "Save capacity"}
                 </button>
               </form>
+              </section>
+
+              <section className="master-detail-section master-danger-zone" aria-label="Danger">
+                <h3 className="master-detail-section-title">Delete company</h3>
+                <p className="muted">
+                  Permanently wipe this company from the cloud database — bookings, payments, parties, staff, and login
+                  accounts. Frees Supabase storage for this tenant.
+                </p>
+                <button
+                  type="button"
+                  className="master-danger-button"
+                  disabled={busyId === selected.id}
+                  onClick={() => void wipeCompany()}
+                >
+                  {busyId === selected.id ? "Deleting..." : "Delete company & all data"}
+                </button>
+              </section>
             </>
           )}
         </section>
