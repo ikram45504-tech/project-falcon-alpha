@@ -8,6 +8,8 @@ import MiscBookingModule from "./MiscBookingFlowV3";
 import DirectionBookingLedger from "./DirectionBookingLedger";
 import type { BookingTransactionType, Party } from "./db";
 import type { BookingServiceName } from "./BookingLifecycle";
+import { useAuth } from "./AuthContext";
+import { normalizeEntitlements } from "./companyEntitlements";
 import "./BookingFinalization.css";
 import "./PaymentsV2.css";
 
@@ -108,6 +110,8 @@ export default function BookingsModule({
   const [service, setService] = useState<BookingService | null>(null);
   const [openBookingId, setOpenBookingId] = useState<string | null>(null);
   const [openedFromAllRegister, setOpenedFromAllRegister] = useState(false);
+  const { company } = useAuth();
+  const enabledSegments = normalizeEntitlements(company?.entitlements).segments;
 
   function chooseDirection(next: BookingTransactionType) {
     setTransactionType(next);
@@ -226,21 +230,33 @@ export default function BookingsModule({
           <p>Select the type of booking you want to enter.</p>
         </div>
         <div className="booking-service-tile-grid">
-          {serviceCards.map((item) => (
-            <button
-              type="button"
-              className={`booking-service-tile service-${item.key.toLowerCase()}`}
-              key={item.key}
-              onClick={() => chooseService(item.key)}
-            >
-              <span className="booking-service-icon">
-                <ServiceIcon service={item.key} />
-              </span>
-              <b>{item.title}</b>
-              <small>{item.subtitle}</small>
-              <span className="booking-service-status live">LIVE</span>
-            </button>
-          ))}
+          {serviceCards.map((item) => {
+            const enabled = enabledSegments[item.key];
+            return (
+              <button
+                type="button"
+                className={`booking-service-tile service-${item.key.toLowerCase()}`}
+                key={item.key}
+                disabled={!enabled}
+                title={
+                  enabled
+                    ? item.subtitle
+                    : `${item.title} is not included on this plan. Upgrade options will be offered here later.`
+                }
+                onClick={() => {
+                  if (!enabled) return;
+                  chooseService(item.key);
+                }}
+              >
+                <span className="booking-service-icon">
+                  <ServiceIcon service={item.key} />
+                </span>
+                <b>{item.title}</b>
+                <small>{item.subtitle}</small>
+                <span className={`booking-service-status${enabled ? " live" : ""}`}>{enabled ? "LIVE" : "PLAN"}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
     );

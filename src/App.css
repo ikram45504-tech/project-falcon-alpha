@@ -9419,3 +9419,34 @@ textarea:focus {
 :root[data-theme="midnight"] .secondary:hover {
   background: rgba(255, 255, 255, 0.1) !important;
 }
+
+.capacity-limit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 37, 64, 0.45);
+}
+.capacity-limit-dialog {
+  width: min(440px, 100%);
+  padding: 20px 22px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-card, #fff);
+  color: var(--text-main);
+}
+.capacity-limit-dialog h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.capacity-limit-dialog p {
+  margin: 0 0 16px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.capacity-limit-actions {
+  display: flex;
+  justify-content: flex-end;
+}

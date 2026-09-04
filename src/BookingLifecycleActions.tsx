@@ -1,3 +1,5 @@
+import { useAuth } from "./AuthContext";
+import { normalizeEntitlements } from "./companyEntitlements";
 import "./BookingLifecycleActions.css";
 
 type Props = {
@@ -29,6 +31,9 @@ export default function BookingLifecycleActions({
   onVoid,
   onDelete,
 }: Props) {
+  const { company } = useAuth();
+  const planAllowsAdjust = normalizeEntitlements(company?.entitlements).features.booking_adjustments;
+  const adjustEnabled = canAdjust && planAllowsAdjust;
   return (
     <div className={`booking-lifecycle-actions${compact ? " compact" : ""}`}>
       {onOpen && (
@@ -37,7 +42,17 @@ export default function BookingLifecycleActions({
         </button>
       )}
       {onAdjustment && (
-        <button type="button" className="adjustment" disabled={!canAdjust || busy} onClick={onAdjustment}>
+        <button
+          type="button"
+          className="adjustment"
+          disabled={!adjustEnabled || busy}
+          title={
+            planAllowsAdjust
+              ? undefined
+              : "Booking adjustments are not included on Free Tier. Upgrade plans will be offered here later."
+          }
+          onClick={onAdjustment}
+        >
           {compact ? "Adjust" : "Booking Adjustment"}
         </button>
       )}

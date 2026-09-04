@@ -1,5 +1,7 @@
 import { createPortal } from "react-dom";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../AuthContext";
+import { normalizeEntitlements } from "../companyEntitlements";
 import type { Permission } from "../permissions";
 
 export function MobileMenu({
@@ -17,6 +19,8 @@ export function MobileMenu({
   onBookingRetap?: () => void;
   onPaymentRetap?: () => void;
 }) {
+  const { company } = useAuth();
+  const planFeatures = normalizeEntitlements(company?.entitlements).features;
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
@@ -61,12 +65,12 @@ export function MobileMenu({
               Payments
             </NavLink>
           )}
-          {can("view_statements") && (
+          {can("view_statements") && planFeatures.statements && (
             <NavLink to="/statements" onClick={onClose}>
               Statements
             </NavLink>
           )}
-          {can("view_statements") && (
+          {can("view_statements") && planFeatures.pnl && (
             <NavLink to="/pnl" onClick={onClose}>
               PnL Portfolio
             </NavLink>

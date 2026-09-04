@@ -21,6 +21,7 @@ import type {
   PaymentV2Meta,
 } from "./PaymentV2Db";
 import "./PaymentsV2.css";
+import { normalizeEntitlements } from "./companyEntitlements";
 import { formatAmountInput, parseFormattedAmount, pkrEquivalent } from "./paymentFormatUtils";
 import {
   fromReceivingLabels,
@@ -285,6 +286,7 @@ export function PaymentsModule({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
+  const canViewReceipt = normalizeEntitlements(company.entitlements).features.payment_receipts;
 
   async function load() {
     try {
@@ -1103,7 +1105,23 @@ export function PaymentsModule({
               </button>
             )}
             {editingId && (
-              <button type="button" className="secondary" onClick={viewCurrentReceipt}>
+              <button
+                type="button"
+                className="secondary"
+                disabled={!canViewReceipt}
+                title={
+                  canViewReceipt
+                    ? "View receipt"
+                    : "View Receipt is not included on Free Tier. Upgrade plans will be offered here later."
+                }
+                onClick={() => {
+                  if (!canViewReceipt) {
+                    setMessage("View Receipt needs a higher plan. Upgrade options will be designed next.");
+                    return;
+                  }
+                  viewCurrentReceipt();
+                }}
+              >
                 View Receipt
               </button>
             )}

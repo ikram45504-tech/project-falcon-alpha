@@ -1,4 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../AuthContext";
+import { normalizeEntitlements } from "../companyEntitlements";
 import type { Permission } from "../permissions";
 
 export function DesktopNav({
@@ -15,6 +17,8 @@ export function DesktopNav({
   onPaymentRetap: () => void;
 }) {
   const location = useLocation();
+  const { company } = useAuth();
+  const planFeatures = normalizeEntitlements(company?.entitlements).features;
 
   return (
     <nav
@@ -119,7 +123,7 @@ export function DesktopNav({
           </span>
         </NavLink>
       )}
-      {can("view_statements") && (
+      {can("view_statements") && planFeatures.statements && (
         <NavLink to="/statements" className={({ isActive }) => (isActive ? "active" : "")}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
             <svg
@@ -142,7 +146,7 @@ export function DesktopNav({
           </span>
         </NavLink>
       )}
-      {can("view_statements") && (
+      {can("view_statements") && planFeatures.pnl && (
         <NavLink to="/pnl" className={({ isActive }) => (isActive ? "active" : "")}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
             <svg

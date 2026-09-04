@@ -1,6 +1,7 @@
 import { supabaseMaster } from "./supabaseClient";
 import {
   CompanyEntitlements,
+  EntitlementPlanId,
   MasterCompanyRow,
   CompanyStatus,
   SegmentKey,
@@ -30,6 +31,10 @@ export async function listCompaniesForMaster(): Promise<MasterCompanyRow[]> {
       phone: String(item.phone || ""),
       status: String(item.status || ""),
       entitlements: normalizeEntitlements(item.entitlements),
+      plan_id:
+        item.plan_id === "free" || item.plan_id === "pro" || item.plan_id === "enterprise" || item.plan_id === "custom"
+          ? item.plan_id
+          : "",
       access_ends_at: item.access_ends_at ? String(item.access_ends_at) : null,
       created_at: String(item.created_at || ""),
       updated_at: String(item.updated_at || ""),
@@ -52,6 +57,16 @@ export async function setCompanyEntitlementsForMaster(companyId: string, entitle
     p_entitlements: entitlements,
   });
   if (error) throw new Error(error.message || "Could not update entitlements.");
+  return data;
+}
+
+/** One company-row update. Does not touch bookings, payments, or staff rows. */
+export async function assignCompanyPlanForMaster(companyId: string, planId: EntitlementPlanId) {
+  const { data, error } = await supabaseMaster.rpc("master_assign_company_plan", {
+    p_company_id: companyId,
+    p_plan_id: planId,
+  });
+  if (error) throw new Error(error.message || "Could not assign plan.");
   return data;
 }
 

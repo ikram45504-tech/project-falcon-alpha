@@ -386,6 +386,13 @@ export async function persistSegmentAdjustmentRecord(input: {
   adjustment: SegmentAdjustmentInsert;
   syncAdjustment: (adjustmentId: string, row: Record<string, unknown>, now: string) => Promise<void>;
 }) {
+  const { enforceBookingAdjustmentCreate } = await import("./companyAccess");
+  await enforceBookingAdjustmentCreate(
+    input.companyId,
+    input.tableName,
+    input.bookingId,
+    input.adjustment.adjustmentType,
+  );
   const now = new Date().toISOString();
   const adjustmentId = crypto.randomUUID();
   const row = {

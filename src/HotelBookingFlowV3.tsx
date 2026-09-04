@@ -21,6 +21,8 @@ import {
   type HotelRoomingGuest,
 } from "./HotelOperationalDb";
 import { hotelCountNights, hotelRowHasData, hotelRowSar, hotelRowPkr, calculateHotelSummary } from "./pricingEngines";
+import { useAuth } from "./AuthContext";
+import { ADDITIONAL_BOOKING_DETAILS_UPGRADE, allowsAdditionalBookingDetails } from "./companyEntitlements";
 import "./BookingFinalization.css";
 import "./BookingIdentity.css";
 
@@ -163,6 +165,8 @@ export default function HotelBookingFlowV3({
     validateBookingUb,
     resetState,
   } = useBookingFlowState(companyId, transactionType, entries, "Hotel");
+  const { company } = useAuth();
+  const canAdditionalDetails = allowsAdditionalBookingDetails(company?.entitlements);
 
   const [rows, setRows] = useState<CommercialRow[]>([newCommercialRow()]);
   const [reservations, setReservations] = useState<HotelReservationDetail[]>([]);
@@ -698,8 +702,15 @@ export default function HotelBookingFlowV3({
       {saved && editingId && (
         <section className={`package14-additional ${detailsOpen ? "open" : "closed"}`}>
           <button
+            type="button"
             className="package14-additional-toggle"
+            disabled={!canAdditionalDetails}
+            title={canAdditionalDetails ? undefined : ADDITIONAL_BOOKING_DETAILS_UPGRADE}
             onClick={() => {
+              if (!canAdditionalDetails) {
+                setMessage(ADDITIONAL_BOOKING_DETAILS_UPGRADE);
+                return;
+              }
               const next = !detailsOpen;
               setDetailsOpen(next);
               if (next) syncReservationRows();

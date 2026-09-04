@@ -244,6 +244,9 @@ export async function correctPaymentV2(
   const trimmedReason = reason.trim();
   if (!trimmedReason) throw new Error("Correction reason is required for the office record.");
 
+  const { enforcePaymentCorrectionCreate } = await import("./companyAccess");
+  await enforcePaymentCorrectionCreate(companyId, paymentId);
+
   const beforeSnapshot = buildPaymentSnapshot(beforeEntry, beforeMeta);
   await updatePaymentV2(companyId, paymentId, input, userId);
 

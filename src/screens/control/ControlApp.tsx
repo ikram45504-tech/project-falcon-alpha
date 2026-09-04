@@ -6,6 +6,7 @@ import { PRODUCT_NAME } from "../../brand";
 import { supabaseMaster } from "../../supabaseClient";
 import { isPlatformMaster } from "../../platformMaster";
 import { clearMasterAuthStorage } from "../../desktopReset";
+import { CONTROL_POST_LOGIN_CACHE_RESET_KEY, hardResetPwaCache } from "../../registerPwa";
 import MasterLoginScreen from "./MasterLoginScreen";
 import ControlHomeScreen from "./ControlHomeScreen";
 import { useControlTheme } from "./controlTheme";
@@ -16,6 +17,7 @@ function ControlGate() {
   const { theme, setTheme } = useControlTheme();
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
+  const [cacheResetting, setCacheResetting] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const allowedRef = useRef(false);
@@ -133,13 +135,25 @@ function ControlGate() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!allowed) return;
+    if (sessionStorage.getItem(CONTROL_POST_LOGIN_CACHE_RESET_KEY) !== "1") return;
+    sessionStorage.setItem(CONTROL_POST_LOGIN_CACHE_RESET_KEY, "0");
+    setCacheResetting(true);
+    void hardResetPwaCache({ path: "/control" }).catch((err) => {
+      console.warn("Post-login cache reset failed:", err);
+      setCacheResetting(false);
+    });
+  }, [allowed]);
+
   const signOutMaster = async () => {
+    sessionStorage.removeItem(CONTROL_POST_LOGIN_CACHE_RESET_KEY);
     await supabaseMaster.auth.signOut();
     clearMasterAuthStorage();
     navigate("/control/login", { replace: true });
   };
 
-  if (checking) {
+  if (checking || cacheResetting) {
     return (
       <main className="master-control-page" data-control-theme={theme}>
         <section className="card master-control-card">
@@ -147,7 +161,7 @@ function ControlGate() {
             <TravelHisabLogo size={48} />
           </div>
           <h1>{PRODUCT_NAME}</h1>
-          <p className="muted">Checking Master access...</p>
+          <p className="muted">{cacheResetting ? "Loading latest Control Panel…" : "Checking Master access..."}</p>
         </section>
       </main>
     );

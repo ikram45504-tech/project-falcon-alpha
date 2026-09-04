@@ -30,6 +30,8 @@ import {
   visaNeedsBus,
   calculateVisaSummary,
 } from "./pricingEngines";
+import { useAuth } from "./AuthContext";
+import { ADDITIONAL_BOOKING_DETAILS_UPGRADE, allowsAdditionalBookingDetails } from "./companyEntitlements";
 import "./BookingFinalization.css";
 import "./BookingIdentity.css";
 
@@ -182,6 +184,8 @@ export default function VisaBookingFlowV3({
     validateBookingUb,
     resetState,
   } = useBookingFlowState(companyId, transactionType, entries, "Visa");
+  const { company } = useAuth();
+  const canAdditionalDetails = allowsAdditionalBookingDetails(company?.entitlements);
 
   const [rows, setRows] = useState<VisaRow[]>([newVisaRow()]);
   const [fleet, setFleet] = useState<FleetRow[]>([]);
@@ -875,8 +879,15 @@ export default function VisaBookingFlowV3({
       {saved && editingId && (
         <section className={`package14-additional ${detailsOpen ? "open" : "closed"}`}>
           <button
+            type="button"
             className="package14-additional-toggle"
+            disabled={!canAdditionalDetails}
+            title={canAdditionalDetails ? undefined : ADDITIONAL_BOOKING_DETAILS_UPGRADE}
             onClick={() => {
+              if (!canAdditionalDetails) {
+                setMessage(ADDITIONAL_BOOKING_DETAILS_UPGRADE);
+                return;
+              }
               const next = !detailsOpen;
               setDetailsOpen(next);
               if (next && passengers.length === 0) syncPassengers();

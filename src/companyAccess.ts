@@ -2,7 +2,6 @@ import { supabase } from "./supabaseClient";
 import { isOfflineOnlyBuild } from "./appMode";
 import {
   SegmentKey,
-  SEGMENT_LABELS,
   assertFeatureEnabled,
   assertSegmentEnabled,
   assertWithinLimit,
@@ -105,33 +104,145 @@ export async function enforceCompanyActive(companyId: string) {
   }
 }
 
-export async function enforceSegmentCreate(companyId: string, segment: SegmentKey) {
+const BOOKING_TABLES: Record<SegmentKey, string> = {
+  PACKAGE: "package_bookings",
+  TICKET: "ticket_bookings",
+  HOTEL: "hotel_bookings",
+  VISA: "visa_bookings",
+  TRANSPORT: "transport_bookings",
+  MISC: "misc_bookings",
+};
+
+async function countActiveBookingsForCounterparty(
+  companyId: string,
+  counterpartyId: string,
+  transactionType: "SALE" | "PURCHASE",
+) {
+  const results = await Promise.all(
+    Object.values(BOOKING_TABLES).map((table) =>
+      supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", companyId)
+        .eq("counterparty_id", counterpartyId)
+        .eq("transaction_type", transactionType)
+        .eq("status", "ACTIVE"),
+    ),
+  );
+  let total = 0;
+  for (const result of results) {
+    if (result.error) {
+      console.warn("booking limit count failed", result.error.message);
+      return null;
+    }
+    total += result.count || 0;
+  }
+  return total;
+}
+
+export async function enforceSegmentCreate(
+  companyId: string,
+  segment: SegmentKey,
+  context?: { transactionType?: "SALE" | "PURCHASE"; counterpartyId?: string },
+) {
   await enforceCompanyActive(companyId);
   const access = await loadCompanyAccess(companyId);
   if (!access) return;
   assertSegmentEnabled(access.entitlements, segment);
 
-  const limit = access.entitlements.limits.bookings_per_segment;
-  if (limit == null) return;
+  const transactionType = context?.transactionType;
+  const counterpartyId = context?.counterpartyId?.trim();
+  if (!transactionType || !counterpartyId) return;
 
-  const tableBySegment: Record<SegmentKey, string> = {
-    PACKAGE: "package_bookings",
-    TICKET: "ticket_bookings",
-    HOTEL: "hotel_bookings",
-    VISA: "visa_bookings",
-    TRANSPORT: "transport_bookings",
-    MISC: "misc_bookings",
-  };
-  const table = tableBySegment[segment];
+  const limitKey = transactionType === "SALE" ? "bookings_per_party" : "bookings_per_vendor";
+  if (access.entitlements.limits[limitKey] == null) return;
+
+  const count = await countActiveBookingsForCounterparty(companyId, counterpartyId, transactionType);
+  if (count == null) return;
+  assertWithinLimit(
+    access.entitlements,
+    limitKey,
+    count,
+    transactionType === "SALE" ? "Bookings per party" : "Bookings per vendor",
+  );
+}
+
+export async function enforcePaymentCreate(
+  companyId: string,
+  partyId: string,
+  accountType: "PARTY" | "VENDOR" | string,
+) {
+  await enforceCompanyActive(companyId);
+  const access = await loadCompanyAccess(companyId);
+  if (!access) return;
+  const limitKey = accountType === "VENDOR" ? "payments_per_vendor" : "payments_per_party";
+  if (access.entitlements.limits[limitKey] == null) return;
+
   const { count, error } = await supabase
-    .from(table)
+    .from("payment_entries")
     .select("id", { count: "exact", head: true })
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .eq("party_id", partyId)
+    .eq("status", "ACTIVE");
   if (error) {
-    console.warn("booking limit count failed", error.message);
+    console.warn("payment limit count failed", error.message);
     return;
   }
-  assertWithinLimit(access.entitlements, "bookings_per_segment", count || 0, `${SEGMENT_LABELS[segment]} bookings`);
+  assertWithinLimit(
+    access.entitlements,
+    limitKey,
+    count || 0,
+    accountType === "VENDOR" ? "Payments per vendor" : "Payments per party",
+  );
+}
+
+export async function enforceBookingAdjustmentCreate(
+  companyId: string,
+  tableName: string,
+  bookingId: string,
+  adjustmentType: string,
+) {
+  await enforceCompanyActive(companyId);
+  const access = await loadCompanyAccess(companyId);
+  if (!access) return;
+  assertFeatureEnabled(access.entitlements, "booking_adjustments", "Booking adjustments");
+
+  const isCorrection = adjustmentType === "CORRECTION";
+  const limitKey = isCorrection ? "corrections" : "adjustment_revisions";
+  let query = supabase
+    .from(tableName)
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .eq("booking_id", bookingId);
+  query = isCorrection ? query.eq("adjustment_type", "CORRECTION") : query.neq("adjustment_type", "CORRECTION");
+  const { count, error } = await query;
+  if (error) {
+    console.warn("adjustment limit count failed", error.message);
+    return;
+  }
+  assertWithinLimit(
+    access.entitlements,
+    limitKey,
+    count || 0,
+    isCorrection ? "Booking corrections" : "Booking adjustment revisions",
+  );
+}
+
+export async function enforcePaymentCorrectionCreate(companyId: string, paymentId: string) {
+  await enforceCompanyActive(companyId);
+  const access = await loadCompanyAccess(companyId);
+  if (!access) return;
+  const { count, error } = await supabase
+    .from("payment_corrections")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .eq("payment_id", paymentId)
+    .eq("action", "CORRECTION");
+  if (error) {
+    console.warn("payment correction limit count failed", error.message);
+    return;
+  }
+  assertWithinLimit(access.entitlements, "corrections", count || 0, "Payment corrections");
 }
 
 export async function enforcePartyCreate(companyId: string, accountType: "PARTY" | "VENDOR" | "UNASSIGNED") {
@@ -152,20 +263,21 @@ export async function enforcePartyCreate(companyId: string, accountType: "PARTY"
   assertWithinLimit(access.entitlements, limitKey, count || 0, label);
 }
 
-export async function enforceStaffCreate(companyId: string) {
+export async function enforceStaffCreate(companyId: string, _role?: string) {
   await enforceCompanyActive(companyId);
   const access = await loadCompanyAccess(companyId);
   if (!access) return;
   const { count, error } = await supabase
     .from("users")
     .select("id", { count: "exact", head: true })
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .neq("role", "OWNER");
   if (error) {
     console.warn("staff limit count failed", error.message);
     return;
   }
-  // Count includes owner; limit is total staff_users seats if set.
-  assertWithinLimit(access.entitlements, "staff_users", count || 0, "Staff users");
+  // Owner is not a team seat. staff_users is Team Staff (Employee) only.
+  assertWithinLimit(access.entitlements, "staff_users", count || 0, "Team Staff (Employee)");
 }
 
 export async function enforceFeature(companyId: string, feature: keyof CompanyEntitlements["features"], label: string) {

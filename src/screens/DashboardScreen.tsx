@@ -5,6 +5,7 @@ import { useIsDesktop } from "../useIsDesktop";
 import { getDashboardMetrics, getRecentActivity, DashboardMetrics, RecentActivity } from "../DashboardDb";
 import { usePhoneUi } from "../phoneUi";
 import { useNavigate } from "react-router-dom";
+import { normalizeEntitlements } from "../companyEntitlements";
 // Helper to format currency
 const pkr = (val: number) =>
   new Intl.NumberFormat("en-PK", {
@@ -20,6 +21,7 @@ export default function DashboardScreen() {
   const isDesktop = useIsDesktop();
   const isPhone = usePhoneUi();
   const navigate = useNavigate();
+  const canOpenPnl = normalizeEntitlements(company?.entitlements).features.pnl;
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [recent, setRecent] = useState<RecentActivity[]>([]);
@@ -477,7 +479,7 @@ export default function DashboardScreen() {
               >
                 📔 Master Ledger
               </button>
-              {!isPhone ? (
+              {!isPhone && canOpenPnl ? (
                 <button
                   onClick={() => navigate("/pnl")}
                   style={{

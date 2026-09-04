@@ -14,6 +14,8 @@ import {
 } from "./TicketFlowDb";
 import "./TicketBookingFlow.css";
 import { ticketRowHasData, ticketRowTotal, calculateTicketSummary } from "./pricingEngines";
+import { useAuth } from "./AuthContext";
+import { ADDITIONAL_BOOKING_DETAILS_UPGRADE, allowsAdditionalBookingDetails } from "./companyEntitlements";
 
 type Props = {
   companyId: string;
@@ -107,6 +109,8 @@ export default function TicketBookingFlowV2({
     setMessage,
     validateBookingUb,
   } = useBookingFlowState(companyId, transactionType, entries, "Ticket");
+  const { company } = useAuth();
+  const canAdditionalDetails = allowsAdditionalBookingDetails(company?.entitlements);
   const [rows, setRows] = useState<Row[]>([newRow()]);
 
   useEffect(() => {
@@ -491,7 +495,15 @@ export default function TicketBookingFlowV2({
           <button
             type="button"
             className="ticket17-additional-toggle"
-            onClick={() => setDetailsOpen((value) => !value)}
+            disabled={!canAdditionalDetails}
+            title={canAdditionalDetails ? undefined : ADDITIONAL_BOOKING_DETAILS_UPGRADE}
+            onClick={() => {
+              if (!canAdditionalDetails) {
+                setMessage(ADDITIONAL_BOOKING_DETAILS_UPGRADE);
+                return;
+              }
+              setDetailsOpen((value) => !value);
+            }}
           >
             <div>
               <b>ADDITIONAL BOOKING DETAILS — {ubNumber}</b>

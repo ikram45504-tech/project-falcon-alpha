@@ -16,6 +16,8 @@ import { getPackageAdjustmentSummaryMap, type PackageAdjustmentSummary } from ".
 import { packageEffectiveCount, packageRowHasData, packageRowTotal, calculatePackageSummary } from "./pricingEngines";
 import { bookingDigitsFromUb, bookingUbFromDigits } from "./bookingUb";
 import { bookingLifecycleConfigs } from "./BookingLifecycle";
+import { useAuth } from "./AuthContext";
+import { ADDITIONAL_BOOKING_DETAILS_UPGRADE, allowsAdditionalBookingDetails } from "./companyEntitlements";
 import "./PackageBookingFlow.css";
 
 const serviceLabel = bookingLifecycleConfigs.PACKAGE.label;
@@ -105,6 +107,8 @@ export default function PackageBookingFlowV2({
     validateBookingUb,
     resetState,
   } = useBookingFlowState(companyId, transactionType, entries, serviceLabel);
+  const { company } = useAuth();
+  const canAdditionalDetails = allowsAdditionalBookingDetails(company?.entitlements);
 
   const [rows, setRows] = useState<PackageRowState[]>([newRow("ADULT")]);
   const [registerFilter, setRegisterFilter] = useState<RegisterFilter>("ALL");
@@ -585,7 +589,15 @@ export default function PackageBookingFlowV2({
             <button
               type="button"
               className="package14-additional-toggle"
-              onClick={() => setDetailsOpen((value) => !value)}
+              disabled={!canAdditionalDetails}
+              title={canAdditionalDetails ? undefined : ADDITIONAL_BOOKING_DETAILS_UPGRADE}
+              onClick={() => {
+                if (!canAdditionalDetails) {
+                  setMessage(ADDITIONAL_BOOKING_DETAILS_UPGRADE);
+                  return;
+                }
+                setDetailsOpen((value) => !value);
+              }}
             >
               <div>
                 <b>ADDITIONAL BOOKING DETAILS — {ubNumber}</b>

@@ -18,6 +18,8 @@ import {
 } from "./TransportOperationalDb";
 import { transportRowCalc, transportRowCapacity, calculateTransportSummary } from "./pricingEngines";
 import { useBookingFlowState } from "./useBookingFlowState";
+import { useAuth } from "./AuthContext";
+import { ADDITIONAL_BOOKING_DETAILS_UPGRADE, allowsAdditionalBookingDetails } from "./companyEntitlements";
 import "./BookingFinalization.css";
 import "./BookingIdentity.css";
 
@@ -138,6 +140,8 @@ export default function TransportBookingFlowV3({
     validateBookingUb,
     resetState,
   } = useBookingFlowState(companyId, transactionType, entries, "Transport");
+  const { company } = useAuth();
+  const canAdditionalDetails = allowsAdditionalBookingDetails(company?.entitlements);
 
   const [rows, setRows] = useState<Row[]>([newRow()]);
   const [chain, setChain] = useState(true);
@@ -728,8 +732,15 @@ export default function TransportBookingFlowV3({
       {saved && editingId && (
         <section className={`package14-additional ${detailsOpen ? "open" : "closed"}`}>
           <button
+            type="button"
             className="package14-additional-toggle"
+            disabled={!canAdditionalDetails}
+            title={canAdditionalDetails ? undefined : ADDITIONAL_BOOKING_DETAILS_UPGRADE}
             onClick={() => {
+              if (!canAdditionalDetails) {
+                setMessage(ADDITIONAL_BOOKING_DETAILS_UPGRADE);
+                return;
+              }
               const next = !detailsOpen;
               setDetailsOpen(next);
               if (next) syncOperational();

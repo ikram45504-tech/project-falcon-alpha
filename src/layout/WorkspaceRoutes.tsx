@@ -12,6 +12,7 @@ import { hasPermission } from "../permissions";
 import { useAuth } from "../AuthContext";
 import type { WorkspaceLayoutState } from "./useWorkspaceLayoutState";
 import { Party, Company } from "../db";
+import { normalizeEntitlements } from "../companyEntitlements";
 import { useParams } from "react-router-dom";
 
 function LedgerRoute({
@@ -72,6 +73,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
     loadParties,
     loadFinancialTotals,
   } = state;
+  const planFeatures = normalizeEntitlements(company?.entitlements).features;
 
   return (
     <Routes>
@@ -138,7 +140,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
       <Route
         path="/statements"
         element={
-          company && can("view_statements") ? (
+          company && can("view_statements") && planFeatures.statements ? (
             <StatementsModule
               key={location.key}
               company={company}
@@ -155,7 +157,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
       <Route
         path="/pnl"
         element={
-          company && can("view_statements") ? (
+          company && can("view_statements") && planFeatures.pnl ? (
             <PnLPortfolio companyId={company.id} onBack={() => navigate("/")} />
           ) : (
             <Navigate to="/" />

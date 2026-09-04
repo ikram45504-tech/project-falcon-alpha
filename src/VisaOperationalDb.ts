@@ -229,6 +229,8 @@ export async function saveVisaOperationalDetails(
   userId = "",
 ) {
   await requireEdit(companyId, userId);
+  const { enforceFeature } = await import("./companyAccess");
+  await enforceFeature(companyId, "additional_booking_details", "Additional booking details");
   await ensureSchema();
   const now = new Date().toISOString();
 

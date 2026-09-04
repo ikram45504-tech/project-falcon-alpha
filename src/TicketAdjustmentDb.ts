@@ -352,6 +352,8 @@ async function writeAdjustment(
   auditAction: string,
   auditDetails: string,
 ) {
+  const { enforceBookingAdjustmentCreate } = await import("./companyAccess");
+  await enforceBookingAdjustmentCreate(companyId, "ticket_booking_adjustments", bookingId, adjustment.adjustmentType);
   const now = new Date().toISOString();
   const adjustmentId = crypto.randomUUID();
   const first = lines[0];

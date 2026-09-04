@@ -1,5 +1,10 @@
 import { FormEvent, useState } from "react";
-import { ENTITLEMENT_PLANS, EntitlementPlanId, entitlementsFromPlan } from "../../companyEntitlements";
+import {
+  ENTITLEMENT_PLANS,
+  EntitlementPlanId,
+  entitlementsFromPlan,
+  getEntitlementPlan,
+} from "../../companyEntitlements";
 import { validateStrongPassword } from "../../db";
 import { createCompanyForMaster, type MasterCreatedCompany } from "../../platformMaster";
 
@@ -21,9 +26,10 @@ export default function MasterCreateCompany({ busy, onBusy, onError, onCreated, 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [planId, setPlanId] = useState<EntitlementPlanId>("starter");
+  const [planId, setPlanId] = useState<EntitlementPlanId>("free");
   const [status, setStatus] = useState<"ACTIVE" | "PENDING_APPROVAL">("ACTIVE");
   const [trial14, setTrial14] = useState(false);
+  const selectedCreatePlan = getEntitlementPlan(planId);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -54,7 +60,7 @@ export default function MasterCreateCompany({ busy, onBusy, onError, onCreated, 
         email,
         entitlements: entitlementsFromPlan(planId),
         status,
-        trialDays: trial14 ? 14 : null,
+        trialDays: selectedCreatePlan?.trialDays ?? (trial14 && planId !== "free" ? 14 : null),
       });
       onCreated({ ...created, password });
     } catch (err) {
@@ -141,10 +147,19 @@ export default function MasterCreateCompany({ busy, onBusy, onError, onCreated, 
           <option value="PENDING_APPROVAL">Pending approval</option>
         </select>
       </label>
-      <label className="master-create-trial">
-        <input type="checkbox" checked={trial14} onChange={(e) => setTrial14(e.target.checked)} />
-        <span>14-day trial (auto-suspend when it ends)</span>
-      </label>
+      {selectedCreatePlan?.trialDays ? (
+        <p className="muted">
+          {selectedCreatePlan.label} includes a {selectedCreatePlan.trialDays}-day trial. After it ends, the price is{" "}
+          {selectedCreatePlan.commercialNotes || "billed per 3 months"}.
+        </p>
+      ) : planId !== "free" ? (
+        <label className="master-create-trial">
+          <input type="checkbox" checked={trial14} onChange={(e) => setTrial14(e.target.checked)} />
+          <span>14-day trial (auto-suspend when it ends)</span>
+        </label>
+      ) : (
+        <p className="muted">Free has no trial or access end date.</p>
+      )}
 
       <div className="master-action-row">
         <button type="submit" className="primary" disabled={busy}>

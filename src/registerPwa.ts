@@ -79,6 +79,9 @@ export async function checkAndApplyPwaUpdate(): Promise<"updated" | "current" | 
 }
 
 /** Unregister workers + wipe Cache Storage, then reload (escape hatch for white screens). */
+/** Set to "1" before Master Google login; ControlGate clears cache once after success. */
+export const CONTROL_POST_LOGIN_CACHE_RESET_KEY = "cp_post_login_cache_reset";
+
 export async function hardResetPwaCache(options?: { path?: string }) {
   const { hardResetWebCache } = await import("./AppErrorBoundary");
   if (options?.path) {

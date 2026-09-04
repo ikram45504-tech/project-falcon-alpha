@@ -2297,7 +2297,7 @@ export async function createCompanyUser(companyId: string, actorUserId: string, 
   await requirePermission(companyId, actorUserId, "manage_users");
   validateEmployeeRole(input.role);
   const { enforceStaffCreate } = await import("./companyAccess");
-  await enforceStaffCreate(companyId);
+  await enforceStaffCreate(companyId, input.role);
 
   const database = await db();
   const fullName = input.fullName.trim();

@@ -11,6 +11,7 @@ import { usePhoneUi } from "./phoneUi";
 import { useWorkspaceLayoutState } from "./layout/useWorkspaceLayoutState";
 import { DesktopAppLayout } from "./desktop/DesktopAppLayout";
 import { MobileAppLayout } from "./mobile/MobileAppLayout";
+import CapacityLimitDialog from "./CapacityLimitDialog";
 import { isOfflineOnlyBuild } from "./appMode";
 
 import LoginScreen from "./screens/LoginScreen";
@@ -26,10 +27,20 @@ function AppLayout() {
   const state = useWorkspaceLayoutState();
 
   if (isPhone) {
-    return <MobileAppLayout state={state} />;
+    return (
+      <>
+        <MobileAppLayout state={state} />
+        <CapacityLimitDialog />
+      </>
+    );
   }
 
-  return <DesktopAppLayout state={state} />;
+  return (
+    <>
+      <DesktopAppLayout state={state} />
+      <CapacityLimitDialog />
+    </>
+  );
 }
 
 function RouterContent() {

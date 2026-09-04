@@ -18,6 +18,8 @@ import {
   type MiscOperationalRow,
 } from "./MiscOperationalDb";
 import { miscRowCalc, miscRowHasData, calculateMiscSummary } from "./pricingEngines";
+import { useAuth } from "./AuthContext";
+import { ADDITIONAL_BOOKING_DETAILS_UPGRADE, allowsAdditionalBookingDetails } from "./companyEntitlements";
 import "./BookingFinalization.css";
 import "./BookingIdentity.css";
 
@@ -96,6 +98,8 @@ export default function MiscBookingFlowV3({
     validateBookingUb,
     resetState,
   } = useBookingFlowState(companyId, transactionType, entries, "Misc");
+  const { company } = useAuth();
+  const canAdditionalDetails = allowsAdditionalBookingDetails(company?.entitlements);
 
   const [rows, setRows] = useState<Row[]>([newRow()]);
   const [operationalRows, setOperationalRows] = useState<OperationalRow[]>([]);
@@ -502,8 +506,15 @@ export default function MiscBookingFlowV3({
       {saved && editingId && (
         <section className={`package14-additional ${detailsOpen ? "open" : "closed"}`}>
           <button
+            type="button"
             className="package14-additional-toggle"
+            disabled={!canAdditionalDetails}
+            title={canAdditionalDetails ? undefined : ADDITIONAL_BOOKING_DETAILS_UPGRADE}
             onClick={() => {
+              if (!canAdditionalDetails) {
+                setMessage(ADDITIONAL_BOOKING_DETAILS_UPGRADE);
+                return;
+              }
               const next = !detailsOpen;
               setDetailsOpen(next);
               if (next) syncOperational();

@@ -526,6 +526,8 @@ function auditStatement(
 
 export async function createPaymentV2(companyId: string, input: PaymentV2Input, userId = "") {
   const { account, amount, roe, paidAmount } = await validateAndResolveAccount(companyId, input);
+  const { enforcePaymentCreate } = await import("./companyAccess");
+  await enforcePaymentCreate(companyId, input.partyId, account.account_type);
   const documentNo = input.documentNo.trim().toUpperCase();
   const settlement = input.settlementAccount.trim();
   const movement = resolveMovement(input, account.name, settlement);

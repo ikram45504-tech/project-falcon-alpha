@@ -22,6 +22,7 @@ import {
 import { getChronologicalLedger, sliceLedgerRowsForPeriod, type LedgerRow } from "./LedgerEngine";
 import { getPaymentV2MetaForPayments, type PaymentV2Meta } from "./PaymentV2Db";
 import { downloadExcel } from "./exportUtils";
+import { normalizeEntitlements } from "./companyEntitlements";
 
 type PeriodType = "FULL_LEDGER" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM";
 
@@ -126,6 +127,12 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
   const [savingPdf, setSavingPdf] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const canPrintView = normalizeEntitlements(company.entitlements).features.statement_print;
+
+  useEffect(() => {
+    if (!canPrintView && previewMode === "print") setPreviewMode("pdf");
+  }, [canPrintView, previewMode]);
+
   /** Ignores stale async loads when the user switches accounts quickly. */
   const loadRequestIdRef = useRef(0);
 
@@ -599,7 +606,19 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
           <button
             type="button"
             className={previewMode === "print" ? "active" : ""}
-            onClick={() => setPreviewMode("print")}
+            disabled={!canPrintView}
+            title={
+              canPrintView
+                ? "Print view"
+                : "Print view is not included on Free Tier. Upgrade plans will be offered here later."
+            }
+            onClick={() => {
+              if (!canPrintView) {
+                setMessage("Print view needs a higher plan. Upgrade options will be designed next.");
+                return;
+              }
+              setPreviewMode("print");
+            }}
           >
             Print view
           </button>

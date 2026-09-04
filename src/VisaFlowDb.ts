@@ -574,7 +574,10 @@ export async function getVisaBookings(companyId: string, search = "", scope?: Bo
 export async function createVisaBooking(companyId: string, input: VisaBookingInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "create_bookings");
   const { enforceSegmentCreate } = await import("./companyAccess");
-  await enforceSegmentCreate(companyId, "VISA");
+  await enforceSegmentCreate(companyId, "VISA", {
+    transactionType: input.transactionType,
+    counterpartyId: input.counterpartyId,
+  });
   const result = await validateVisaBooking(companyId, input);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();

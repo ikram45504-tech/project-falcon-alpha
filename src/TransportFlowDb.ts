@@ -370,7 +370,10 @@ export async function getTransportBookings(companyId: string, search = "", scope
 export async function createTransportBooking(companyId: string, input: TransportBookingInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "create_bookings");
   const { enforceSegmentCreate } = await import("./companyAccess");
-  await enforceSegmentCreate(companyId, "TRANSPORT");
+  await enforceSegmentCreate(companyId, "TRANSPORT", {
+    transactionType: input.transactionType,
+    counterpartyId: input.counterpartyId,
+  });
   const result = await validateTransportBooking(companyId, input);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
