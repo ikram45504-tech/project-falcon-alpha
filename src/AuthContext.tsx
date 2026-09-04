@@ -12,7 +12,7 @@ import {
   restoreLocalSession,
   OFFLINE_SESSION_STORAGE_KEY,
 } from "./db";
-import { clearAuthStorage } from "./desktopReset";
+import { clearAgencyAuthStorage } from "./desktopReset";
 import { UserRole } from "./permissions";
 import {
   clearPasswordRecoveryPending,
@@ -30,6 +30,12 @@ export type AuthGate = "none" | "recovery" | "google-link";
 function normalizeUserRole(value: string): UserRole {
   const upper = value.trim().toUpperCase();
   return USER_ROLES.includes(upper as UserRole) ? (upper as UserRole) : "VIEW_ONLY";
+}
+
+/** Master Control Panel uses its own gate — agency auth must not clear the shared Supabase session. */
+function isControlPanelPath() {
+  if (typeof window === "undefined") return false;
+  return window.location.pathname.replace(/\/$/, "").startsWith("/control");
 }
 
 type AuthContextType = {
@@ -195,6 +201,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // /control is Master-only UI. Never sign out or force google-link here.
+      if (isControlPanelPath()) {
+        if (!mounted || gen !== loadGen) return;
+        clearPasswordRecoveryPending();
+        authGateRef.current = "none";
+        setAuthGate("none");
+        setPendingAuthEmail("");
+        setSession(null);
+        setCompany(null);
+        setError("");
+        setIsInitialized(true);
+        return;
+      }
+
       if (!force && authGateRef.current === "google-link") {
         enterGoogleLink(initialUser.email || "");
         return;
@@ -233,7 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           await supabase.auth.signOut({ scope: "local" });
-          clearAuthStorage();
+          clearAgencyAuthStorage();
           if (!mounted || gen !== loadGen) return;
           authGateRef.current = "none";
           setAuthGate("none");
@@ -285,7 +305,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           await supabase.auth.signOut({ scope: "local" });
-          clearAuthStorage();
+          clearAgencyAuthStorage();
           if (!mounted || gen !== loadGen) return;
           authGateRef.current = "none";
           setAuthGate("none");
@@ -432,7 +452,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (isOfflineOnlyBuild()) {
       sessionStorage.removeItem(OFFLINE_SESSION_STORAGE_KEY);
-      clearAuthStorage();
+      clearAgencyAuthStorage();
       setBackgroundSyncCompanyId("");
       setSession(null);
       setCompany(null);
@@ -441,7 +461,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     await supabase.auth.signOut();
-    clearAuthStorage();
+    clearAgencyAuthStorage();
     setBackgroundSyncCompanyId("");
     setSession(null);
     setCompany(null);

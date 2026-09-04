@@ -3,9 +3,9 @@ import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import TravelHisabLogo from "../../TravelHisabLogo";
 import { PRODUCT_NAME } from "../../brand";
-import { supabase } from "../../supabaseClient";
+import { supabaseMaster } from "../../supabaseClient";
 import { isPlatformMaster } from "../../platformMaster";
-import { clearAuthStorage } from "../../desktopReset";
+import { clearMasterAuthStorage } from "../../desktopReset";
 import MasterLoginScreen from "./MasterLoginScreen";
 import ControlHomeScreen from "./ControlHomeScreen";
 import { useControlTheme } from "./controlTheme";
@@ -29,9 +29,8 @@ function ControlGate() {
     let mounted = true;
     let applyGen = 0;
 
-    async function applySession(session: Session | null, options?: { showChecking?: boolean; soft?: boolean }) {
+    async function applySession(session: Session | null, options?: { showChecking?: boolean }) {
       const showChecking = Boolean(options?.showChecking);
-      const soft = Boolean(options?.soft);
       const gen = ++applyGen;
 
       if (showChecking) {
@@ -41,17 +40,6 @@ function ControlGate() {
 
       try {
         if (!session?.user) {
-          if (!mounted || gen !== applyGen) return;
-          // Tab focus / token refresh can briefly report no session — do not kick an active Master out.
-          if (soft && allowedRef.current) {
-            setChecking(false);
-            return;
-          }
-          allowedRef.current = false;
-          setAllowed(false);
-          setEmail("");
-          setError("");
-          setChecking(false);
           return;
         }
 
@@ -59,8 +47,7 @@ function ControlGate() {
         if (!mounted || gen !== applyGen) return;
 
         if (!master) {
-          // Network blip on tab switch: keep the existing Master session.
-          if (soft && allowedRef.current) {
+          if (allowedRef.current) {
             setChecking(false);
             return;
           }
@@ -79,7 +66,7 @@ function ControlGate() {
         setChecking(false);
       } catch (err) {
         if (!mounted || gen !== applyGen) return;
-        if (soft && allowedRef.current) {
+        if (allowedRef.current) {
           setChecking(false);
           return;
         }
@@ -90,19 +77,29 @@ function ControlGate() {
       }
     }
 
+    function markLoggedOut() {
+      allowedRef.current = false;
+      setAllowed(false);
+      setEmail("");
+      setError("");
+      setChecking(false);
+    }
+
     void (async () => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
-      await applySession(session, { showChecking: true });
+      } = await supabaseMaster.auth.getSession();
+      if (session?.user) {
+        await applySession(session, { showChecking: true });
+      }
     })();
 
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      // Use the event session — do not call getSession() inside this callback (lock/race).
+    const { data } = supabaseMaster.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
-        void applySession(null);
+        markLoggedOut();
         return;
       }
+
       if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         if (session?.user) {
           setEmail(session.user.email || "");
@@ -112,23 +109,29 @@ function ControlGate() {
         }
         return;
       }
-      if (event === "SIGNED_IN") {
-        void applySession(session, { showChecking: true });
-        return;
+
+      if (session?.user) {
+        void applySession(session, { showChecking: event === "SIGNED_IN" || event === "INITIAL_SESSION" });
       }
-      // INITIAL_SESSION and other events: soft apply so tab focus cannot bounce to login.
-      void applySession(session, { soft: true });
     });
+
+    // If storage is slow to hydrate after tab resume, wait before treating as logged out.
+    const settleTimer = window.setTimeout(() => {
+      if (mounted && !allowedRef.current) {
+        markLoggedOut();
+      }
+    }, 4000);
 
     return () => {
       mounted = false;
+      window.clearTimeout(settleTimer);
       data.subscription.unsubscribe();
     };
   }, []);
 
   const signOutMaster = async () => {
-    await supabase.auth.signOut();
-    clearAuthStorage();
+    await supabaseMaster.auth.signOut();
+    clearMasterAuthStorage();
     navigate("/control/login", { replace: true });
   };
 

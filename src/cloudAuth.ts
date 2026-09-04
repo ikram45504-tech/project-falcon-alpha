@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase, supabaseMaster } from "./supabaseClient";
 import { googleOAuthRedirectTo, masterGoogleOAuthRedirectTo, passwordResetRedirectTo } from "./authRedirect";
 import { resolveLoginEmail } from "./loginAuth";
 
@@ -41,7 +41,7 @@ export async function signInWithGoogle() {
 }
 
 export async function signInWithGoogleAsMaster() {
-  const { error } = await supabase.auth.signInWithOAuth({
+  const { error } = await supabaseMaster.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: masterGoogleOAuthRedirectTo(),

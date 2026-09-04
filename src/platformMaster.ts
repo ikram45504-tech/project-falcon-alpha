@@ -1,8 +1,8 @@
-import { supabase } from "./supabaseClient";
+import { supabaseMaster } from "./supabaseClient";
 import { CompanyEntitlements, MasterCompanyRow, CompanyStatus, normalizeEntitlements } from "./companyEntitlements";
 
 export async function isPlatformMaster(): Promise<boolean> {
-  const { data, error } = await supabase.rpc("master_is_platform_admin");
+  const { data, error } = await supabaseMaster.rpc("master_is_platform_admin");
   if (error) {
     console.warn("master_is_platform_admin failed", error.message);
     return false;
@@ -11,7 +11,7 @@ export async function isPlatformMaster(): Promise<boolean> {
 }
 
 export async function listCompaniesForMaster(): Promise<MasterCompanyRow[]> {
-  const { data, error } = await supabase.rpc("master_list_companies");
+  const { data, error } = await supabaseMaster.rpc("master_list_companies");
   if (error) throw new Error(error.message || "Could not load companies.");
   const rows = Array.isArray(data) ? data : [];
   return rows.map((row) => {
@@ -31,7 +31,7 @@ export async function listCompaniesForMaster(): Promise<MasterCompanyRow[]> {
 }
 
 export async function setCompanyStatusForMaster(companyId: string, status: CompanyStatus) {
-  const { data, error } = await supabase.rpc("master_set_company_status", {
+  const { data, error } = await supabaseMaster.rpc("master_set_company_status", {
     p_company_id: companyId,
     p_status: status,
   });
@@ -40,7 +40,7 @@ export async function setCompanyStatusForMaster(companyId: string, status: Compa
 }
 
 export async function setCompanyEntitlementsForMaster(companyId: string, entitlements: CompanyEntitlements) {
-  const { data, error } = await supabase.rpc("master_set_company_entitlements", {
+  const { data, error } = await supabaseMaster.rpc("master_set_company_entitlements", {
     p_company_id: companyId,
     p_entitlements: entitlements,
   });
@@ -58,7 +58,7 @@ export type WipeCompanyResult = {
 
 /** Permanently deletes a company and all related cloud data (Master only). */
 export async function wipeCompanyForMaster(companyId: string): Promise<WipeCompanyResult> {
-  const { data, error } = await supabase.rpc("master_wipe_company", {
+  const { data, error } = await supabaseMaster.rpc("master_wipe_company", {
     p_company_id: companyId,
   });
   if (error) throw new Error(error.message || "Could not delete company data.");

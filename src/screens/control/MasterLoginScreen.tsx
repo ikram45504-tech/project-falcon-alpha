@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import TravelHisabLogo from "../../TravelHisabLogo";
 import { COMPANY_NAME, PRODUCT_NAME } from "../../brand";
 import { googleAuthErrorFromUrl, signInWithGoogleAsMaster } from "../../cloudAuth";
-import { supabase } from "../../supabaseClient";
+import { supabaseMaster } from "../../supabaseClient";
 import { isPlatformMaster } from "../../platformMaster";
 import { hardResetPwaCache } from "../../registerPwa";
 import { useControlTheme } from "./controlTheme";
@@ -36,7 +36,7 @@ export default function MasterLoginScreen() {
     void (async () => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await supabaseMaster.auth.getSession();
       if (!session?.user || !mounted) return;
       const master = await isPlatformMaster();
       if (master && mounted) navigate("/control", { replace: true });
