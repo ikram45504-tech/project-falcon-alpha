@@ -250,6 +250,86 @@
   color: var(--cp-text);
 }
 
+.master-list-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.master-search-box {
+  flex: 1 1 180px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  padding: 0 10px;
+  background: var(--cp-surface-2, transparent);
+  min-height: 40px;
+}
+
+.master-search-icon {
+  color: var(--cp-muted);
+  font-size: 14px;
+}
+
+.master-search-box input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--cp-text);
+  min-width: 0;
+  padding: 8px 0;
+}
+
+.master-sort-box {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--cp-muted);
+  flex: 0 0 auto;
+}
+
+.master-sort-box select,
+.master-plan-select select {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface-2, transparent);
+  color: var(--cp-text);
+  padding: 8px 10px;
+  min-width: 140px;
+}
+
+.master-plan-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 8px;
+}
+
+.master-plan-select {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--cp-muted);
+  flex: 1 1 200px;
+}
+
+.master-plan-hint {
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+
+.master-plan-row .ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .master-company-list {
   list-style: none;
   margin: 0;

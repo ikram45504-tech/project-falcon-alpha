@@ -37,6 +37,115 @@ export const DEFAULT_COMPANY_ENTITLEMENTS: CompanyEntitlements = {
   },
 };
 
+export type EntitlementPlanId = "starter" | "standard" | "pro";
+
+export type EntitlementPlan = {
+  id: EntitlementPlanId;
+  label: string;
+  description: string;
+  entitlements: CompanyEntitlements;
+};
+
+function cloneEntitlements(value: CompanyEntitlements): CompanyEntitlements {
+  return {
+    segments: { ...value.segments },
+    features: { ...value.features },
+    limits: { ...value.limits },
+  };
+}
+
+/** Named capacity presets for Master Control Panel (Apply plan → still Save capacity). */
+export const ENTITLEMENT_PLANS: EntitlementPlan[] = [
+  {
+    id: "starter",
+    label: "Starter",
+    description: "Package / Ticket / Hotel · adjustments + statements · capped seats",
+    entitlements: {
+      segments: {
+        PACKAGE: true,
+        TICKET: true,
+        HOTEL: true,
+        VISA: false,
+        TRANSPORT: false,
+        MISC: false,
+      },
+      features: {
+        booking_adjustments: true,
+        statements: true,
+        pnl: false,
+      },
+      limits: {
+        bookings_per_segment: 500,
+        parties: 70,
+        vendors: 10,
+        staff_users: 3,
+      },
+    },
+  },
+  {
+    id: "standard",
+    label: "Standard",
+    description: "All segments · adjustments + statements · mid limits",
+    entitlements: {
+      segments: {
+        PACKAGE: true,
+        TICKET: true,
+        HOTEL: true,
+        VISA: true,
+        TRANSPORT: true,
+        MISC: true,
+      },
+      features: {
+        booking_adjustments: true,
+        statements: true,
+        pnl: false,
+      },
+      limits: {
+        bookings_per_segment: 1500,
+        parties: 150,
+        vendors: 30,
+        staff_users: 8,
+      },
+    },
+  },
+  {
+    id: "pro",
+    label: "Pro",
+    description: "All segments + P&L · high / unlimited caps",
+    entitlements: {
+      segments: {
+        PACKAGE: true,
+        TICKET: true,
+        HOTEL: true,
+        VISA: true,
+        TRANSPORT: true,
+        MISC: true,
+      },
+      features: {
+        booking_adjustments: true,
+        statements: true,
+        pnl: true,
+      },
+      limits: {
+        bookings_per_segment: null,
+        parties: null,
+        vendors: null,
+        staff_users: 25,
+      },
+    },
+  },
+];
+
+export function getEntitlementPlan(id: EntitlementPlanId): EntitlementPlan | undefined {
+  return ENTITLEMENT_PLANS.find((plan) => plan.id === id);
+}
+
+export function entitlementsFromPlan(id: EntitlementPlanId): CompanyEntitlements {
+  const plan = getEntitlementPlan(id);
+  if (!plan) return cloneEntitlements(DEFAULT_COMPANY_ENTITLEMENTS);
+  return cloneEntitlements(plan.entitlements);
+}
+
 export const SEGMENT_LABELS: Record<SegmentKey, string> = {
   PACKAGE: "Package",
   TICKET: "Ticket",

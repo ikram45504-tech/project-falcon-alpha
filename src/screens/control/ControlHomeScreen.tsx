@@ -1,10 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CompanyEntitlements,
+  ENTITLEMENT_PLANS,
+  EntitlementPlanId,
   MasterCompanyRow,
   SEGMENT_LABELS,
   SegmentKey,
   companyStatusLabel,
+  entitlementsFromPlan,
   normalizeEntitlements,
 } from "../../companyEntitlements";
 import {
@@ -17,6 +20,8 @@ import { hardResetPwaCache } from "../../registerPwa";
 import { ControlTheme } from "./controlTheme";
 
 const SEGMENTS = Object.keys(SEGMENT_LABELS) as SegmentKey[];
+
+type CompanySort = "name_asc" | "status" | "newest";
 
 function statusTone(status: string) {
   switch (String(status || "").toUpperCase()) {
@@ -32,6 +37,28 @@ function statusTone(status: string) {
   }
 }
 
+function statusSortRank(status: string) {
+  switch (String(status || "").toUpperCase()) {
+    case "PENDING_APPROVAL":
+      return 0;
+    case "ACTIVE":
+      return 1;
+    case "SUSPENDED":
+      return 2;
+    case "INACTIVE":
+      return 3;
+    default:
+      return 4;
+  }
+}
+
+function companyMatchesSearch(row: MasterCompanyRow, query: string) {
+  const clean = query.trim().toLowerCase();
+  if (!clean) return true;
+  const haystack = [row.name, row.company_code, row.email, row.phone].filter(Boolean).join(" ").toLowerCase();
+  return haystack.includes(clean);
+}
+
 type Props = {
   masterEmail: string;
   theme: ControlTheme;
@@ -45,6 +72,9 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [filter, setFilter] = useState<"ALL" | "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED">("ALL");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<CompanySort>("newest");
+  const [planId, setPlanId] = useState<EntitlementPlanId | "">("");
   const [selectedId, setSelectedId] = useState<string>("");
   const [draft, setDraft] = useState<CompanyEntitlements | null>(null);
   const [busyId, setBusyId] = useState("");
@@ -88,17 +118,31 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   );
 
   const visible = useMemo(() => {
-    if (filter === "ALL") return rows;
-    return rows.filter((row) => String(row.status).toUpperCase() === filter);
-  }, [rows, filter]);
+    const filtered = rows.filter((row) => {
+      if (filter !== "ALL" && String(row.status).toUpperCase() !== filter) return false;
+      return companyMatchesSearch(row, search);
+    });
+    return [...filtered].sort((a, b) => {
+      if (sort === "name_asc") return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      if (sort === "status") {
+        const rank = statusSortRank(a.status) - statusSortRank(b.status);
+        if (rank !== 0) return rank;
+        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      }
+      // newest first
+      return String(b.created_at || "").localeCompare(String(a.created_at || "")) || a.name.localeCompare(b.name);
+    });
+  }, [rows, filter, search, sort]);
 
   const selected = rows.find((row) => row.id === selectedId) || null;
   const showDetail = Boolean(selected && draft);
   const layoutClass = isNarrow ? (showDetail ? "mobile-detail" : "mobile-list") : "";
+  const selectedPlan = planId ? ENTITLEMENT_PLANS.find((plan) => plan.id === planId) : undefined;
 
   const openCompany = (row: MasterCompanyRow) => {
     setSelectedId(row.id);
     setDraft(normalizeEntitlements(row.entitlements));
+    setPlanId("");
     setMessage("");
     setError("");
   };
@@ -106,6 +150,19 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   const closeDetail = () => {
     setSelectedId("");
     setDraft(null);
+    setPlanId("");
+  };
+
+  const applyPlanToDraft = () => {
+    if (!planId || !draft) return;
+    setDraft(entitlementsFromPlan(planId));
+    const plan = ENTITLEMENT_PLANS.find((item) => item.id === planId);
+    setMessage(
+      plan
+        ? `Applied ${plan.label} plan to the form. Click Save capacity to persist.`
+        : "Plan applied to the form. Click Save capacity to persist.",
+    );
+    setError("");
   };
 
   const runStatus = async (companyId: string, status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "INACTIVE") => {
@@ -244,10 +301,35 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
             ))}
           </div>
 
+          <div className="master-list-tools">
+            <label className="master-search-box">
+              <span className="master-search-icon" aria-hidden="true">
+                ⌕
+              </span>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name, code, email…"
+                aria-label="Search companies"
+              />
+            </label>
+            <label className="master-sort-box">
+              Sort
+              <select value={sort} onChange={(e) => setSort(e.target.value as CompanySort)} aria-label="Sort companies">
+                <option value="newest">Newest first</option>
+                <option value="name_asc">Name A–Z</option>
+                <option value="status">Status</option>
+              </select>
+            </label>
+          </div>
+
           {loading ? (
             <p className="muted">Loading companies...</p>
           ) : visible.length === 0 ? (
-            <p className="muted">No companies in this filter.</p>
+            <p className="muted">
+              {search.trim() ? "No companies match this search." : "No companies in this filter."}
+            </p>
           ) : (
             <ul className="master-company-list">
               {visible.map((row) => (
@@ -342,6 +424,32 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
               </div>
 
               <form className="master-entitlements-form" onSubmit={(e) => void saveEntitlements(e)}>
+                <h3>Plan template</h3>
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Apply a preset into this form, then click <strong>Save capacity</strong> to store it.
+                </p>
+                <div className="master-plan-row">
+                  <label className="master-plan-select">
+                    Plan
+                    <select
+                      value={planId}
+                      onChange={(e) => setPlanId(e.target.value as EntitlementPlanId | "")}
+                      aria-label="Entitlement plan template"
+                    >
+                      <option value="">Custom (current form)</option>
+                      {ENTITLEMENT_PLANS.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" className="ghost" disabled={!planId} onClick={applyPlanToDraft}>
+                    Apply plan
+                  </button>
+                </div>
+                {selectedPlan ? <p className="master-plan-hint muted">{selectedPlan.description}</p> : null}
+
                 <h3>Segments</h3>
                 <div className="master-check-grid">
                   {SEGMENTS.map((key) => (
