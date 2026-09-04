@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import type { Session } from "@supabase/supabase-js";
 import TravelHisabLogo from "../../TravelHisabLogo";
 import { PRODUCT_NAME } from "../../brand";
 import { supabase } from "../../supabaseClient";
@@ -17,6 +18,7 @@ function ControlGate() {
   const [allowed, setAllowed] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const allowedRef = useRef(false);
 
   useEffect(() => {
     document.documentElement.classList.add("master-control-screen");
@@ -25,44 +27,99 @@ function ControlGate() {
 
   useEffect(() => {
     let mounted = true;
-    async function boot() {
-      setChecking(true);
-      setError("");
+    let applyGen = 0;
+
+    async function applySession(session: Session | null, options?: { showChecking?: boolean; soft?: boolean }) {
+      const showChecking = Boolean(options?.showChecking);
+      const soft = Boolean(options?.soft);
+      const gen = ++applyGen;
+
+      if (showChecking) {
+        setChecking(true);
+        setError("");
+      }
+
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
         if (!session?.user) {
-          if (mounted) {
-            setAllowed(false);
+          if (!mounted || gen !== applyGen) return;
+          // Tab focus / token refresh can briefly report no session — do not kick an active Master out.
+          if (soft && allowedRef.current) {
             setChecking(false);
+            return;
           }
+          allowedRef.current = false;
+          setAllowed(false);
+          setEmail("");
+          setError("");
+          setChecking(false);
           return;
         }
+
         const master = await isPlatformMaster();
-        if (!mounted) return;
+        if (!mounted || gen !== applyGen) return;
+
         if (!master) {
+          // Network blip on tab switch: keep the existing Master session.
+          if (soft && allowedRef.current) {
+            setChecking(false);
+            return;
+          }
+          allowedRef.current = false;
           setAllowed(false);
           setEmail(session.user.email || "");
           setError("This Google account is not a Master account.");
           setChecking(false);
           return;
         }
+
+        allowedRef.current = true;
         setEmail(session.user.email || "");
         setAllowed(true);
+        setError("");
         setChecking(false);
       } catch (err) {
-        if (!mounted) return;
+        if (!mounted || gen !== applyGen) return;
+        if (soft && allowedRef.current) {
+          setChecking(false);
+          return;
+        }
         setError(err instanceof Error ? err.message : String(err));
+        allowedRef.current = false;
         setAllowed(false);
         setChecking(false);
       }
     }
-    void boot();
 
-    const { data } = supabase.auth.onAuthStateChange(() => {
-      void boot();
+    void (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      await applySession(session, { showChecking: true });
+    })();
+
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      // Use the event session — do not call getSession() inside this callback (lock/race).
+      if (event === "SIGNED_OUT") {
+        void applySession(null);
+        return;
+      }
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        if (session?.user) {
+          setEmail(session.user.email || "");
+          allowedRef.current = true;
+          setAllowed(true);
+          setChecking(false);
+        }
+        return;
+      }
+      if (event === "SIGNED_IN") {
+        void applySession(session, { showChecking: true });
+        return;
+      }
+      // INITIAL_SESSION and other events: soft apply so tab focus cannot bounce to login.
+      void applySession(session, { soft: true });
     });
+
     return () => {
       mounted = false;
       data.subscription.unsubscribe();
