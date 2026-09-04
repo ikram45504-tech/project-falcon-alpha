@@ -163,6 +163,42 @@ export function buildLedgerRows(transactions: LedgerTransaction[], party: Party)
   });
 }
 
+/** Closing balance = last ACTIVE row's running balance (same engine as Statements). */
+export function closingBalanceFromLedgerRows(rows: LedgerRow[]) {
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    if (rows[i].status === "ACTIVE") return Number(rows[i].running_balance || 0);
+  }
+  return 0;
+}
+
+/**
+ * Summary cards that always reconcile to `closingBalanceFromLedgerRows`
+ * via bookingActivity − paymentSettlement (same formula as accountBalanceFromTotals).
+ */
+export function summarizeAccountLedger(rows: LedgerRow[], accountType: Party["account_type"]) {
+  const isVendor = accountType === "VENDOR";
+  let bookingActivity = 0;
+  let paymentSettlement = 0;
+
+  for (const row of rows) {
+    if (row.status !== "ACTIVE") continue;
+    const debit = Number(row.debit || 0);
+    const credit = Number(row.credit || 0);
+    if (row.kind === "PAYMENT") {
+      paymentSettlement += isVendor ? debit - credit : credit - debit;
+    } else {
+      bookingActivity += isVendor ? credit - debit : debit - credit;
+    }
+  }
+
+  const closingBalance = closingBalanceFromLedgerRows(rows);
+  return {
+    bookingActivity,
+    paymentSettlement,
+    closingBalance,
+  };
+}
+
 /**
  * Period view of a full chronological ledger: keeps row debit/credit,
  * but recomputes running balance from the statement opening balance so the

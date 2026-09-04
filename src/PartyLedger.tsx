@@ -9,6 +9,7 @@ import {
   effectiveBookingAmount,
   getBookingAccountingEntries,
 } from "./BookingAccounting";
+import { getChronologicalLedger, summarizeAccountLedger, type LedgerRow } from "./LedgerEngine";
 import { bookingServiceDisplayLabel, type BookingServiceName } from "./BookingLifecycle";
 import { recordPaymentVoidHistory } from "./PaymentCorrectionDb";
 import PaymentReceiptPreviewModal from "./PaymentReceiptPreviewModal";
@@ -21,13 +22,7 @@ import {
   type PaymentTransactionKind,
   type PaymentV2Meta,
 } from "./PaymentV2Db";
-import {
-  accountBalanceFromTotals,
-  inferPaymentKind,
-  paymentKindLabel,
-  signedPaymentSettlement,
-  sumSignedPaymentSettlements,
-} from "./accountBalance";
+import { inferPaymentKind, paymentKindLabel, signedPaymentSettlement } from "./accountBalance";
 import {
   hasSarFigure,
   statementActivityLabel,
@@ -100,6 +95,7 @@ export default function PartyLedger({
 }: Props) {
   const [bookings, setBookings] = useState<BookingAccountingEntry[]>([]);
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
+  const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
   const [metaMap, setMetaMap] = useState<Map<string, PaymentV2Meta>>(() => new Map());
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -115,9 +111,10 @@ export default function PartyLedger({
   async function load() {
     setLoading(true);
     try {
-      const [bookingRows, paymentRows] = await Promise.all([
+      const [bookingRows, paymentRows, chronoRows] = await Promise.all([
         getBookingAccountingEntries(companyId, party.id),
         getPayments(companyId, "", party.id),
+        getChronologicalLedger(companyId, party),
       ]);
       const metadata = await getPaymentV2MetaForPayments(
         companyId,
@@ -130,6 +127,7 @@ export default function PartyLedger({
       const relevant = party.account_type === "PARTY" ? "SALE" : party.account_type === "VENDOR" ? "PURCHASE" : null;
       setBookings(bookingRows.filter((row) => !relevant || row.transaction_type === relevant));
       setPayments(paymentRows);
+      setLedgerRows(chronoRows);
       setMetaMap(metadata);
       setLatestAdjustments(buildLatestAdjustmentMap(adjustments));
       setError("");
@@ -146,10 +144,13 @@ export default function PartyLedger({
 
   const activeBookings = useMemo(() => bookings.filter((entry) => entry.status === "ACTIVE"), [bookings]);
   const activePayments = useMemo(() => payments.filter((entry) => entry.status === "ACTIVE"), [payments]);
-  const bookingTotal = useMemo(
-    () => activeBookings.reduce((sum, entry) => sum + effectiveBookingAmount(entry, latestAdjustments), 0),
-    [activeBookings, latestAdjustments],
+  const ledgerSummary = useMemo(
+    () => summarizeAccountLedger(ledgerRows, party.account_type),
+    [ledgerRows, party.account_type],
   );
+  const bookingTotal = ledgerSummary.bookingActivity;
+  const paymentTotal = ledgerSummary.paymentSettlement;
+  const balance = ledgerSummary.closingBalance;
   const bookingSarTotal = useMemo(
     () => activeBookings.reduce((sum, entry) => sum + Number(entry.total_sar || 0), 0),
     [activeBookings],
@@ -158,18 +159,11 @@ export default function PartyLedger({
     () => activeBookings.reduce((sum, entry) => sum + Number(entry.unconverted_sar || 0), 0),
     [activeBookings],
   );
-  const paymentTotal = useMemo(
-    () =>
-      sumSignedPaymentSettlements(activePayments, (index) =>
-        inferPaymentKind(metaMap.get(activePayments[index].id), party.account_type),
-      ),
-    [activePayments, metaMap, party.account_type],
-  );
   const paymentSarTotal = useMemo(
     () => sumSignedPaymentSar(activePayments, metaMap, party.account_type),
     [activePayments, metaMap, party.account_type],
   );
-  const balance = accountBalanceFromTotals(bookingTotal, paymentTotal);
+  const paymentsById = useMemo(() => new Map(payments.map((entry) => [entry.id, entry])), [payments]);
   const activityLabel = statementActivityLabel(party.account_type);
   const balanceLabel = statementClosingBalanceLabel(party.account_type, balance);
   const balanceDisplay = statementClosingBalanceDisplayPkr(balance);
@@ -244,6 +238,18 @@ export default function PartyLedger({
   }
 
   function handleExport() {
+    const chronoData = ledgerRows.map((row, i) => ({
+      "SR #": i + 1,
+      Date: formatDate(row.transaction_date),
+      Ref: row.ref_no || "-",
+      Description: row.description,
+      Kind: row.kind,
+      Debit: row.debit || 0,
+      Credit: row.credit || 0,
+      "Running Balance": row.running_balance || 0,
+      Status: row.status,
+    }));
+
     const bookingData = bookings.map((b, i) => {
       const effectivePkr = effectiveBookingAmount(b, latestAdjustments);
       const originalPkr = Number(b.total_pkr || 0);
@@ -292,12 +298,14 @@ export default function PartyLedger({
         ...(hasSarFigure(paymentSarTotal) ? { "Paid Amount (SAR)": paymentSarTotal } : {}),
         [balanceLabel]: balanceDisplay,
         ...(hasSarFigure(pendingSarTotal) ? { "Pending SAR": pendingSarTotal } : {}),
+        "Balance source": "LedgerEngine chronological (same as Statements)",
       },
     ];
 
     downloadExcel(
       [
         { name: "Summary", data: summaryData },
+        { name: "Chronological", data: chronoData },
         { name: "Bookings", data: bookingData },
         { name: "Payments", data: paymentData },
       ],
@@ -401,7 +409,60 @@ export default function PartyLedger({
 
       <div className="ledger-section blue-section services-ledger-section">
         <div className="ledger-section-title">
-          <b>{activityLabel} — FULL PACKAGE / TICKET / HOTEL / VISA / TRANSPORT / MISC</b>
+          <b>CHRONOLOGICAL LEDGER (same engine as Statements)</b>
+          <div className="section-right">
+            <strong>CLOSING: {formatMoney(balanceDisplay)}</strong>
+          </div>
+        </div>
+        {ledgerRows.length === 0 ? (
+          <div className="coming-data">No ledger movements for this account yet.</div>
+        ) : (
+          <div className="ledger-table-wrap">
+            <table className="ledger-service-table ledger-chrono-table">
+              <thead>
+                <tr>
+                  <th>SR</th>
+                  <th>DATE</th>
+                  <th>REF</th>
+                  <th>DESCRIPTION</th>
+                  <th>DEBIT</th>
+                  <th>CREDIT</th>
+                  <th>BALANCE</th>
+                  <th>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerRows.map((row, index) => {
+                  const paymentEntry = row.kind === "PAYMENT" ? paymentsById.get(row.id) : undefined;
+                  return (
+                    <tr key={`${row.kind}-${row.id}`} className={row.status === "VOID" ? "void-row" : ""}>
+                      <td className="centered">{index + 1}</td>
+                      <td>{formatDate(row.transaction_date)}</td>
+                      <td>
+                        <b>{row.ref_no || "—"}</b>
+                      </td>
+                      <td>
+                        {row.description}
+                        {row.status === "VOID" ? <small className="void-label">VOID</small> : null}
+                      </td>
+                      <td className="right">{row.debit ? formatMoney(row.debit) : "—"}</td>
+                      <td className="right">{row.credit ? formatMoney(row.credit) : "—"}</td>
+                      <td className="right total-pkr">
+                        <b>{formatMoney(row.running_balance)}</b>
+                      </td>
+                      <td>{paymentEntry ? renderPaymentActions(paymentEntry) : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="ledger-section blue-section services-ledger-section">
+        <div className="ledger-section-title">
+          <b>{activityLabel} — DETAIL BY SERVICE</b>
           <div className="section-right">
             <strong>TOTAL: {formatMoney(bookingTotal)}</strong>
           </div>
@@ -533,9 +594,10 @@ export default function PartyLedger({
       </div>
 
       <div className="bf-note">
-        <b>Accounting source:</b> bookings remain the commercial source and Payments is the only settlement-entry
-        workspace. Use <strong>Correct</strong> to fix mistakes with office history, or <strong>Void</strong> to cancel
-        a payment while keeping the audit trail.
+        <b>One balance story:</b> summary cards and the chronological ledger use the same <strong>LedgerEngine</strong>{" "}
+        as Statements (bookings, amendments, payments). Detail tables below are for SAR/service drill-down and payment
+        tools. Use <strong>Correct</strong> to fix mistakes with office history, or <strong>Void</strong> to cancel a
+        payment while keeping the audit trail.
       </div>
 
       {modal && (

@@ -3,6 +3,7 @@ import type { Company, Party, PaymentEntry } from "./db";
 import { getPayments } from "./db";
 import { getPartyBookingTotals } from "./BookingAccounting";
 import type { PartyBookingTotal } from "./BookingAccounting";
+import { downloadExcel } from "./exportUtils";
 import PaymentReceiptPreviewModal from "./PaymentReceiptPreviewModal";
 import {
   createPaymentV2,
@@ -278,6 +279,8 @@ export function PaymentsModule({
   const [suggestedDocument, setSuggestedDocument] = useState("");
   const [registerFilter, setRegisterFilter] = useState<RegisterFilter>("ALL");
   const [search, setSearch] = useState("");
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -406,6 +409,49 @@ export function PaymentsModule({
       return haystack.includes(clean);
     });
   }, [entries, metaMap, parties, registerFilter, search]);
+
+  function handleExportRegister() {
+    const rows = visibleEntries.filter((entry) => {
+      if (exportFrom && entry.transaction_date < exportFrom) return false;
+      if (exportTo && entry.transaction_date > exportTo) return false;
+      return true;
+    });
+    if (!rows.length) {
+      setError("No payments in the selected date range / filter to export.");
+      return;
+    }
+    const data = rows.map((entry, index) => {
+      const meta = metaMap.get(entry.id);
+      const kind = inferKind(entry, meta, parties);
+      const account = parties.find((party) => party.id === entry.party_id) || null;
+      const settlement =
+        meta?.settlement_account || (sideForKind(kind) === "PARTY" ? entry.to_account : entry.from_account);
+      return {
+        "SR #": index + 1,
+        Date: formatDate(entry.transaction_date),
+        "Receipt / Voucher #": entry.receipt_no || "LEGACY",
+        Type: kindLabel(kind),
+        "Party / Vendor": account?.name || entry.ledger_party_name || "—",
+        Method: entry.payment_type,
+        Currency: entry.currency,
+        SAR: entry.currency === "SAR" ? entry.sar || 0 : "",
+        ROE: entry.currency === "SAR" ? entry.roe || 0 : "",
+        "PKR Amount": Number(entry.paid_amount || 0),
+        "Settlement Account": settlement || "—",
+        Reference: meta?.reference || entry.description || "—",
+        From: entry.from_account,
+        To: entry.to_account,
+        Status: entry.status,
+      };
+    });
+    const rangeLabel = exportFrom || exportTo ? `${exportFrom || "start"}_to_${exportTo || "end"}` : "all_dates";
+    downloadExcel(
+      [{ name: "Payment Register", data }],
+      `Payment_Register_${rangeLabel}_${new Date().toISOString().split("T")[0]}`,
+    );
+    setMessage(`Exported ${rows.length} payment(s) to Excel.`);
+    setError("");
+  }
 
   function patch<K extends keyof PaymentFormState>(key: K, value: PaymentFormState[K]) {
     setError("");
@@ -1158,6 +1204,19 @@ export function PaymentsModule({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search receipt, account, bank, reference, description..."
             />
+          </div>
+          <div className="payment-v2-export-row">
+            <label>
+              From
+              <input type="date" value={exportFrom} onChange={(e) => setExportFrom(e.target.value)} />
+            </label>
+            <label>
+              To
+              <input type="date" value={exportTo} onChange={(e) => setExportTo(e.target.value)} />
+            </label>
+            <button type="button" className="secondary" onClick={handleExportRegister}>
+              Export Excel
+            </button>
           </div>
         </div>
 

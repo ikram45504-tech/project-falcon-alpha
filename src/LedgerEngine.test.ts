@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { buildLedgerRows, getChronologicalLedger, sliceLedgerRowsForPeriod } from "./LedgerEngine";
+import {
+  buildLedgerRows,
+  getChronologicalLedger,
+  sliceLedgerRowsForPeriod,
+  summarizeAccountLedger,
+  closingBalanceFromLedgerRows,
+} from "./LedgerEngine";
 import type { Party } from "./db";
 import type { LedgerTransaction } from "./LedgerEngine";
 
@@ -335,5 +341,74 @@ describe("LedgerEngine", () => {
     expect(period).toHaveLength(2);
     expect(period[0].running_balance).toBe(7000); // 5000 opening + 2000 sale
     expect(period[1].running_balance).toBe(6500); // 7000 - 500 payment
+  });
+
+  it("summarizeAccountLedger matches closing running balance for party and vendor", () => {
+    const partyRows = buildLedgerRows(
+      [
+        {
+          id: "1",
+          transaction_date: "2026-01-01",
+          created_at: "2026-01-01",
+          kind: "SALE_BOOKING",
+          service_type: "PACKAGE",
+          ref_no: "UB-1",
+          description: "Sale",
+          total_pkr: 1000,
+          status: "ACTIVE",
+        },
+        {
+          id: "2",
+          transaction_date: "2026-01-02",
+          created_at: "2026-01-02",
+          kind: "PAYMENT",
+          service_type: "BANK",
+          ref_no: "RC-1",
+          description: "Receipt",
+          total_pkr: 400,
+          status: "ACTIVE",
+          payment_kind: "PARTY_RECEIPT",
+        },
+      ],
+      { id: "p1", account_type: "PARTY" } as Party,
+    );
+    const partySummary = summarizeAccountLedger(partyRows, "PARTY");
+    expect(partySummary.bookingActivity).toBe(1000);
+    expect(partySummary.paymentSettlement).toBe(400);
+    expect(partySummary.closingBalance).toBe(600);
+    expect(partySummary.closingBalance).toBe(closingBalanceFromLedgerRows(partyRows));
+
+    const vendorRows = buildLedgerRows(
+      [
+        {
+          id: "1",
+          transaction_date: "2026-01-01",
+          created_at: "2026-01-01",
+          kind: "PURCHASE_BOOKING",
+          service_type: "HOTEL",
+          ref_no: "UB-2",
+          description: "Purchase",
+          total_pkr: 2000,
+          status: "ACTIVE",
+        },
+        {
+          id: "2",
+          transaction_date: "2026-01-02",
+          created_at: "2026-01-02",
+          kind: "PAYMENT",
+          service_type: "BANK",
+          ref_no: "PV-1",
+          description: "Paid",
+          total_pkr: 1500,
+          status: "ACTIVE",
+          payment_kind: "VENDOR_PAYMENT",
+        },
+      ],
+      { id: "v1", account_type: "VENDOR" } as Party,
+    );
+    const vendorSummary = summarizeAccountLedger(vendorRows, "VENDOR");
+    expect(vendorSummary.bookingActivity).toBe(2000);
+    expect(vendorSummary.paymentSettlement).toBe(1500);
+    expect(vendorSummary.closingBalance).toBe(500);
   });
 });
