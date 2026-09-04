@@ -5,6 +5,7 @@ import {
   assertWithinLimit,
   CapacityLimitError,
   entitlementsFromPlan,
+  allowsPaymentReceipts,
   isFloorLockedPlan,
   isPaidEntitlementPlan,
   normalizeEntitlements,
@@ -31,6 +32,8 @@ describe("entitlement plans", () => {
     expect(second.features.statement_print).toBe(false);
     expect(second.features.booking_adjustments).toBe(false);
     expect(second.features.payment_receipts).toBe(false);
+    expect(allowsPaymentReceipts(second)).toBe(false);
+    expect(allowsPaymentReceipts(entitlementsFromPlan("pro"))).toBe(true);
     expect(second.features.pnl).toBe(false);
     expect(second.features.additional_booking_details).toBe(false);
     expect(second.limits.bookings_per_party).toBe(10);

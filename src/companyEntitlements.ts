@@ -253,8 +253,15 @@ export function isPaidEntitlementPlan(id: EntitlementPlanId | "" | undefined): i
 export const ADDITIONAL_BOOKING_DETAILS_UPGRADE =
   "Additional booking details are not included on Free Tier. Upgrade plans will be offered here later.";
 
+export const PAYMENT_RECEIPTS_UPGRADE =
+  "View Receipt is not included on this plan. Upgrade plans will be offered here later.";
+
 export function allowsAdditionalBookingDetails(entitlements: unknown) {
   return normalizeEntitlements(entitlements).features.additional_booking_details;
+}
+
+export function allowsPaymentReceipts(entitlements: unknown) {
+  return normalizeEntitlements(entitlements).features.payment_receipts;
 }
 
 /** Minimum numeric floors for a plan. Master may raise these, not lower them. */

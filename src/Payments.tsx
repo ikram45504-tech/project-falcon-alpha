@@ -21,7 +21,7 @@ import type {
   PaymentV2Meta,
 } from "./PaymentV2Db";
 import "./PaymentsV2.css";
-import { normalizeEntitlements } from "./companyEntitlements";
+import { PAYMENT_RECEIPTS_UPGRADE, allowsPaymentReceipts } from "./companyEntitlements";
 import { formatAmountInput, parseFormattedAmount, pkrEquivalent } from "./paymentFormatUtils";
 import {
   fromReceivingLabels,
@@ -286,7 +286,7 @@ export function PaymentsModule({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
-  const canViewReceipt = normalizeEntitlements(company.entitlements).features.payment_receipts;
+  const canViewReceipt = allowsPaymentReceipts(company.entitlements);
 
   async function load() {
     try {
@@ -511,6 +511,10 @@ export function PaymentsModule({
   }
 
   function openReceiptPreview(entry: PaymentEntry) {
+    if (!canViewReceipt) {
+      setMessage(PAYMENT_RECEIPTS_UPGRADE);
+      return;
+    }
     const account = parties.find((party) => party.id === entry.party_id) || null;
     if (!account) return setError("Account not found for this receipt.");
     const meta = metaMap.get(entry.id) || null;
@@ -642,7 +646,12 @@ export function PaymentsModule({
   function renderRegisterEntryActions(entry: PaymentEntry, account: Party | null) {
     return (
       <div className="row-actions compact-actions payment-v2-card-actions">
-        <button type="button" onClick={() => openReceiptPreview(entry)}>
+        <button
+          type="button"
+          disabled={!canViewReceipt}
+          title={canViewReceipt ? "View receipt" : PAYMENT_RECEIPTS_UPGRADE}
+          onClick={() => openReceiptPreview(entry)}
+        >
           Receipt
         </button>
         <button type="button" onClick={() => account && onOpenLedger(account)} disabled={!account}>
@@ -1109,14 +1118,10 @@ export function PaymentsModule({
                 type="button"
                 className="secondary"
                 disabled={!canViewReceipt}
-                title={
-                  canViewReceipt
-                    ? "View receipt"
-                    : "View Receipt is not included on Free Tier. Upgrade plans will be offered here later."
-                }
+                title={canViewReceipt ? "View receipt" : PAYMENT_RECEIPTS_UPGRADE}
                 onClick={() => {
                   if (!canViewReceipt) {
-                    setMessage("View Receipt needs a higher plan. Upgrade options will be designed next.");
+                    setMessage(PAYMENT_RECEIPTS_UPGRADE);
                     return;
                   }
                   viewCurrentReceipt();

@@ -31,6 +31,7 @@ import {
   sumSignedPaymentSar,
 } from "./StatementSummary";
 import { loadSegmentAdjustmentsForStatements } from "./SegmentAdjustmentRecord";
+import { PAYMENT_RECEIPTS_UPGRADE, allowsPaymentReceipts } from "./companyEntitlements";
 import "./PaymentLedgerModal.css";
 
 type Props = {
@@ -104,6 +105,7 @@ export default function PartyLedger({
   const [modal, setModal] = useState<LedgerModalState>(null);
   const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
   const [latestAdjustments, setLatestAdjustments] = useState(() => new Map());
+  const canViewReceipt = allowsPaymentReceipts(company.entitlements);
 
   const direction = accountDirectionLabel(party.account_type);
   const isVendor = party.account_type === "VENDOR";
@@ -201,6 +203,10 @@ export default function PartyLedger({
   }
 
   async function openReceiptPreview(entry: PaymentEntry) {
+    if (!canViewReceipt) {
+      setMessage(PAYMENT_RECEIPTS_UPGRADE);
+      return;
+    }
     setError("");
     setMessage("");
     const meta = metaMap.get(entry.id) || (await getPaymentV2Meta(companyId, entry.id));
@@ -316,7 +322,12 @@ export default function PartyLedger({
   function renderPaymentActions(entry: PaymentEntry) {
     return (
       <div className="row-actions compact-actions ledger-payment-actions">
-        <button type="button" onClick={() => void openReceiptPreview(entry)}>
+        <button
+          type="button"
+          disabled={!canViewReceipt}
+          title={canViewReceipt ? "View receipt" : PAYMENT_RECEIPTS_UPGRADE}
+          onClick={() => void openReceiptPreview(entry)}
+        >
           Receipt
         </button>
         <button type="button" onClick={() => void openModal("history", entry)}>
