@@ -58,7 +58,19 @@ export default function MasterLoginScreen() {
   return (
     <main className="master-control-page" data-control-theme={theme}>
       <section className="card master-control-card">
-        <div className="master-theme-switch" style={{ marginBottom: 14 }} role="group" aria-label="Control Panel theme">
+        <div className="master-login-brand">
+          <div className="mark product-logo-mark">
+            <TravelHisabLogo size={52} />
+          </div>
+          <h1>Control Panel</h1>
+          <span className="eyebrow">MASTER ACCOUNT</span>
+          <p className="muted auth-login-lead">
+            Sign in with a Master Google account to approve companies and set capacity. This is not the agency Travel
+            Hisab workspace.
+          </p>
+        </div>
+
+        <div className="master-theme-switch master-login-theme" role="group" aria-label="Control Panel theme">
           <button type="button" className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>
             Dark
           </button>
@@ -66,15 +78,6 @@ export default function MasterLoginScreen() {
             Ocean
           </button>
         </div>
-        <div className="mark product-logo-mark">
-          <TravelHisabLogo size={48} />
-        </div>
-        <span className="eyebrow">MASTER ACCOUNT</span>
-        <h1>Control Panel</h1>
-        <p className="muted auth-login-lead">
-          Sign in with a Master Google account to approve companies and set capacity. This is not the agency Travel
-          Hisab workspace.
-        </p>
 
         {error && <div className="alert error">{error}</div>}
 
@@ -83,10 +86,9 @@ export default function MasterLoginScreen() {
         </button>
 
         <button
-          className="ghost master-cache-refresh"
+          className="ghost master-cache-refresh master-login-cache"
           type="button"
           disabled={busy || cacheBusy}
-          style={{ width: "100%", marginTop: 10 }}
           title="Clear PWA/browser cache and reload the latest deployment"
           onClick={() => {
             setCacheBusy(true);
@@ -96,7 +98,7 @@ export default function MasterLoginScreen() {
           {cacheBusy ? "Updating…" : "Clear cache & reload"}
         </button>
 
-        <p className="muted" style={{ marginTop: 16, fontSize: 13 }}>
+        <p className="muted master-login-agency-hint">
           Agency users should use{" "}
           <Link to="/login" className="master-inline-link">
             company Sign In
