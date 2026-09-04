@@ -30,6 +30,8 @@ export default defineConfig(async () => ({
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest,woff,woff2}"],
+        // Main app chunk is just over Workbox's 2 MiB default; keep it in the PWA precache.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: "/index.html",
         skipWaiting: true,
         clientsClaim: true,
