@@ -3,6 +3,7 @@ import type { BookingTransactionType, TicketPassengerType } from "./db";
 import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety";
 import { isDesktopApp, syncTicketBookingBundle, syncTicketBookingVoid, flushDesktopSyncQueue } from "./cloudSync";
 import { applyBookingListScope, bookingListScopeSql, type BookingListScope } from "./bookingListScope";
+import { validateBookingCounterparty } from "./CounterpartyDb";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -150,41 +151,6 @@ function normalizeUb(value: string) {
 
 function validateUb(value: string) {
   if (!/^UB-\d{4}$/.test(normalizeUb(value))) throw new Error("Booking number must be assigned in UB-0000 format.");
-}
-
-async function validateCounterparty(
-  companyId: string,
-  transactionType: BookingTransactionType,
-  counterpartyId: string,
-) {
-  if (!counterpartyId)
-    throw new Error(transactionType === "SALE" ? "Select a Party / Customer." : "Select a Vendor / Supplier.");
-
-  let account: { account_type: string; status: string } | null | undefined;
-
-  if (isDesktopApp()) {
-    const database = await db();
-    const rows = await database.select<Array<{ account_type: string; status: string }>>(
-      `SELECT account_type,status FROM parties WHERE id=$1 AND company_id=$2 LIMIT 1`,
-      [counterpartyId, companyId],
-    );
-    account = rows[0];
-  } else {
-    const { data } = await supabase
-      .from("parties")
-      .select("account_type, status")
-      .eq("id", counterpartyId)
-      .eq("company_id", companyId)
-      .single();
-    account = data;
-  }
-
-  const expected = transactionType === "SALE" ? "PARTY" : "VENDOR";
-  if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
-    throw new Error(
-      transactionType === "SALE" ? "Select an active Party / Customer." : "Select an active Vendor / Supplier.",
-    );
-  }
 }
 
 async function validateUbAvailability(
@@ -402,7 +368,7 @@ export async function createTicketCommercialBooking(companyId: string, input: Ti
   if (!["SALE", "PURCHASE"].includes(input.transactionType)) throw new Error("Select Sale or Purchase first.");
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   validateUb(input.ubNumber);
-  await validateCounterparty(companyId, input.transactionType, input.counterpartyId);
+  await validateBookingCounterparty(companyId, input.transactionType, input.counterpartyId);
   await validateUbAvailability(companyId, input.transactionType, input.counterpartyId, input.ubNumber);
   const { calculated, totalPkr } = calculateTicketCommercialLines(input.lines);
   const first = calculated[0];

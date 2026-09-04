@@ -4,6 +4,7 @@ import { runAtomicTransaction, type AtomicSqlStatement } from "./DatabaseSafety"
 import { isDesktopApp, queueSync, syncPackageBookingBundle, syncPackageBookingVoid } from "./cloudSync";
 
 import { applyBookingListScope, bookingListScopeSql, type BookingListScope } from "./bookingListScope";
+import { validateBookingCounterparty } from "./CounterpartyDb";
 import { supabase } from "./supabaseClient";
 
 const DB_PATH = "sqlite:travel-accounting.db";
@@ -82,42 +83,6 @@ function auditStatement(
         $4,'PACKAGE',$5,$6,$7)`,
     params: [crypto.randomUUID(), companyId, userId, action, recordId, details, now],
   };
-}
-
-async function validateCounterparty(
-  companyId: string,
-  transactionType: BookingTransactionType,
-  counterpartyId: string,
-) {
-  if (!counterpartyId)
-    throw new Error(transactionType === "SALE" ? "Select a Party / Customer." : "Select a Vendor / Supplier.");
-
-  const isTauri = "__TAURI_INTERNALS__" in window;
-  let account;
-
-  if (isTauri) {
-    const database = await db();
-    const rows = await database.select<Array<{ account_type: string; status: string }>>(
-      `SELECT account_type,status FROM parties WHERE id=$1 AND company_id=$2 LIMIT 1`,
-      [counterpartyId, companyId],
-    );
-    account = rows[0];
-  } else {
-    const { data } = await supabase
-      .from("parties")
-      .select("account_type, status")
-      .eq("id", counterpartyId)
-      .eq("company_id", companyId)
-      .single();
-    account = data;
-  }
-
-  const expected = transactionType === "SALE" ? "PARTY" : "VENDOR";
-  if (!account || account.status !== "ACTIVE" || account.account_type !== expected) {
-    throw new Error(
-      transactionType === "SALE" ? "Select an active Party / Customer." : "Select an active Vendor / Supplier.",
-    );
-  }
 }
 
 async function validatePackageUbAvailability(
@@ -446,7 +411,7 @@ export async function createPackageCommercialBooking(
   if (!["SALE", "PURCHASE"].includes(input.transactionType)) throw new Error("Select Sale or Purchase first.");
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   validateNewUb(input.ubNumber);
-  await validateCounterparty(companyId, input.transactionType, input.counterpartyId);
+  await validateBookingCounterparty(companyId, input.transactionType, input.counterpartyId);
   await validatePackageUbAvailability(companyId, input.transactionType, input.counterpartyId, input.ubNumber);
   const { calculated, totalPkr } = calculateLines(input.lines);
   const id = crypto.randomUUID();
