@@ -3,7 +3,8 @@ import { Component, type ReactNode } from "react";
 type Props = { children: ReactNode };
 type State = { error: Error | null };
 
-async function hardResetWebCache() {
+async function hardResetWebCache(options?: { navigate?: boolean }) {
+  const navigate = options?.navigate !== false;
   try {
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -16,6 +17,7 @@ async function hardResetWebCache() {
   } catch (error) {
     console.warn("PWA cache reset failed:", error);
   }
+  if (!navigate) return;
   const url = new URL(window.location.href);
   url.searchParams.delete("pwa-reset");
   window.location.replace(url.toString());

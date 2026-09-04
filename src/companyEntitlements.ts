@@ -113,3 +113,34 @@ export function companyStatusLabel(status: string) {
       return status || "Unknown";
   }
 }
+
+export function assertSegmentEnabled(entitlements: unknown, segment: SegmentKey) {
+  const normalized = normalizeEntitlements(entitlements);
+  if (!normalized.segments[segment]) {
+    throw new Error(`${SEGMENT_LABELS[segment]} bookings are not enabled for this company.`);
+  }
+}
+
+export function assertFeatureEnabled(
+  entitlements: unknown,
+  feature: keyof CompanyEntitlements["features"],
+  label: string,
+) {
+  const normalized = normalizeEntitlements(entitlements);
+  if (!normalized.features[feature]) {
+    throw new Error(`${label} is not enabled for this company.`);
+  }
+}
+
+export function assertWithinLimit(
+  entitlements: unknown,
+  limitKey: keyof CompanyEntitlements["limits"],
+  currentCount: number,
+  label: string,
+) {
+  const limit = normalizeEntitlements(entitlements).limits[limitKey];
+  if (limit == null) return;
+  if (currentCount >= limit) {
+    throw new Error(`${label} limit reached (${limit}). Ask SMC Softwares to increase capacity.`);
+  }
+}

@@ -9608,6 +9608,34 @@ textarea:focus {
   margin-bottom: 18px;
 }
 
+.master-danger-zone {
+  margin: 0 0 20px;
+  padding: 14px;
+  border: 1px solid rgba(220, 80, 80, 0.35);
+  border-radius: 12px;
+  background: rgba(120, 24, 24, 0.18);
+}
+
+.master-danger-zone h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: #f3b4b4;
+}
+
+.master-danger-button {
+  margin-top: 8px;
+  border: 1px solid rgba(240, 120, 120, 0.55);
+  background: #8b1e1e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+.master-danger-button:hover:not(:disabled) {
+  background: #a52424;
+}
+
 .master-entitlements-form h3 {
   margin: 16px 0 8px;
   font-size: 0.95rem;

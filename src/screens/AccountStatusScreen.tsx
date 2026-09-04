@@ -3,10 +3,12 @@ import TravelHisabLogo from "../TravelHisabLogo";
 import { COMPANY_NAME, PRODUCT_NAME } from "../brand";
 import { useAuth } from "../AuthContext";
 import { companyStatusLabel } from "../companyEntitlements";
+import { supabase } from "../supabaseClient";
 
 export default function AccountStatusScreen() {
-  const { company, session, logout } = useAuth();
+  const { company, session, logout, refreshAuth, setSessionData } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
   const status = String(company?.status || "").toUpperCase();
   const pending = status === "PENDING_APPROVAL";
   const suspended = status === "SUSPENDED";
@@ -15,6 +17,42 @@ export default function AccountStatusScreen() {
     document.documentElement.classList.add("auth-screen");
     return () => document.documentElement.classList.remove("auth-screen");
   }, []);
+
+  useEffect(() => {
+    if (!company?.id || status === "ACTIVE") return;
+
+    let cancelled = false;
+    const poll = async () => {
+      setChecking(true);
+      try {
+        const { data } = await supabase
+          .from("companies")
+          .select(
+            "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, created_at, updated_at",
+          )
+          .eq("id", company.id)
+          .maybeSingle();
+        if (cancelled || !data || !session) return;
+        const nextStatus = String(data.status || "").toUpperCase();
+        if (nextStatus === String(company.status || "").toUpperCase()) return;
+        setSessionData(session, data as typeof company);
+        if (nextStatus === "ACTIVE") {
+          await refreshAuth();
+        }
+      } catch {
+        // Keep waiting silently; user can still sign out.
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+
+    void poll();
+    const timer = window.setInterval(() => void poll(), 8000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [company, company?.id, company?.status, refreshAuth, session, setSessionData, status]);
 
   const title = pending ? "Registration under review" : suspended ? "Account suspended" : "Account not active";
 
@@ -41,6 +79,11 @@ export default function AccountStatusScreen() {
           <div className="muted">Code: {company?.company_code || "—"}</div>
           <div className="muted">Signed in as: {session?.email || session?.username || "—"}</div>
           <div className="muted">Status: {companyStatusLabel(status)}</div>
+          {pending ? (
+            <div className="muted" style={{ marginTop: 8 }}>
+              {checking ? "Checking for approval..." : "This page updates automatically when approved."}
+            </div>
+          ) : null}
         </div>
 
         <button

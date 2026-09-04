@@ -1,4 +1,4 @@
--- Master Control Panel: platform admins + company entitlements
+-- Master Control Panel: platform admins + company entitlements + wipe
 -- Applied live via Supabase; kept in repo for reference.
 
 create schema if not exists private;
@@ -166,3 +166,177 @@ $$;
 
 revoke all on function public.master_set_company_entitlements(text, jsonb) from public;
 grant execute on function public.master_set_company_entitlements(text, jsonb) to authenticated;
+
+-- Agency clients cannot self-approve or edit capacity.
+create or replace function public.protect_company_control_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if not private.is_platform_master() then
+      new.status := 'PENDING_APPROVAL';
+    end if;
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if (new.status is distinct from old.status
+        or new.entitlements is distinct from old.entitlements)
+       and not private.is_platform_master() then
+      raise exception 'Only Master can change company status or entitlements';
+    end if;
+    return new;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_protect_company_control_fields on public.companies;
+create trigger trg_protect_company_control_fields
+  before insert or update on public.companies
+  for each row
+  execute function public.protect_company_control_fields();
+
+revoke all on function public.protect_company_control_fields() from public;
+
+-- Master wipe: all company data + public users + auth users
+create or replace function public.master_wipe_company(p_company_id text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_code text;
+  v_name text;
+  v_user_ids text[];
+  v_auth_deleted int := 0;
+  uid text;
+  v_email text;
+begin
+  if not private.is_platform_master() then
+    raise exception 'Not authorized as Master';
+  end if;
+
+  if p_company_id is null or length(trim(p_company_id)) = 0 then
+    raise exception 'Company id is required';
+  end if;
+
+  select company_code, name into v_code, v_name
+  from public.companies
+  where id = p_company_id;
+
+  if v_code is null then
+    raise exception 'Company not found';
+  end if;
+
+  select coalesce(array_agg(id), '{}') into v_user_ids
+  from public.users
+  where company_id = p_company_id;
+
+  delete from public.package_booking_lines where booking_id in (select id from public.package_bookings where company_id = p_company_id);
+  delete from public.package_operational_flight_stopovers where company_id = p_company_id;
+  delete from public.package_operational_flights where company_id = p_company_id;
+  delete from public.package_operational_hotels where company_id = p_company_id;
+  delete from public.package_operational_passengers where company_id = p_company_id;
+  delete from public.package_operational_meta where company_id = p_company_id;
+  delete from public.package_movement_events where company_id = p_company_id;
+  delete from public.package_booking_adjustments where company_id = p_company_id;
+  delete from public.package_bookings where company_id = p_company_id;
+
+  delete from public.ticket_booking_lines where booking_id in (select id from public.ticket_bookings where company_id = p_company_id);
+  delete from public.ticket_operational_flights where company_id = p_company_id;
+  delete from public.ticket_operational_passengers where company_id = p_company_id;
+  delete from public.ticket_operational_meta where company_id = p_company_id;
+  delete from public.ticket_booking_adjustments where company_id = p_company_id;
+  delete from public.ticket_bookings where company_id = p_company_id;
+
+  delete from public.hotel_booking_lines where booking_id in (select id from public.hotel_bookings where company_id = p_company_id);
+  delete from public.hotel_commercial_guest_refs where company_id = p_company_id;
+  delete from public.hotel_operational_guests where company_id = p_company_id;
+  delete from public.hotel_operational_reservations where company_id = p_company_id;
+  delete from public.hotel_operational_meta where company_id = p_company_id;
+  delete from public.hotel_booking_adjustments where company_id = p_company_id;
+  delete from public.hotel_bookings where company_id = p_company_id;
+
+  delete from public.visa_booking_lines where booking_id in (select id from public.visa_bookings where company_id = p_company_id);
+  delete from public.visa_passport_details where booking_id in (select id from public.visa_bookings where company_id = p_company_id);
+  delete from public.visa_transport_fleet where booking_id in (select id from public.visa_bookings where company_id = p_company_id);
+  delete from public.visa_operational_passengers where company_id = p_company_id;
+  delete from public.visa_operational_meta where company_id = p_company_id;
+  delete from public.visa_booking_adjustments where company_id = p_company_id;
+  delete from public.visa_bookings where company_id = p_company_id;
+
+  delete from public.transport_booking_lines where booking_id in (select id from public.transport_bookings where company_id = p_company_id);
+  delete from public.transport_operational_sectors where company_id = p_company_id;
+  delete from public.transport_operational_meta where company_id = p_company_id;
+  delete from public.transport_booking_adjustments where company_id = p_company_id;
+  delete from public.transport_bookings where company_id = p_company_id;
+
+  delete from public.misc_booking_lines where booking_id in (select id from public.misc_bookings where company_id = p_company_id);
+  delete from public.misc_commercial_family_refs where company_id = p_company_id;
+  delete from public.misc_operational_services where company_id = p_company_id;
+  delete from public.misc_operational_meta where company_id = p_company_id;
+  delete from public.misc_booking_adjustments where company_id = p_company_id;
+  delete from public.misc_bookings where company_id = p_company_id;
+
+  delete from public.payment_corrections where company_id = p_company_id;
+  delete from public.payment_entries where company_id = p_company_id;
+  delete from public.payment_v2_meta where company_id = p_company_id;
+  delete from public.parties where company_id = p_company_id;
+  delete from public.vendors where company_id = p_company_id;
+  delete from public.unassigned_accounts where company_id = p_company_id;
+  delete from public.remembered_sessions where company_id = p_company_id;
+  delete from public.audit_logs where company_id = p_company_id;
+  delete from public.users where company_id = p_company_id;
+  delete from public.companies where id = p_company_id;
+
+  foreach uid in array v_user_ids loop
+    begin
+      select email into v_email from auth.users where id = uid::uuid;
+      -- Never delete Master Control Panel login accounts.
+      if v_email is not null and exists (
+        select 1 from public.platform_admins pa where lower(pa.email) = lower(v_email)
+      ) then
+        continue;
+      end if;
+      delete from auth.users where id = uid::uuid;
+      v_auth_deleted := v_auth_deleted + 1;
+    exception when others then
+      null;
+    end;
+  end loop;
+
+  return jsonb_build_object(
+    'company_id', p_company_id,
+    'company_code', v_code,
+    'company_name', v_name,
+    'users_removed', coalesce(array_length(v_user_ids, 1), 0),
+    'auth_users_removed', v_auth_deleted
+  );
+end;
+$$;
+
+revoke all on function public.master_wipe_company(text) from public;
+grant execute on function public.master_wipe_company(text) to authenticated;
+
+create or replace function public.is_reserved_platform_email(p_email text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.platform_admins pa
+    where lower(pa.email) = lower(trim(coalesce(p_email, '')))
+  );
+$$;
+
+revoke all on function public.is_reserved_platform_email(text) from public;
+grant execute on function public.is_reserved_platform_email(text) to authenticated;

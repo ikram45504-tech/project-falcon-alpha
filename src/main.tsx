@@ -12,7 +12,16 @@ async function maybeResetStalePwa() {
   if (typeof window === "undefined") return false;
   const params = new URLSearchParams(window.location.search);
   if (params.get("pwa-reset") !== "1") return false;
-  await hardResetWebCache();
+
+  // Cache clear can hang in some browsers — never block the UI forever.
+  await Promise.race([
+    hardResetWebCache({ navigate: false }),
+    new Promise<void>((resolve) => window.setTimeout(resolve, 2500)),
+  ]);
+
+  const url = new URL(window.location.href);
+  url.searchParams.delete("pwa-reset");
+  window.location.replace(url.toString());
   return true;
 }
 

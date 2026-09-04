@@ -441,6 +441,8 @@ export async function createPackageCommercialBooking(
   actorUserId = "",
 ) {
   await requirePermission(companyId, actorUserId, "create_bookings");
+  const { enforceSegmentCreate } = await import("./companyAccess");
+  await enforceSegmentCreate(companyId, "PACKAGE");
   if (!["SALE", "PURCHASE"].includes(input.transactionType)) throw new Error("Select Sale or Purchase first.");
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   validateNewUb(input.ubNumber);

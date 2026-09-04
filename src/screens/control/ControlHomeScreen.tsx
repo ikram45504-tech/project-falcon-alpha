@@ -11,6 +11,7 @@ import {
   listCompaniesForMaster,
   setCompanyEntitlementsForMaster,
   setCompanyStatusForMaster,
+  wipeCompanyForMaster,
 } from "../../platformMaster";
 
 const SEGMENTS = Object.keys(SEGMENT_LABELS) as SegmentKey[];
@@ -103,6 +104,41 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
     try {
       await setCompanyEntitlementsForMaster(selected.id, draft);
       setMessage("Capacity saved.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const wipeCompany = async () => {
+    if (!selected) return;
+    const code = selected.company_code;
+    const name = selected.name;
+    const confirmed = window.confirm(
+      `Delete company "${name}" (${code}) permanently?\n\nThis removes ALL cloud bookings, payments, parties, users, and login accounts for this company. It cannot be undone.`,
+    );
+    if (!confirmed) return;
+    const typed = window.prompt(`Type the Company Code ${code} to confirm permanent delete:`);
+    if (
+      String(typed || "")
+        .trim()
+        .toUpperCase() !== code.toUpperCase()
+    ) {
+      setError("Delete cancelled — Company Code did not match.");
+      return;
+    }
+    setBusyId(selected.id);
+    setError("");
+    setMessage("");
+    try {
+      const result = await wipeCompanyForMaster(selected.id);
+      setSelectedId("");
+      setDraft(null);
+      setMessage(
+        `Deleted ${result.company_name} (${result.company_code}). Removed ${result.users_removed} user row(s) and ${result.auth_users_removed} login account(s).`,
+      );
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -217,6 +253,22 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
                 </button>
               </div>
 
+              <div className="master-danger-zone">
+                <h3>Delete company</h3>
+                <p className="muted">
+                  Permanently wipe this company from the cloud database — bookings, payments, parties, staff, and login
+                  accounts. Frees Supabase storage for this tenant.
+                </p>
+                <button
+                  type="button"
+                  className="master-danger-button"
+                  disabled={busyId === selected.id}
+                  onClick={() => void wipeCompany()}
+                >
+                  {busyId === selected.id ? "Deleting..." : "Delete company & all data"}
+                </button>
+              </div>
+
               <form className="master-entitlements-form" onSubmit={(e) => void saveEntitlements(e)}>
                 <h3>Segments</h3>
                 <div className="master-check-grid">
@@ -282,7 +334,7 @@ export default function ControlHomeScreen({ masterEmail }: { masterEmail: string
 
                 <h3>Limits</h3>
                 <p className="muted" style={{ marginTop: 0 }}>
-                  Leave blank for unlimited. Enforcement inside Travel Hisab comes next.
+                  Leave blank for unlimited. Limits apply when creating parties, staff, and bookings.
                 </p>
                 <div className="master-limit-grid">
                   {(

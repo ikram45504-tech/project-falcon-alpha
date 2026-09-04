@@ -397,6 +397,8 @@ export async function getTicketCommercialBookings(companyId: string, search = ""
 export async function createTicketCommercialBooking(companyId: string, input: TicketCommercialInput, actorUserId = "") {
   await ensureSchema();
   await requirePermission(companyId, actorUserId, "create_bookings");
+  const { enforceSegmentCreate } = await import("./companyAccess");
+  await enforceSegmentCreate(companyId, "TICKET");
   if (!["SALE", "PURCHASE"].includes(input.transactionType)) throw new Error("Select Sale or Purchase first.");
   if (!input.transactionDate) throw new Error("Date of Booking is required.");
   validateUb(input.ubNumber);

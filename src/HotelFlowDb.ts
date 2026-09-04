@@ -299,6 +299,8 @@ export async function getHotelBookings(companyId: string, search = "", scope?: B
 
 export async function createHotelBooking(companyId: string, input: HotelBookingInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "create_bookings");
+  const { enforceSegmentCreate } = await import("./companyAccess");
+  await enforceSegmentCreate(companyId, "HOTEL");
   const { calculated, totalSar, totalPkr, unconvertedSar } = await validateHotelBooking(companyId, input);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();

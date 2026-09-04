@@ -1847,6 +1847,9 @@ export async function createCompanyAccount(input: CreateCompanyAccountInput) {
 
   setCompanySetupInProgress(true);
   try {
+    const { assertEmailNotReservedForMaster } = await import("./companyAccess");
+    await assertEmailNotReservedForMaster(ownerEmail);
+
     const userId = await acquireAuthUserIdForSetup(ownerEmail, input.password, {
       username,
       full_name: username,
@@ -1894,6 +1897,8 @@ export async function createCompanyAccountForCurrentAuthUser(input: CreateCompan
 
   setCompanySetupInProgress(true);
   try {
+    const { assertEmailNotReservedForMaster } = await import("./companyAccess");
+    await assertEmailNotReservedForMaster(ownerEmail);
     await prepareAuthUserForFreshCompany(user.id);
     return await provisionCompanyForAuthUser({
       userId: user.id,
@@ -2289,6 +2294,8 @@ function validateEmployeeRole(role: string): asserts role is Exclude<UserRole, "
 export async function createCompanyUser(companyId: string, actorUserId: string, input: CompanyUserInput) {
   await requirePermission(companyId, actorUserId, "manage_users");
   validateEmployeeRole(input.role);
+  const { enforceStaffCreate } = await import("./companyAccess");
+  await enforceStaffCreate(companyId);
 
   const database = await db();
   const fullName = input.fullName.trim();
@@ -2507,6 +2514,8 @@ export async function getParties(companyId: string, search = "") {
 
 export async function createParty(companyId: string, input: PartyInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "edit_parties");
+  const { enforcePartyCreate } = await import("./companyAccess");
+  await enforcePartyCreate(companyId, input.accountType);
   const { createAccount } = await import("./CounterpartyDb");
   const id = await createAccount(companyId, input, actorUserId);
   if (actorUserId) {

@@ -266,6 +266,8 @@ export async function getMiscBookings(companyId: string, search = "", scope?: Bo
 export async function createMiscBooking(companyId: string, input: MiscBookingInput, actorUserId = "") {
   await initMiscDatabase();
   await requirePermission(companyId, actorUserId, "create_bookings");
+  const { enforceSegmentCreate } = await import("./companyAccess");
+  await enforceSegmentCreate(companyId, "MISC");
   const result = await validateBooking(companyId, input);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();

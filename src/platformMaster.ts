@@ -47,3 +47,27 @@ export async function setCompanyEntitlementsForMaster(companyId: string, entitle
   if (error) throw new Error(error.message || "Could not update entitlements.");
   return data;
 }
+
+export type WipeCompanyResult = {
+  company_id: string;
+  company_code: string;
+  company_name: string;
+  users_removed: number;
+  auth_users_removed: number;
+};
+
+/** Permanently deletes a company and all related cloud data (Master only). */
+export async function wipeCompanyForMaster(companyId: string): Promise<WipeCompanyResult> {
+  const { data, error } = await supabase.rpc("master_wipe_company", {
+    p_company_id: companyId,
+  });
+  if (error) throw new Error(error.message || "Could not delete company data.");
+  const row = (data || {}) as Record<string, unknown>;
+  return {
+    company_id: String(row.company_id || companyId),
+    company_code: String(row.company_code || ""),
+    company_name: String(row.company_name || ""),
+    users_removed: Number(row.users_removed || 0),
+    auth_users_removed: Number(row.auth_users_removed || 0),
+  };
+}
