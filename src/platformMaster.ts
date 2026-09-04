@@ -224,3 +224,48 @@ export async function bulkCompaniesForMaster(input: {
 
   return { action: input.action, updated, skipped, errors };
 }
+
+export type MasterCreatedCompany = {
+  company_id: string;
+  company_code: string;
+  company_name: string;
+  owner_username: string;
+  owner_email: string;
+  status: string;
+  access_ends_at: string | null;
+};
+
+export async function createCompanyForMaster(input: {
+  companyName: string;
+  ownerUsername: string;
+  ownerPassword: string;
+  companyCode?: string;
+  phone?: string;
+  email?: string;
+  entitlements?: CompanyEntitlements;
+  status?: "ACTIVE" | "PENDING_APPROVAL";
+  trialDays?: number | null;
+}): Promise<MasterCreatedCompany> {
+  const { data, error } = await supabaseMaster.rpc("master_create_company", {
+    p_company_name: input.companyName.trim(),
+    p_owner_username: input.ownerUsername.trim(),
+    p_owner_password: input.ownerPassword,
+    p_company_code: input.companyCode?.trim() || null,
+    p_phone: input.phone?.trim() || "",
+    p_email: input.email?.trim() || "",
+    p_entitlements: input.entitlements || null,
+    p_status: input.status || "ACTIVE",
+    p_trial_days: input.trialDays ?? null,
+  });
+  if (error) throw new Error(error.message || "Could not create company.");
+  const row = (data || {}) as Record<string, unknown>;
+  return {
+    company_id: String(row.company_id || ""),
+    company_code: String(row.company_code || ""),
+    company_name: String(row.company_name || input.companyName),
+    owner_username: String(row.owner_username || input.ownerUsername),
+    owner_email: String(row.owner_email || ""),
+    status: String(row.status || "ACTIVE"),
+    access_ends_at: row.access_ends_at ? String(row.access_ends_at) : null,
+  };
+}

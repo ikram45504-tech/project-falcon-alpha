@@ -28,6 +28,7 @@ import {
 import { accessDaysRemaining, formatAccessEndsAt } from "../../companyAccess";
 import { hardResetPwaCache } from "../../registerPwa";
 import { ControlTheme } from "./controlTheme";
+import MasterCreateCompany, { CreatedCredentialsCard, type CreatedCredentials } from "./MasterCreateCompany";
 
 const SEGMENTS = Object.keys(SEGMENT_LABELS) as SegmentKey[];
 
@@ -144,6 +145,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   const [auditLoading, setAuditLoading] = useState(false);
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const [bulkPlanId, setBulkPlanId] = useState<EntitlementPlanId | "">("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<CreatedCredentials | null>(null);
   const [busyId, setBusyId] = useState("");
   const [cacheBusy, setCacheBusy] = useState(false);
   const [isNarrow, setIsNarrow] = useState(() =>
@@ -170,8 +173,10 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
         setSelectedId("");
         setDraft(null);
       }
+      return list;
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      return [] as MasterCompanyRow[];
     } finally {
       setLoading(false);
     }
@@ -204,7 +209,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
   }, [rows, filter, search, sort]);
 
   const selected = rows.find((row) => row.id === selectedId) || null;
-  const showDetail = Boolean(selected && draft);
+  const showCreate = createOpen || Boolean(createdCreds);
+  const showDetail = Boolean(selected && draft) || showCreate;
   const checkedVisible = useMemo(() => visible.filter((row) => checkedIds.includes(row.id)), [visible, checkedIds]);
   const allVisibleChecked = visible.length > 0 && checkedVisible.length === visible.length;
   const layoutClass = isNarrow ? (showDetail ? "mobile-detail" : "mobile-list") : "";
@@ -216,6 +222,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
     setPlanId("");
     setUsage(null);
     setAuditRows([]);
+    setCreateOpen(false);
+    setCreatedCreds(null);
     setMessage("");
     setError("");
   };
@@ -226,6 +234,20 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
     setPlanId("");
     setUsage(null);
     setAuditRows([]);
+    setCreateOpen(false);
+    setCreatedCreds(null);
+  };
+
+  const openCreate = () => {
+    setSelectedId("");
+    setDraft(null);
+    setPlanId("");
+    setUsage(null);
+    setAuditRows([]);
+    setCreatedCreds(null);
+    setCreateOpen(true);
+    setError("");
+    setMessage("");
   };
 
   useEffect(() => {
@@ -578,6 +600,14 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                 <option value="status">Status</option>
               </select>
             </label>
+            <button
+              type="button"
+              className="primary master-create-open"
+              onClick={openCreate}
+              disabled={busyId === "bulk"}
+            >
+              Create company
+            </button>
           </div>
 
           {visible.length > 0 ? (
@@ -683,9 +713,45 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
         </section>
 
         <section className="master-control-detail">
-          {!selected || !draft ? (
+          {createdCreds ? (
+            <>
+              <div className="master-back-row">
+                <button type="button" className="ghost" onClick={closeDetail}>
+                  ← Back to companies
+                </button>
+              </div>
+              <CreatedCredentialsCard
+                created={createdCreds}
+                onDone={() => {
+                  const created = createdCreds;
+                  setCreatedCreds(null);
+                  setCreateOpen(false);
+                  setMessage(`Created ${created.company_name} (${created.company_code}).`);
+                  void load().then((list) => {
+                    const row = list.find((item) => item.id === created.company_id);
+                    if (row) openCompany(row);
+                  });
+                }}
+              />
+            </>
+          ) : createOpen ? (
+            <>
+              <div className="master-back-row">
+                <button type="button" className="ghost" onClick={closeDetail}>
+                  ← Back to companies
+                </button>
+              </div>
+              <MasterCreateCompany
+                busy={busyId === "create"}
+                onBusy={(next) => setBusyId(next ? "create" : "")}
+                onError={setError}
+                onCreated={setCreatedCreds}
+                onCancel={closeDetail}
+              />
+            </>
+          ) : !selected || !draft ? (
             <div className="master-empty-detail">
-              <p className="muted">Select a company to approve, suspend, set capacity, or delete.</p>
+              <p className="muted">Select a company to approve, suspend, set capacity, or delete. Or create one.</p>
             </div>
           ) : (
             <>

@@ -432,3 +432,6 @@ grant execute on function public.master_company_usage(text) to authenticated;
 
 -- Wave D (bulk): client loops existing Master RPCs (status / entitlements / extend).
 -- No bulk wipe. Cap is 50 companies per action in platformMaster.ts.
+
+-- Wave E (provision): see rpc_master_create_company.sql
+-- Master creates company + owner auth user + public.users row. Credentials shown once in Control UI.
