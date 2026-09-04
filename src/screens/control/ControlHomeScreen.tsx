@@ -333,7 +333,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                           })
                         }
                       />
-                      <span>{SEGMENT_LABELS[key]}</span>
+                      <span className="master-check-label">{SEGMENT_LABELS[key]}</span>
+                      <span className="master-check-state">{draft.segments[key] ? "On" : "Off"}</span>
                     </label>
                   ))}
                 </div>
@@ -351,7 +352,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                         })
                       }
                     />
-                    <span>Booking adjustments</span>
+                    <span className="master-check-label">Booking adjustments</span>
+                    <span className="master-check-state">{draft.features.booking_adjustments ? "On" : "Off"}</span>
                   </label>
                   <label className="master-check">
                     <input
@@ -364,7 +366,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                         })
                       }
                     />
-                    <span>Statements</span>
+                    <span className="master-check-label">Statements</span>
+                    <span className="master-check-state">{draft.features.statements ? "On" : "Off"}</span>
                   </label>
                   <label className="master-check">
                     <input
@@ -377,7 +380,8 @@ export default function ControlHomeScreen({ masterEmail, theme, onThemeChange, o
                         })
                       }
                     />
-                    <span>P&amp;L</span>
+                    <span className="master-check-label">P&amp;L</span>
+                    <span className="master-check-state">{draft.features.pnl ? "On" : "Off"}</span>
                   </label>
                 </div>
 
