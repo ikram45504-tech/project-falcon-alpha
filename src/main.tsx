@@ -66,12 +66,34 @@ async function bootstrap() {
 
     document.title = PRODUCT_NAME;
     applyPhoneShellDocumentClass();
-    const report = await initializeDatabaseSafety();
-    if (report.duplicatePaymentDocuments > 0) {
-      console.warn(
-        `Database Safety: ${report.duplicatePaymentDocuments} duplicate payment document group(s) need cleanup before uniqueness can be enforced.`,
-      );
+
+    const onControl =
+      typeof window !== "undefined" && window.location.pathname.replace(/\/$/, "").startsWith("/control");
+
+    // Control Panel does not need SQLite safety; never block Master login on a hung Tauri invoke.
+    if (!onControl) {
+      const report = await Promise.race([
+        initializeDatabaseSafety(),
+        new Promise<Awaited<ReturnType<typeof initializeDatabaseSafety>>>((resolve) =>
+          window.setTimeout(
+            () =>
+              resolve({
+                backupPath: null,
+                destructiveMigrationsRetired: true,
+                paymentDocumentUniqueIndex: true,
+                duplicatePaymentDocuments: 0,
+              }),
+            4000,
+          ),
+        ),
+      ]);
+      if (report.duplicatePaymentDocuments > 0) {
+        console.warn(
+          `Database Safety: ${report.duplicatePaymentDocuments} duplicate payment document group(s) need cleanup before uniqueness can be enforced.`,
+        );
+      }
     }
+
     ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       <ThemeProvider>
         <AppErrorBoundary>

@@ -18,10 +18,8 @@ export default function MasterLoginScreen() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    document.documentElement.classList.add("auth-screen");
     document.documentElement.classList.add("master-control-screen");
     return () => {
-      document.documentElement.classList.remove("auth-screen");
       document.documentElement.classList.remove("master-control-screen");
     };
   }, []);

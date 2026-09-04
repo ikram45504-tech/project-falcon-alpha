@@ -403,6 +403,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Control Panel is Master-only — never block or hang on agency SQLite/sync boot.
+      if (isControlPanelPath()) {
+        if (mounted) {
+          setSession(null);
+          setCompany(null);
+          setError("");
+          setIsInitialized(true);
+        }
+        return;
+      }
+
       try {
         await initDatabase();
         await startBackgroundSync();

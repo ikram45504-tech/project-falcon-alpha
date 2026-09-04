@@ -89,8 +89,12 @@ function ControlGate() {
       const {
         data: { session },
       } = await supabaseMaster.auth.getSession();
+      if (!mounted) return;
       if (session?.user) {
         await applySession(session, { showChecking: true });
+      } else {
+        // No Master session — stop the checking spinner immediately (do not wait 4s).
+        setChecking(false);
       }
     })();
 

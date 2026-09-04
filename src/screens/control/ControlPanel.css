@@ -75,13 +75,26 @@
   display: grid;
   place-items: center;
   padding: 24px 16px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Beat agency midnight/ocean body overrides that wash out the Control Panel. */
+  background:
+    radial-gradient(ellipse 90% 55% at 90% -5%, rgba(45, 212, 191, 0.18), transparent 50%),
+    radial-gradient(ellipse 70% 40% at 0% 100%, rgba(34, 211, 238, 0.12), transparent 45%), var(--cp-bg) !important;
+  color: var(--cp-text) !important;
+}
+
+.master-control-page[data-control-theme="ocean"] {
+  background:
+    radial-gradient(ellipse 80% 50% at 15% -10%, rgba(14, 165, 233, 0.22), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(125, 211, 252, 0.35), transparent 50%), var(--cp-bg) !important;
 }
 
 .master-control-card {
   width: min(420px, 100%);
-  background: var(--cp-card);
-  border: 1px solid var(--cp-border);
-  color: var(--cp-text);
+  background: var(--cp-card) !important;
+  border: 1px solid var(--cp-border) !important;
+  color: var(--cp-text) !important;
   border-radius: var(--cp-radius);
   box-shadow: var(--cp-shadow);
   padding: 28px 24px 22px;
@@ -90,20 +103,22 @@
 .master-control-card h1 {
   margin: 8px 0 6px;
   font-size: 1.7rem;
-  color: var(--cp-text);
+  color: var(--cp-text) !important;
 }
 
 .master-control-card .eyebrow,
 .master-control-kicker {
   letter-spacing: 0.08em;
-  color: var(--cp-accent);
+  color: var(--cp-accent) !important;
   font-size: 12px;
   text-transform: uppercase;
 }
 
 .master-control-card .muted,
-.master-control-root .muted {
-  color: var(--cp-muted);
+.master-control-root .muted,
+.master-control-card .auth-login-lead,
+.master-control-card .auth-login-footer {
+  color: var(--cp-muted) !important;
 }
 
 .master-inline-link {
