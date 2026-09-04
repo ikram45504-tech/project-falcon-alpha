@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { createCompanyAccount, createOfflineCompanyAccount } from "../db";
+import { createCompanyAccount, createCompanyAccountForCurrentAuthUser, createOfflineCompanyAccount } from "../db";
 import { isOfflineOnlyBuild } from "../appMode";
 import { useNavigate } from "react-router-dom";
 import TravelHisabLogo from "../TravelHisabLogo";
 import { PRODUCT_BYLINE, PRODUCT_HIGHLIGHTS, PRODUCT_NAME, PRODUCT_TAGLINE } from "../brand";
+import { useAuth } from "../AuthContext";
 
 const blankSetup = {
   companyName: "",
@@ -37,11 +38,19 @@ function passwordPolicyMessage(value: string) {
 
 export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (notice: any) => void }) {
   const navigate = useNavigate();
+  const { authGate, pendingAuthEmail, refreshAuth } = useAuth();
+  const googleSetup = authGate === "google-link";
   const [setup, setSetup] = useState(blankSetup);
   const [showSetupPassword, setShowSetupPassword] = useState(false);
   const [showSetupConfirmPassword, setShowSetupConfirmPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [googleCreated, setGoogleCreated] = useState<{
+    companyName: string;
+    companyCode: string;
+    username: string;
+    email: string;
+  } | null>(null);
 
   const setupPasswordChecks = useMemo(() => passwordChecks(setup.password), [setup.password]);
 
@@ -49,6 +58,12 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
     document.documentElement.classList.add("auth-screen");
     return () => document.documentElement.classList.remove("auth-screen");
   }, []);
+
+  useEffect(() => {
+    if (googleSetup && pendingAuthEmail) {
+      setSetup((prev) => ({ ...prev, email: pendingAuthEmail }));
+    }
+  }, [googleSetup, pendingAuthEmail]);
 
   const updateSetup = (key: keyof typeof setup, value: string) => {
     setError("");
@@ -62,13 +77,29 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
     if (!/^\S+@\S+\.\S+$/.test(setup.email.trim())) return setError("Please enter a valid Email Address.");
     if (!setup.phone.trim()) return setError("Please enter the Phone / WhatsApp Number.");
 
-    const passwordError = passwordPolicyMessage(setup.password);
+    const passwordError = googleSetup ? "" : passwordPolicyMessage(setup.password);
     if (passwordError) return setError(passwordError);
-    if (setup.password !== setup.confirmPassword) return setError("Passwords do not match.");
+    if (!googleSetup && setup.password !== setup.confirmPassword) return setError("Passwords do not match.");
 
     setBusy(true);
     setError("");
     try {
+      if (googleSetup) {
+        const created = await createCompanyAccountForCurrentAuthUser({
+          companyName: setup.companyName.trim(),
+          ownerUsername: setup.username.trim(),
+          ownerPhone: setup.phone.trim(),
+          dtsLicense: setup.dtsLicense.trim(),
+        });
+        setGoogleCreated({
+          companyName: setup.companyName.trim(),
+          companyCode: created.companyCode,
+          username: created.username,
+          email: created.email,
+        });
+        return;
+      }
+
       const created = isOfflineOnlyBuild()
         ? await createOfflineCompanyAccount({
             companyName: setup.companyName.trim(),
@@ -137,131 +168,174 @@ export default function SetupScreen({ onAccountCreated }: { onAccountCreated: (n
 
         <section className="auth-setup-form-panel">
           <div className="auth-setup-form-head">
-            <h1>Create company account</h1>
-            <p className="muted">A unique Company Code is issued after registration.</p>
+            <h1>{googleCreated ? "Company account ready" : "Create company account"}</h1>
+            <p className="muted">
+              {googleCreated
+                ? "Write down your Company Code before opening the workspace."
+                : googleSetup
+                  ? "This company will be created for your Google account. No password is needed."
+                  : "A unique Company Code is issued after registration."}
+            </p>
           </div>
 
           {error && <div className="alert error">{error}</div>}
 
-          <form
-            className="auth-setup-form-compact"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void finishSetup();
-            }}
-          >
-            <label className="auth-setup-field auth-setup-field-hero">
-              Company Name *
-              <input
-                autoFocus
-                value={setup.companyName}
-                onChange={(e) => updateSetup("companyName", e.target.value)}
-                placeholder="e.g. ABC Travel & Tours"
-              />
-            </label>
-
-            <label className="auth-setup-field auth-setup-field-hero">
-              Email Address *
-              <input
-                type="email"
-                value={setup.email}
-                onChange={(e) => updateSetup("email", e.target.value)}
-                placeholder="e.g. accounts@abctravel.com"
-                autoComplete="email"
-              />
-            </label>
-
-            <label className="auth-setup-field auth-setup-field-medium">
-              Master Username *
-              <input
-                value={setup.username}
-                onChange={(e) => updateSetup("username", e.target.value)}
-                placeholder="e.g. admin"
-                autoComplete="username"
-              />
-            </label>
-
-            <label className="auth-setup-field auth-setup-field-medium">
-              Phone / WhatsApp *
-              <input
-                value={setup.phone}
-                onChange={(e) => updateSetup("phone", e.target.value)}
-                placeholder="e.g. +92 300 1234567"
-                inputMode="tel"
-                autoComplete="tel"
-              />
-            </label>
-
-            <label className="auth-setup-field auth-setup-field-small auth-setup-span-full">
-              DTS License # <small>(Optional)</small>
-              <input
-                value={setup.dtsLicense}
-                onChange={(e) => updateSetup("dtsLicense", e.target.value)}
-                placeholder="License #"
-              />
-            </label>
-
-            <div className="auth-setup-password-row">
-              <label className="auth-setup-field auth-setup-field-password">
-                Password *
-                <div className="password-input-wrap-v8b">
-                  <input
-                    type={showSetupPassword ? "text" : "password"}
-                    value={setup.password}
-                    onChange={(e) => updateSetup("password", e.target.value)}
-                    placeholder="Create password"
-                    autoComplete="new-password"
-                  />
-                  <button
-                    className="password-eye-v8b"
-                    type="button"
-                    onClick={() => setShowSetupPassword((v) => !v)}
-                    aria-label={showSetupPassword ? "Hide password" : "Show password"}
-                  >
-                    {showSetupPassword ? "Hide" : "Show"}
-                  </button>
-                </div>
+          {googleCreated ? (
+            <div className="created-company-code">
+              <small>COMPANY CODE</small>
+              <b>{googleCreated.companyCode}</b>
+              <span>
+                {googleCreated.companyName} · {googleCreated.username} · {googleCreated.email}
+              </span>
+              <div className="auth-setup-actions auth-setup-span-full">
+                <button
+                  className="primary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true);
+                    void refreshAuth()
+                      .then(() => navigate("/", { replace: true }))
+                      .catch((e) => {
+                        setError(e instanceof Error ? e.message : String(e));
+                        setBusy(false);
+                      });
+                  }}
+                >
+                  {busy ? "Opening workspace..." : "Continue to workspace"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              className="auth-setup-form-compact"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void finishSetup();
+              }}
+            >
+              <label className="auth-setup-field auth-setup-field-hero">
+                Company Name *
+                <input
+                  autoFocus
+                  value={setup.companyName}
+                  onChange={(e) => updateSetup("companyName", e.target.value)}
+                  placeholder="e.g. ABC Travel & Tours"
+                />
               </label>
 
-              <label className="auth-setup-field auth-setup-field-password">
-                Confirm Password *
-                <div className="password-input-wrap-v8b">
-                  <input
-                    type={showSetupConfirmPassword ? "text" : "password"}
-                    value={setup.confirmPassword}
-                    onChange={(e) => updateSetup("confirmPassword", e.target.value)}
-                    placeholder="Repeat password"
-                    autoComplete="new-password"
-                  />
-                  <button
-                    className="password-eye-v8b"
-                    type="button"
-                    onClick={() => setShowSetupConfirmPassword((v) => !v)}
-                    aria-label={showSetupConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                  >
-                    {showSetupConfirmPassword ? "Hide" : "Show"}
-                  </button>
-                </div>
+              <label className="auth-setup-field auth-setup-field-hero">
+                Email Address *
+                <input
+                  type="email"
+                  value={setup.email}
+                  onChange={(e) => updateSetup("email", e.target.value)}
+                  placeholder="e.g. accounts@abctravel.com"
+                  autoComplete="email"
+                  readOnly={googleSetup}
+                />
               </label>
-            </div>
 
-            <div className="password-rules-v8b auth-setup-rules-compact auth-setup-span-full">
-              <span className={setupPasswordChecks.length ? "ok" : ""}>8+ chars</span>
-              <span className={setupPasswordChecks.upper ? "ok" : ""}>A-Z</span>
-              <span className={setupPasswordChecks.lower ? "ok" : ""}>a-z</span>
-              <span className={setupPasswordChecks.number ? "ok" : ""}>0-9</span>
-              <span className={setupPasswordChecks.special ? "ok" : ""}>!@#$</span>
-            </div>
+              <label className="auth-setup-field auth-setup-field-medium">
+                Master Username *
+                <input
+                  value={setup.username}
+                  onChange={(e) => updateSetup("username", e.target.value)}
+                  placeholder="e.g. admin"
+                  autoComplete="username"
+                />
+              </label>
 
-            <div className="auth-setup-actions auth-setup-span-full">
-              <button className="primary" type="submit" disabled={busy}>
-                {busy ? "Creating Account..." : "Create Account"}
-              </button>
-              <button className="signup-back-v8b" type="button" onClick={() => navigate("/login")}>
-                Back to Sign In
-              </button>
-            </div>
-          </form>
+              <label className="auth-setup-field auth-setup-field-medium">
+                Phone / WhatsApp *
+                <input
+                  value={setup.phone}
+                  onChange={(e) => updateSetup("phone", e.target.value)}
+                  placeholder="e.g. +92 300 1234567"
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
+              </label>
+
+              <label className="auth-setup-field auth-setup-field-small auth-setup-span-full">
+                DTS License # <small>(Optional)</small>
+                <input
+                  value={setup.dtsLicense}
+                  onChange={(e) => updateSetup("dtsLicense", e.target.value)}
+                  placeholder="License #"
+                />
+              </label>
+
+              {!googleSetup && (
+                <>
+                  <div className="auth-setup-password-row">
+                    <label className="auth-setup-field auth-setup-field-password">
+                      Password *
+                      <div className="password-input-wrap-v8b">
+                        <input
+                          type={showSetupPassword ? "text" : "password"}
+                          value={setup.password}
+                          onChange={(e) => updateSetup("password", e.target.value)}
+                          placeholder="Create password"
+                          autoComplete="new-password"
+                        />
+                        <button
+                          className="password-eye-v8b"
+                          type="button"
+                          onClick={() => setShowSetupPassword((v) => !v)}
+                          aria-label={showSetupPassword ? "Hide password" : "Show password"}
+                        >
+                          {showSetupPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </label>
+
+                    <label className="auth-setup-field auth-setup-field-password">
+                      Confirm Password *
+                      <div className="password-input-wrap-v8b">
+                        <input
+                          type={showSetupConfirmPassword ? "text" : "password"}
+                          value={setup.confirmPassword}
+                          onChange={(e) => updateSetup("confirmPassword", e.target.value)}
+                          placeholder="Repeat password"
+                          autoComplete="new-password"
+                        />
+                        <button
+                          className="password-eye-v8b"
+                          type="button"
+                          onClick={() => setShowSetupConfirmPassword((v) => !v)}
+                          aria-label={showSetupConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                        >
+                          {showSetupConfirmPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="password-rules-v8b auth-setup-rules-compact auth-setup-span-full">
+                    <span className={setupPasswordChecks.length ? "ok" : ""}>8+ chars</span>
+                    <span className={setupPasswordChecks.upper ? "ok" : ""}>A-Z</span>
+                    <span className={setupPasswordChecks.lower ? "ok" : ""}>a-z</span>
+                    <span className={setupPasswordChecks.number ? "ok" : ""}>0-9</span>
+                    <span className={setupPasswordChecks.special ? "ok" : ""}>!@#$</span>
+                  </div>
+                </>
+              )}
+
+              <div className="auth-setup-actions auth-setup-span-full">
+                <button className="primary" type="submit" disabled={busy}>
+                  {busy ? "Creating Account..." : "Create Account"}
+                </button>
+                <button
+                  className="signup-back-v8b"
+                  type="button"
+                  onClick={() => navigate(googleSetup ? "/auth/google-link" : "/login")}
+                >
+                  {googleSetup ? "Back" : "Back to Sign In"}
+                </button>
+              </div>
+            </form>
+          )}
         </section>
       </div>
     </main>

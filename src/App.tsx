@@ -10,10 +10,13 @@ import { usePhoneUi } from "./phoneUi";
 import { useWorkspaceLayoutState } from "./layout/useWorkspaceLayoutState";
 import { DesktopAppLayout } from "./desktop/DesktopAppLayout";
 import { MobileAppLayout } from "./mobile/MobileAppLayout";
+import { isOfflineOnlyBuild } from "./appMode";
 
-// Screens
 import LoginScreen from "./screens/LoginScreen";
 import SetupScreen from "./screens/SetupScreen";
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
+import ResetPasswordScreen from "./screens/ResetPasswordScreen";
+import GoogleLinkCompanyScreen from "./screens/GoogleLinkCompanyScreen";
 
 function AppLayout() {
   const isPhone = usePhoneUi();
@@ -27,7 +30,7 @@ function AppLayout() {
 }
 
 function RouterContent() {
-  const { isInitialized, session, company, error } = useAuth();
+  const { isInitialized, session, company, error, authGate } = useAuth();
   const [accountCreatedNotice, setAccountCreatedNotice] = useState<any>(null);
   const location = useLocation();
 
@@ -45,7 +48,27 @@ function RouterContent() {
     );
   }
 
+  if (authGate === "recovery") {
+    return (
+      <Routes>
+        <Route path="/reset-password" element={<ResetPasswordScreen />} />
+        <Route path="*" element={<Navigate to="/reset-password" replace />} />
+      </Routes>
+    );
+  }
+
+  if (authGate === "google-link") {
+    return (
+      <Routes>
+        <Route path="/setup" element={<SetupScreen onAccountCreated={setAccountCreatedNotice} />} />
+        <Route path="/auth/google-link" element={<GoogleLinkCompanyScreen />} />
+        <Route path="*" element={<Navigate to="/auth/google-link" replace />} />
+      </Routes>
+    );
+  }
+
   if (!session || !company) {
+    const offline = isOfflineOnlyBuild();
     return (
       <Routes>
         <Route path="/setup" element={<SetupScreen onAccountCreated={setAccountCreatedNotice} />} />
@@ -58,6 +81,8 @@ function RouterContent() {
             />
           }
         />
+        {!offline && <Route path="/forgot-password" element={<ForgotPasswordScreen />} />}
+        {!offline && <Route path="/reset-password" element={<ResetPasswordScreen />} />}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );

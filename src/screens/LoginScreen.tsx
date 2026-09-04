@@ -1,13 +1,14 @@
 import { FormEvent, useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useBodyScrollLock } from "../useBodyScrollLock";
 import { supabase } from "../supabaseClient";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import TravelHisabLogo from "../TravelHisabLogo";
 import { COMPANY_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "../brand";
 import { resolveLoginEmail } from "../loginAuth";
 import { isOfflineOnlyBuild } from "../appMode";
 import { getCompanyById, loginUser, OFFLINE_SESSION_STORAGE_KEY } from "../db";
+import { googleAuthErrorFromUrl, signInWithGoogle } from "../cloudAuth";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -19,7 +20,9 @@ export default function LoginScreen({
   useBodyScrollLock(Boolean(accountCreatedNotice));
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { error: globalAuthError, setError: setGlobalAuthError, setSessionData } = useAuth();
+  const cloudAuth = !isOfflineOnlyBuild();
 
   const [loginCompanyCode, setLoginCompanyCode] = useState(
     () => localStorage.getItem("travelAccountingLastCompanyCode") || accountCreatedNotice?.companyCode || "",
@@ -38,8 +41,16 @@ export default function LoginScreen({
 
   useEffect(() => {
     setGlobalAuthError("");
-    setError("");
-  }, [setGlobalAuthError]);
+    const oauthError = googleAuthErrorFromUrl(location.search);
+    if (oauthError) {
+      setError(oauthError);
+    }
+    const navState = location.state as { passwordUpdated?: boolean } | null;
+    if (navState?.passwordUpdated) {
+      setMessage("Password updated. Sign in with your new password.");
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.search, location.state, navigate, setGlobalAuthError]);
 
   useEffect(() => {
     if (accountCreatedNotice) {
@@ -194,6 +205,18 @@ export default function LoginScreen({
             </div>
           </label>
 
+          {cloudAuth && (
+            <div className="auth-forgot-row">
+              <Link
+                className="auth-forgot-link"
+                to="/forgot-password"
+                state={{ companyCode: loginCompanyCode, identifier: loginName }}
+              >
+                Forgot password?
+              </Link>
+            </div>
+          )}
+
           <label className="remember-company-code">
             <input
               type="checkbox"
@@ -207,6 +230,30 @@ export default function LoginScreen({
             {busy ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        {cloudAuth && (
+          <>
+            <div className="new-company-divider">
+              <span>Or continue with</span>
+            </div>
+            <button
+              className="google-login-button"
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setError("");
+                void signInWithGoogle().catch((err) => {
+                  setError(err instanceof Error ? err.message : String(err));
+                  setBusy(false);
+                });
+              }}
+            >
+              <GoogleMark />
+              Continue with Google
+            </button>
+          </>
+        )}
 
         <div className="new-company-divider">
           <span>New to {PRODUCT_NAME}?</span>
@@ -305,5 +352,28 @@ export default function LoginScreen({
         </div>
       )}
     </main>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <svg className="google-login-mark" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#FFC107"
+        d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.2 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"
+      />
+      <path
+        fill="#FF3D00"
+        d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.2 6.1 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"
+      />
+      <path
+        fill="#4CAF50"
+        d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.3C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8.1l-6.5 5C9.5 39.6 16.2 44 24 44z"
+      />
+      <path
+        fill="#1976D2"
+        d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.5 5.6-6.7 7.1l6.3 5.3C38.2 37.3 44 32 44 24c0-1.2-.1-2.3-.4-3.5z"
+      />
+    </svg>
   );
 }

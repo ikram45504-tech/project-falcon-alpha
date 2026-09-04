@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { isOfflineOnlyBuild } from "./appMode";
 import {
@@ -14,8 +14,16 @@ import {
 } from "./db";
 import { clearAuthStorage } from "./desktopReset";
 import { UserRole } from "./permissions";
+import {
+  clearPasswordRecoveryPending,
+  isPasswordRecoveryPending,
+  markPasswordRecoveryPending,
+  urlLooksLikePasswordRecovery,
+} from "./authSessionFlags";
 
 const USER_ROLES: UserRole[] = ["OWNER", "ADMIN", "ACCOUNTS", "DATA_ENTRY", "VIEW_ONLY"];
+
+export type AuthGate = "none" | "recovery" | "google-link";
 
 function normalizeUserRole(value: string): UserRole {
   const upper = value.trim().toUpperCase();
@@ -27,9 +35,12 @@ type AuthContextType = {
   session: UserSession | null;
   company: Company | null;
   error: string;
+  authGate: AuthGate;
+  pendingAuthEmail: string;
   setError: (msg: string) => void;
   setSessionData: (session: UserSession | null, company: Company | null) => void;
   logout: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,7 +49,18 @@ type SupabaseAuthUser = {
   id: string;
   email?: string;
   user_metadata?: Record<string, unknown>;
+  app_metadata?: Record<string, unknown>;
+  identities?: Array<{ provider?: string }>;
 };
+
+function isGoogleAuthUser(user: SupabaseAuthUser) {
+  const identities = Array.isArray(user.identities) ? user.identities : [];
+  if (identities.some((identity) => identity?.provider === "google")) return true;
+  const metadata = user.app_metadata || {};
+  if (metadata.provider === "google") return true;
+  const providers = metadata.providers;
+  return Array.isArray(providers) && providers.some((provider) => provider === "google");
+}
 
 async function resolveAuthUser(): Promise<SupabaseAuthUser | null> {
   await supabase.auth.refreshSession();
@@ -104,45 +126,103 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<UserSession | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [error, setError] = useState("");
+  const [authGate, setAuthGate] = useState<AuthGate>("none");
+  const [pendingAuthEmail, setPendingAuthEmail] = useState("");
+  const authGateRef = useRef<AuthGate>("none");
+  const refreshAuthRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    authGateRef.current = authGate;
+  }, [authGate]);
 
   useEffect(() => {
     let mounted = true;
     let authSubscription: { unsubscribe: () => void } | null = null;
+    let loadGen = 0;
 
-    async function loadSupabaseSession(initialUser: SupabaseAuthUser | null | undefined) {
+    function enterRecovery(email = "") {
+      markPasswordRecoveryPending();
+      authGateRef.current = "recovery";
+      if (!mounted) return;
+      setAuthGate("recovery");
+      setPendingAuthEmail(email);
+      setSession(null);
+      setCompany(null);
+      setError("");
+      setIsInitialized(true);
+    }
+
+    function enterGoogleLink(email = "") {
+      authGateRef.current = "google-link";
+      if (!mounted) return;
+      setAuthGate("google-link");
+      setPendingAuthEmail(email);
+      setSession(null);
+      setCompany(null);
+      setError("");
+      setIsInitialized(true);
+    }
+
+    async function loadSupabaseSession(
+      initialUser: SupabaseAuthUser | null | undefined,
+      options?: { force?: boolean },
+    ) {
+      const gen = ++loadGen;
+      const force = Boolean(options?.force);
+
       if (!initialUser) {
-        if (mounted) {
-          setSession(null);
-          setCompany(null);
-          setError("");
-          setIsInitialized(true);
-        }
+        if (!mounted || gen !== loadGen) return;
+        clearPasswordRecoveryPending();
+        authGateRef.current = "none";
+        setAuthGate("none");
+        setPendingAuthEmail("");
+        setSession(null);
+        setCompany(null);
+        setError("");
+        setIsInitialized(true);
+        return;
+      }
+
+      if (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending()) {
+        enterRecovery(initialUser.email || "");
+        return;
+      }
+
+      if (!force && authGateRef.current === "google-link") {
+        enterGoogleLink(initialUser.email || "");
         return;
       }
 
       try {
         const user = (await resolveAuthUser()) || initialUser;
+        if (!mounted || gen !== loadGen) return;
         const profile = await resolveCompanyId(user);
 
         if (!profile.companyId) {
           if (isCompanySetupInProgress()) {
-            if (mounted) {
-              setSession(null);
-              setCompany(null);
-              setError("");
-              setIsInitialized(true);
-            }
+            if (!mounted || gen !== loadGen) return;
+            setSession(null);
+            setCompany(null);
+            setError("");
+            setIsInitialized(true);
+            return;
+          }
+
+          if (isGoogleAuthUser(user)) {
+            enterGoogleLink(user.email || "");
             return;
           }
 
           await supabase.auth.signOut({ scope: "local" });
           clearAuthStorage();
-          if (mounted) {
-            setSession(null);
-            setCompany(null);
-            setError("");
-            setIsInitialized(true);
-          }
+          if (!mounted || gen !== loadGen) return;
+          authGateRef.current = "none";
+          setAuthGate("none");
+          setPendingAuthEmail("");
+          setSession(null);
+          setCompany(null);
+          setError("");
+          setIsInitialized(true);
           return;
         }
 
@@ -170,43 +250,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!companyData) {
           if (isCompanySetupInProgress()) {
-            if (mounted) {
-              setSession(null);
-              setCompany(null);
-              setError("");
-              setIsInitialized(true);
-            }
+            if (!mounted || gen !== loadGen) return;
+            setSession(null);
+            setCompany(null);
+            setError("");
+            setIsInitialized(true);
+            return;
+          }
+
+          if (isGoogleAuthUser(user)) {
+            enterGoogleLink(user.email || "");
             return;
           }
 
           await supabase.auth.signOut({ scope: "local" });
           clearAuthStorage();
-          if (mounted) {
-            setSession(null);
-            setCompany(null);
-            setError("");
-            setIsInitialized(true);
-          }
+          if (!mounted || gen !== loadGen) return;
+          authGateRef.current = "none";
+          setAuthGate("none");
+          setPendingAuthEmail("");
+          setSession(null);
+          setCompany(null);
+          setError("");
+          setIsInitialized(true);
           return;
         }
 
-        if (mounted) {
-          await syncCloudSessionToLocal(companyData as Company, newSession);
-          setBackgroundSyncCompanyId(profile.companyId);
-          setSession(newSession);
-          setCompany(companyData as Company);
-          setError("");
-          setIsInitialized(true);
-        }
+        if (!mounted || gen !== loadGen) return;
+        await syncCloudSessionToLocal(companyData as Company, newSession);
+        setBackgroundSyncCompanyId(profile.companyId);
+        authGateRef.current = "none";
+        setAuthGate("none");
+        setPendingAuthEmail("");
+        setSession(newSession);
+        setCompany(companyData as Company);
+        setError("");
+        setIsInitialized(true);
       } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : String(err));
-          setSession(null);
-          setCompany(null);
-          setIsInitialized(true);
-        }
+        if (!mounted || gen !== loadGen) return;
+        setError(err instanceof Error ? err.message : String(err));
+        setSession(null);
+        setCompany(null);
+        setIsInitialized(true);
       }
     }
+
+    refreshAuthRef.current = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      authGateRef.current = "none";
+      await loadSupabaseSession(user as SupabaseAuthUser | null, { force: true });
+    };
 
     async function initializeOffline() {
       try {
@@ -249,14 +344,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession();
-        await loadSupabaseSession(currentSession?.user as SupabaseAuthUser | undefined);
 
         const {
           data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+        } = supabase.auth.onAuthStateChange((event, currentSession) => {
+          if (event === "PASSWORD_RECOVERY" || urlLooksLikePasswordRecovery()) {
+            markPasswordRecoveryPending();
+          }
+          if (event === "PASSWORD_RECOVERY" || isPasswordRecoveryPending()) {
+            enterRecovery(currentSession?.user?.email || "");
+            return;
+          }
           void loadSupabaseSession(currentSession?.user as SupabaseAuthUser | undefined);
         });
         authSubscription = subscription;
+
+        if (urlLooksLikePasswordRecovery() || isPasswordRecoveryPending()) {
+          enterRecovery(currentSession?.user?.email || "");
+          return;
+        }
+
+        await loadSupabaseSession(currentSession?.user as SupabaseAuthUser | undefined);
       } catch (e) {
         if (mounted) {
           setError(`Workspace could not start: ${e instanceof Error ? e.message : String(e)}`);
@@ -279,6 +387,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    clearPasswordRecoveryPending();
+    authGateRef.current = "none";
+    setAuthGate("none");
+    setPendingAuthEmail("");
+
     if (isOfflineOnlyBuild()) {
       sessionStorage.removeItem(OFFLINE_SESSION_STORAGE_KEY);
       clearAuthStorage();
@@ -297,6 +410,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError("");
   };
 
+  const refreshAuth = async () => {
+    await refreshAuthRef.current();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -304,9 +421,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         company,
         error,
+        authGate,
+        pendingAuthEmail,
         setError,
         setSessionData,
         logout,
+        refreshAuth,
       }}
     >
       {children}

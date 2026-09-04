@@ -1,4 +1,4 @@
-﻿/* AUTO-GENERATED THEME OVERRIDES FOR App.css */
+/* AUTO-GENERATED THEME OVERRIDES FOR App.css */
 
 :root[data-theme="midnight"] :root {
   border-color: rgba(56, 189, 248, 0.15) !important;
@@ -1061,6 +1061,15 @@
   border-color: rgba(56, 189, 248, 0.15) !important;
 }
 :root[data-theme="midnight"] .auth-login-card-v8 form label:not(.remember-company-code) {
+  color: var(--text-main) !important;
+}
+:root[data-theme="midnight"] .auth-forgot-link,
+:root[data-theme="midnight"] .auth-text-button {
+  color: #7dd3fc !important;
+}
+:root[data-theme="midnight"] .google-login-button {
+  background: var(--bg-card) !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="midnight"] .auth-setup-page-compact {
@@ -3172,6 +3181,15 @@
   border-color: rgba(2, 132, 199, 0.2) !important;
 }
 :root[data-theme="ocean"] .auth-login-card-v8 form label:not(.remember-company-code) {
+  color: var(--text-main) !important;
+}
+:root[data-theme="ocean"] .auth-forgot-link,
+:root[data-theme="ocean"] .auth-text-button {
+  color: #0369a1 !important;
+}
+:root[data-theme="ocean"] .google-login-button {
+  background: var(--bg-card) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
   color: var(--text-main) !important;
 }
 :root[data-theme="ocean"] .auth-setup-page-compact {
