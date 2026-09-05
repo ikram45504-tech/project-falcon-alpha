@@ -604,6 +604,8 @@ export async function createPaymentV2(companyId: string, input: PaymentV2Input, 
 }
 
 export async function updatePaymentV2(companyId: string, paymentId: string, input: PaymentV2Input, userId = "") {
+  const { enforceCompanyActive } = await import("./companyAccess");
+  await enforceCompanyActive(companyId);
   const { account, amount, roe, paidAmount } = await validateAndResolveAccount(companyId, input);
   const existingMeta = await getPaymentV2Meta(companyId, paymentId);
   if (existingMeta && existingMeta.transaction_kind !== input.transactionKind) {
@@ -684,6 +686,8 @@ export async function updatePaymentV2(companyId: string, paymentId: string, inpu
 }
 
 export async function voidPaymentV2(companyId: string, paymentId: string, userId = "") {
+  const { enforceCompanyActive } = await import("./companyAccess");
+  await enforceCompanyActive(companyId);
   const now = new Date().toISOString();
 
   if (isDesktopApp()) {

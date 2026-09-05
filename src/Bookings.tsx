@@ -11,6 +11,7 @@ import type { BookingServiceName } from "./BookingLifecycle";
 import { useAuth } from "./AuthContext";
 import { normalizeEntitlements } from "./companyEntitlements";
 import { PLAN_LOCKED_HINT } from "./planLocked";
+import { guardCompanyWrites } from "./companyStatus";
 import "./BookingFinalization.css";
 import "./PaymentsV2.css";
 
@@ -115,6 +116,7 @@ export default function BookingsModule({
   const enabledSegments = normalizeEntitlements(company?.entitlements).segments;
 
   function chooseDirection(next: BookingTransactionType) {
+    if (!guardCompanyWrites(company?.status)) return;
     setTransactionType(next);
     setService(null);
     setOpenBookingId(null);
@@ -122,6 +124,7 @@ export default function BookingsModule({
     setScreen("SERVICES");
   }
   function chooseService(next: BookingService) {
+    if (!guardCompanyWrites(company?.status)) return;
     setService(next);
     setOpenBookingId(null);
     setOpenedFromAllRegister(false);

@@ -13,7 +13,17 @@ import { useAuth } from "../AuthContext";
 import type { WorkspaceLayoutState } from "./useWorkspaceLayoutState";
 import { Party, Company } from "../db";
 import { normalizeEntitlements } from "../companyEntitlements";
+import { COMPANY_SUSPENDED_MESSAGE, companyAllowsWrites, notifyCompanySuspended } from "../companyStatus";
 import { useParams } from "react-router-dom";
+
+function SuspendedSectionNotice({ title }: { title: string }) {
+  return (
+    <section className="content-card">
+      <h2>{title}</h2>
+      <p>{COMPANY_SUSPENDED_MESSAGE}</p>
+    </section>
+  );
+}
 
 function LedgerRoute({
   company,
@@ -44,11 +54,15 @@ function LedgerRoute({
       parties={parties}
       userId={session?.userId}
       preparedByName={session?.fullName}
-      canEditPayments={can("edit_payments")}
+      canEditPayments={can("edit_payments") && companyAllowsWrites(company.status)}
       onBack={() => navigate(`/parties/${party.account_type === "UNASSIGNED" ? "UNASSIGNED" : party.account_type}`)}
       onEditParty={() => {}}
       onGenerateStatement={(ledgerParty: Party) => {
         if (!can("view_statements")) return;
+        if (!companyAllowsWrites(company.status)) {
+          notifyCompanySuspended();
+          return;
+        }
         setStatementPartyId(ledgerParty.id);
         navigate("/statements");
       }}
@@ -65,6 +79,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
     session,
     parties,
     can,
+    canMutate,
     location,
     statementPartyId,
     setStatementPartyId,
@@ -108,9 +123,9 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
               companyId={company.id}
               parties={parties}
               userId={session.userId}
-              canCreate={can("create_bookings")}
-              canEdit={can("edit_bookings")}
-              canVoid={can("void_bookings")}
+              canCreate={can("create_bookings") && canMutate}
+              canEdit={can("edit_bookings") && canMutate}
+              canVoid={can("void_bookings") && canMutate}
               onChanged={async () => {
                 await loadParties();
                 await loadFinancialTotals();
@@ -133,7 +148,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
               parties={parties}
               userId={session?.userId}
               preparedByName={session?.fullName}
-              canEdit={can("edit_payments")}
+              canEdit={can("edit_payments") && canMutate}
               onOpenLedger={(party) => navigate(`/parties/ledger/${party.id}`)}
               onChanged={() => {
                 void loadFinancialTotals();
@@ -149,14 +164,18 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
         path="/statements"
         element={
           company && can("view_statements") && planFeatures.statements ? (
-            <StatementsModule
-              key={location.key}
-              company={company}
-              parties={parties}
-              initialPartyId={statementPartyId}
-              onConsumed={() => setStatementPartyId("")}
-              onOpenLedger={(party) => navigate(`/parties/ledger/${party.id}`)}
-            />
+            canMutate ? (
+              <StatementsModule
+                key={location.key}
+                company={company}
+                parties={parties}
+                initialPartyId={statementPartyId}
+                onConsumed={() => setStatementPartyId("")}
+                onOpenLedger={(party) => navigate(`/parties/ledger/${party.id}`)}
+              />
+            ) : (
+              <SuspendedSectionNotice title="Statements" />
+            )
           ) : (
             <Navigate to="/" />
           )
@@ -166,7 +185,11 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
         path="/pnl"
         element={
           company && can("view_statements") && planFeatures.pnl ? (
-            <PnLPortfolio companyId={company.id} onBack={() => navigate("/")} />
+            canMutate ? (
+              <PnLPortfolio companyId={company.id} onBack={() => navigate("/")} />
+            ) : (
+              <SuspendedSectionNotice title="PnL Portfolio" />
+            )
           ) : (
             <Navigate to="/" />
           )

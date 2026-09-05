@@ -42,6 +42,7 @@ function statusTone(status: string) {
     case "PENDING_APPROVAL":
       return "warn";
     case "SUSPENDED":
+    case "REVOKED":
     case "INACTIVE":
       return "bad";
     default:
@@ -99,7 +100,7 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED">(restored.filter);
+  const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED" | "REVOKED">(restored.filter);
   const [mainTab, setMainTab] = useState<"approved" | "pending">(restored.mainTab);
   const [pendingSearch, setPendingSearch] = useState("");
   const [planId, setPlanId] = useState<EntitlementPlanId | "">(restored.planId);
@@ -192,7 +193,8 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
       if (status === "PENDING_APPROVAL") return false;
       if (filter === "ACTIVE") return status === "ACTIVE";
       if (filter === "SUSPENDED") return status === "SUSPENDED";
-      return status === "ACTIVE" || status === "SUSPENDED" || status === "INACTIVE";
+      if (filter === "REVOKED") return status === "REVOKED";
+      return status === "ACTIVE" || status === "SUSPENDED" || status === "REVOKED" || status === "INACTIVE";
     });
     return [...filtered].sort(
       (a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")) || a.name.localeCompare(b.name),
@@ -286,7 +288,13 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
     };
   }, [selectedId]);
 
-  const runStatus = async (companyId: string, status: "ACTIVE" | "SUSPENDED") => {
+  const runStatus = async (companyId: string, status: "ACTIVE" | "SUSPENDED" | "REVOKED") => {
+    if (status === "REVOKED") {
+      const confirmed = window.confirm(
+        "Revoke this company? Users cannot sign in. Anyone already signed in will be blocked and asked to contact SMC Softwares.",
+      );
+      if (!confirmed) return;
+    }
     setBusyId(companyId);
     setError("");
     setMessage("");
@@ -651,7 +659,7 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
         <div className="master-control-layout">
           <nav className="master-control-taskbar" aria-label="Approved users toolbar">
             <div className="master-filter-row">
-              {(["ALL", "ACTIVE", "SUSPENDED"] as const).map((item) => (
+              {(["ALL", "ACTIVE", "SUSPENDED", "REVOKED"] as const).map((item) => (
                 <button
                   key={item}
                   type="button"
@@ -690,7 +698,7 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
                 <div
                   className={`master-status-toggle${!selected || showCreate ? " is-disabled" : ""}`}
                   role="group"
-                  aria-label="Company status"
+                  aria-label="Company status: Active full access, Suspend view only, Revoke block login"
                 >
                   <button
                     type="button"
@@ -707,6 +715,14 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
                     onClick={() => selected && void runStatus(selected.id, "SUSPENDED")}
                   >
                     Suspend
+                  </button>
+                  <button
+                    type="button"
+                    className={selected && !showCreate && statusKey === "REVOKED" ? "active bad" : ""}
+                    disabled={!selected || showCreate || busyId === selected?.id || statusKey === "REVOKED"}
+                    onClick={() => selected && void runStatus(selected.id, "REVOKED")}
+                  >
+                    Revoke
                   </button>
                 </div>
               </div>

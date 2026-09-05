@@ -3,6 +3,7 @@ import TravelHisabLogo from "../TravelHisabLogo";
 import { COMPANY_NAME, PRODUCT_NAME } from "../brand";
 import { useAuth } from "../AuthContext";
 import { companyStatusLabel } from "../companyEntitlements";
+import { COMPANY_REVOKED_MESSAGE, companyAllowsWorkspace, isCompanyRevoked } from "../companyStatus";
 import { supabase } from "../supabaseClient";
 
 export default function AccountStatusScreen() {
@@ -11,7 +12,7 @@ export default function AccountStatusScreen() {
   const [checking, setChecking] = useState(false);
   const status = String(company?.status || "").toUpperCase();
   const pending = status === "PENDING_APPROVAL";
-  const suspended = status === "SUSPENDED";
+  const revoked = isCompanyRevoked(status);
 
   useEffect(() => {
     document.documentElement.classList.add("auth-screen");
@@ -36,7 +37,7 @@ export default function AccountStatusScreen() {
         const nextStatus = String(data.status || "").toUpperCase();
         if (nextStatus === String(company.status || "").toUpperCase()) return;
         setSessionData(session, data as typeof company);
-        if (nextStatus === "ACTIVE") {
+        if (companyAllowsWorkspace(nextStatus)) {
           await refreshAuth();
         }
       } catch {
@@ -54,12 +55,12 @@ export default function AccountStatusScreen() {
     };
   }, [company, company?.id, company?.status, refreshAuth, session, setSessionData, status]);
 
-  const title = pending ? "Registration under review" : suspended ? "Account suspended" : "Account not active";
+  const title = pending ? "Registration under review" : revoked ? "Account revoked" : "Account not active";
 
   const lead = pending
     ? `Your request has been delivered to the relevant department at ${COMPANY_NAME}. They will contact you shortly once your account is activated.`
-    : suspended
-      ? `This company account is suspended (including after a trial or access period ends). Please contact ${COMPANY_NAME} if you need it reactivated.`
+    : revoked
+      ? COMPANY_REVOKED_MESSAGE
       : `This company cannot open the workspace right now. Please contact ${COMPANY_NAME} for help.`;
 
   return (

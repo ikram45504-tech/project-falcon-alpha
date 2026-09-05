@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient";
 import { isOfflineOnlyBuild } from "./appMode";
+import { COMPANY_REVOKED_MESSAGE, assertCompanyAllowsWrites, isCompanyRevoked } from "./companyStatus";
 import {
   SegmentKey,
   assertFeatureEnabled,
@@ -95,6 +96,10 @@ export async function enforceCompanyActive(companyId: string) {
   await applyCompanyAccessExpiry(companyId);
   const access = await loadCompanyAccess(companyId);
   if (!access) return;
+  if (isCompanyRevoked(access.status)) {
+    throw new Error(COMPANY_REVOKED_MESSAGE);
+  }
+  assertCompanyAllowsWrites(access.status);
   if (access.status !== "ACTIVE") {
     throw new Error("This company is not active. Workspace changes are blocked until approval.");
   }

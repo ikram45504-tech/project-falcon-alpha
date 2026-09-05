@@ -2,6 +2,7 @@ import { DesktopNav } from "./DesktopNav";
 import { WorkspaceRoutes } from "../layout/WorkspaceRoutes";
 import type { WorkspaceLayoutState } from "../layout/useWorkspaceLayoutState";
 import AccessExpiryBanner from "../AccessExpiryBanner";
+import SuspendedAccountBanner from "../SuspendedAccountBanner";
 import { workspaceAccountKind, workspaceLoginId, workspacePlanChip } from "../workspaceHeader";
 
 /** Desktop shell — Tauri app and desktop browser/PWA. Unchanged from the original layout. */
@@ -15,6 +16,7 @@ export function DesktopAppLayout({ state }: { state: WorkspaceLayoutState }) {
   return (
     <main className="workspace">
       <AccessExpiryBanner accessEndsAt={company?.access_ends_at} />
+      <SuspendedAccountBanner status={company?.status} />
       <header className="app-header">
         <div className="identity">
           <div className="header-logo">{company?.logo_data ? <img src={company.logo_data} alt="" /> : initials}</div>

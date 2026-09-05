@@ -23,6 +23,7 @@ import {
   urlLooksLikePasswordRecovery,
 } from "./authSessionFlags";
 import { applyCompanyAccessExpiry } from "./companyAccess";
+import { companyAllowsWorkspace } from "./companyStatus";
 
 const USER_ROLES: UserRole[] = ["OWNER", "ADMIN", "ACCOUNTS", "DATA_ENTRY", "VIEW_ONLY"];
 
@@ -331,7 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted || gen !== loadGen) return;
 
         const companyStatus = String((companyData as Company).status || "").toUpperCase();
-        if (companyStatus !== "ACTIVE") {
+        if (!companyAllowsWorkspace(companyStatus)) {
           setBackgroundSyncCompanyId("");
           authGateRef.current = "none";
           setAuthGate("none");
@@ -519,6 +520,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updated_at: (data as Company).updated_at,
         };
       });
+      if (!companyAllowsWorkspace((data as Company).status)) {
+        setBackgroundSyncCompanyId("");
+      }
     }
 
     void pullCompanyEntitlements();

@@ -21,6 +21,7 @@ import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import GoogleLinkCompanyScreen from "./screens/GoogleLinkCompanyScreen";
 import AccountStatusScreen from "./screens/AccountStatusScreen";
 import ControlApp from "./screens/control/ControlApp";
+import { companyAllowsWorkspace } from "./companyStatus";
 
 function AppLayout() {
   const isPhone = usePhoneUi();
@@ -94,7 +95,7 @@ function RouterContent() {
     );
   }
 
-  if (session && company && String(company.status || "").toUpperCase() !== "ACTIVE") {
+  if (session && company && !companyAllowsWorkspace(company.status)) {
     return <AccountStatusScreen />;
   }
 

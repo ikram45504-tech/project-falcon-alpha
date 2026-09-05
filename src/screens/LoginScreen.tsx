@@ -12,6 +12,7 @@ import { googleAuthErrorFromUrl, signInWithGoogle } from "../cloudAuth";
 import { consumePasswordUpdatedNotice } from "../authSessionFlags";
 import type { UserRole } from "../permissions";
 import type { Company } from "../db";
+import { COMPANY_REVOKED_MESSAGE, companyAllowsWorkspace, isCompanyRevoked } from "../companyStatus";
 
 export default function LoginScreen({
   accountCreatedNotice,
@@ -130,7 +131,11 @@ export default function LoginScreen({
             .maybeSingle();
 
           const status = String(companyRow?.status || "").toUpperCase();
-          if (companyRow && status && status !== "ACTIVE") {
+          if (companyRow && isCompanyRevoked(status)) {
+            await supabase.auth.signOut();
+            throw new Error(COMPANY_REVOKED_MESSAGE);
+          }
+          if (companyRow && status && !companyAllowsWorkspace(status)) {
             if (rememberCredentials) {
               localStorage.setItem("travelAccountingLastCompanyCode", loginCompanyCode.trim());
               localStorage.setItem("travelAccountingLastIdentifier", loginName.trim());

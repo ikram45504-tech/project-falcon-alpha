@@ -17,6 +17,7 @@ import {
 } from "./db";
 import { EMPLOYEE_ROLES, ROLE_LABELS, UserRole, hasPermission, roleDescription } from "./permissions";
 import DiagnosticPanel from "./DiagnosticPanel";
+import { guardCompanyWrites } from "./companyStatus";
 
 type Props = {
   company: Company;
@@ -135,6 +136,7 @@ export default function SecurityCenter({ company, session, onCompanyUpdated, cat
   }
 
   function openNewUser() {
+    if (!guardCompanyWrites(company.status)) return;
     clearAlerts();
     setEditingUser(null);
     setUserForm(blankUser);
@@ -143,6 +145,7 @@ export default function SecurityCenter({ company, session, onCompanyUpdated, cat
 
   function openEditUser(user: CompanyUser) {
     if (user.role === "OWNER") return;
+    if (!guardCompanyWrites(company.status)) return;
     clearAlerts();
     setEditingUser(user);
     setUserForm({
@@ -159,6 +162,7 @@ export default function SecurityCenter({ company, session, onCompanyUpdated, cat
 
   async function saveUser() {
     clearAlerts();
+    if (!guardCompanyWrites(company.status)) return;
     if (!userForm.fullName.trim()) return setError("Full name is required.");
     if (!userForm.username.trim()) return setError("Username is required.");
     if (!editingUser && userForm.password.length < 8)
@@ -200,6 +204,7 @@ export default function SecurityCenter({ company, session, onCompanyUpdated, cat
 
   async function toggleUser(user: CompanyUser) {
     clearAlerts();
+    if (!guardCompanyWrites(company.status)) return;
     const next = user.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
     if (next === "DISABLED" && !window.confirm(`Disable login for ${user.full_name}?`)) return;
     setBusy(true);
@@ -216,6 +221,7 @@ export default function SecurityCenter({ company, session, onCompanyUpdated, cat
 
   async function saveResetPassword() {
     if (!resetUser) return;
+    if (!guardCompanyWrites(company.status)) return;
     clearAlerts();
     if (resetPassword.length < 8) return setError("New password must be at least 8 characters.");
     if (resetPassword !== resetConfirm) return setError("Passwords do not match.");
@@ -255,6 +261,7 @@ export default function SecurityCenter({ company, session, onCompanyUpdated, cat
 
   async function saveCompany() {
     clearAlerts();
+    if (!guardCompanyWrites(company.status)) return;
     setBusy(true);
     try {
       await updateCompanyProfile(company.id, session.userId, companyForm);

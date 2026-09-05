@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Company, Party, PaymentEntry } from "./db";
+import { guardCompanyWrites } from "./companyStatus";
 import { getPayments } from "./db";
 import { getPartyBookingTotals } from "./BookingAccounting";
 import type { PartyBookingTotal } from "./BookingAccounting";
@@ -471,6 +472,7 @@ export function PaymentsModule({
   }
 
   function chooseSide(nextSide: PaymentSide) {
+    if (!guardCompanyWrites(company.status)) return;
     resetForSide(nextSide);
     setScreen("FORM");
   }
@@ -531,6 +533,7 @@ export function PaymentsModule({
   }
 
   async function savePayment() {
+    if (!guardCompanyWrites(company.status)) return;
     if (!canEdit) return setError("Your role does not allow payment entry changes.");
     if (!form.partyId)
       return setError(side === "PARTY" ? "Select a Party / Customer first." : "Select a Vendor / Supplier first.");

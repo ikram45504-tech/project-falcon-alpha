@@ -2,6 +2,7 @@ import { MobileMenu, MobileTabBar } from "./MobileNav";
 import { WorkspaceRoutes } from "../layout/WorkspaceRoutes";
 import type { WorkspaceLayoutState } from "../layout/useWorkspaceLayoutState";
 import AccessExpiryBanner from "../AccessExpiryBanner";
+import SuspendedAccountBanner from "../SuspendedAccountBanner";
 import { workspacePlanChip } from "../workspaceHeader";
 
 /** Mobile PWA shell — isolated from desktop so changes here do not affect desktop/Tauri. */
@@ -12,6 +13,7 @@ export function MobileAppLayout({ state }: { state: WorkspaceLayoutState }) {
   return (
     <main className="workspace mobile-workspace">
       <AccessExpiryBanner accessEndsAt={company?.access_ends_at} />
+      <SuspendedAccountBanner status={company?.status} />
       <header className="app-header mobile-app-header">
         <div className="identity mobile-identity">
           <div className="header-logo mobile-header-logo">

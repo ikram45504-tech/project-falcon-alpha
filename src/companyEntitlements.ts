@@ -306,7 +306,7 @@ export type MasterCompanyRow = {
   name: string;
   email: string;
   phone: string;
-  status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "INACTIVE" | string;
+  status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "REVOKED" | "INACTIVE" | string;
   entitlements: CompanyEntitlements;
   plan_id?: EntitlementPlanId | "";
   access_ends_at: string | null;
@@ -314,7 +314,7 @@ export type MasterCompanyRow = {
   updated_at: string;
 };
 
-export type CompanyStatus = "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "INACTIVE";
+export type CompanyStatus = "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "REVOKED" | "INACTIVE";
 
 function asBoolean(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
@@ -404,6 +404,8 @@ export function companyStatusLabel(status: string) {
       return "Pending approval";
     case "SUSPENDED":
       return "Suspended";
+    case "REVOKED":
+      return "Revoked";
     case "INACTIVE":
       return "Inactive";
     default:

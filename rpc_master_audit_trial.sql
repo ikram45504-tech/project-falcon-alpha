@@ -161,7 +161,7 @@ begin
     raise exception 'Not authorized as Master';
   end if;
 
-  if cleaned not in ('ACTIVE', 'PENDING_APPROVAL', 'SUSPENDED', 'INACTIVE') then
+  if cleaned not in ('ACTIVE', 'PENDING_APPROVAL', 'SUSPENDED', 'INACTIVE', 'REVOKED') then
     raise exception 'Invalid company status';
   end if;
 

@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { normalizeEntitlements } from "../companyEntitlements";
 import { PLAN_LOCKED_HINT } from "../planLocked";
+import { COMPANY_SUSPENDED_MESSAGE, companyAllowsWrites, notifyCompanySuspended } from "../companyStatus";
 import type { Permission } from "../permissions";
 
 export function DesktopNav({
@@ -20,6 +21,10 @@ export function DesktopNav({
   const location = useLocation();
   const { company } = useAuth();
   const planFeatures = normalizeEntitlements(company?.entitlements).features;
+  const canWrite = companyAllowsWrites(company?.status);
+  const statementsOpen = planFeatures.statements && canWrite;
+  const pnlOpen = planFeatures.pnl && canWrite;
+  const lockedHint = canWrite ? PLAN_LOCKED_HINT : COMPANY_SUSPENDED_MESSAGE;
 
   return (
     <nav
@@ -125,7 +130,7 @@ export function DesktopNav({
         </NavLink>
       )}
       {can("view_statements") &&
-        (planFeatures.statements ? (
+        (statementsOpen ? (
           <NavLink to="/statements" className={({ isActive }) => (isActive ? "active" : "")}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
               <svg
@@ -148,7 +153,14 @@ export function DesktopNav({
             </span>
           </NavLink>
         ) : (
-          <span className="workspace-nav-locked" title={PLAN_LOCKED_HINT} aria-disabled="true">
+          <span
+            className="workspace-nav-locked"
+            title={lockedHint}
+            aria-disabled="true"
+            onClick={() => {
+              if (!canWrite) notifyCompanySuspended();
+            }}
+          >
             <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
               <svg
                 width="18"
@@ -171,7 +183,7 @@ export function DesktopNav({
           </span>
         ))}
       {can("view_statements") &&
-        (planFeatures.pnl ? (
+        (pnlOpen ? (
           <NavLink to="/pnl" className={({ isActive }) => (isActive ? "active" : "")}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
               <svg
@@ -191,7 +203,14 @@ export function DesktopNav({
             </span>
           </NavLink>
         ) : (
-          <span className="workspace-nav-locked" title={PLAN_LOCKED_HINT} aria-disabled="true">
+          <span
+            className="workspace-nav-locked"
+            title={lockedHint}
+            aria-disabled="true"
+            onClick={() => {
+              if (!canWrite) notifyCompanySuspended();
+            }}
+          >
             <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
               <svg
                 width="18"

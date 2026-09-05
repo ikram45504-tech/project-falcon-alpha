@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useWorkspace } from "../WorkspaceContext";
 import { hasPermission } from "../permissions";
+import { companyAllowsWrites } from "../companyStatus";
 import { isOfflineOnlyBuild, productNameForBuild } from "../appMode";
 
 export function useWorkspaceLayoutState() {
@@ -104,6 +105,7 @@ export function useWorkspaceLayoutState() {
   }, [company]);
 
   const can = (permission: Parameters<typeof hasPermission>[1]) => hasPermission(session?.role, permission);
+  const canMutate = companyAllowsWrites(company?.status);
 
   return {
     session,
@@ -125,6 +127,7 @@ export function useWorkspaceLayoutState() {
     phoneMenuFromPointer,
     initials,
     can,
+    canMutate,
   };
 }
 

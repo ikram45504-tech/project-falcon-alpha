@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ModalPortal } from "./ModalPortal";
 import { CAPACITY_LIMIT_EVENT } from "./companyEntitlements";
+import { COMPANY_SUSPENDED_EVENT } from "./companyStatus";
 
 type CapacityLimitDetail = {
   title?: string;
@@ -8,16 +9,23 @@ type CapacityLimitDetail = {
 };
 
 export default function CapacityLimitDialog() {
+  const [title, setTitle] = useState("Limit exceeded");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const onLimit = (event: Event) => {
+    const onNotice = (event: Event) => {
       const detail = (event as CustomEvent<CapacityLimitDetail>).detail;
       const text = String(detail?.message || "").trim();
-      if (text) setMessage(text);
+      if (!text) return;
+      setTitle(String(detail?.title || "Limit exceeded"));
+      setMessage(text);
     };
-    window.addEventListener(CAPACITY_LIMIT_EVENT, onLimit);
-    return () => window.removeEventListener(CAPACITY_LIMIT_EVENT, onLimit);
+    window.addEventListener(CAPACITY_LIMIT_EVENT, onNotice);
+    window.addEventListener(COMPANY_SUSPENDED_EVENT, onNotice);
+    return () => {
+      window.removeEventListener(CAPACITY_LIMIT_EVENT, onNotice);
+      window.removeEventListener(COMPANY_SUSPENDED_EVENT, onNotice);
+    };
   }, []);
 
   if (!message) return null;
@@ -32,7 +40,7 @@ export default function CapacityLimitDialog() {
           aria-labelledby="capacity-limit-title"
           onClick={(event) => event.stopPropagation()}
         >
-          <h3 id="capacity-limit-title">Limit exceeded</h3>
+          <h3 id="capacity-limit-title">{title}</h3>
           <p>{message}</p>
           <div className="capacity-limit-actions">
             <button type="button" className="primary" onClick={() => setMessage("")}>

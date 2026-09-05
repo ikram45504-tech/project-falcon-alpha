@@ -17,6 +17,7 @@ import { inferPaymentKind, signedPaymentSettlement } from "./accountBalance";
 import type { PaymentTransactionKind } from "./PaymentV2Db";
 import type { CompanyEntitlements } from "./companyEntitlements";
 import { COMPANY_NAME } from "./brand";
+import { COMPANY_REVOKED_MESSAGE, companyAllowsWorkspace, isCompanyRevoked, loginBlockMessage } from "./companyStatus";
 
 const DB_PATH = "sqlite:travel-accounting.db";
 let databasePromise: Promise<Database> | null = null;
@@ -34,7 +35,7 @@ export type Company = {
   email: string;
   base_currency: string;
   foreign_currency: string;
-  status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "INACTIVE";
+  status: "ACTIVE" | "PENDING_APPROVAL" | "SUSPENDED" | "REVOKED" | "INACTIVE";
   entitlements?: CompanyEntitlements | null;
   access_ends_at?: string | null;
   created_at: string;
@@ -2036,15 +2037,15 @@ export async function loginUser(
   );
   const company = companies[0];
   if (!company) return null;
+  if (isCompanyRevoked(company.status)) {
+    throw new Error(COMPANY_REVOKED_MESSAGE);
+  }
   if (company.status === "PENDING_APPROVAL") {
-    throw new Error(
-      `Your registration is under review. ${COMPANY_NAME} will contact you shortly once your account is activated.`,
-    );
+    throw new Error(loginBlockMessage(company.status));
   }
-  if (company.status === "SUSPENDED") {
-    throw new Error(`This company account is suspended. Please contact ${COMPANY_NAME} for help.`);
+  if (!companyAllowsWorkspace(company.status)) {
+    throw new Error(loginBlockMessage(company.status));
   }
-  if (company.status !== "ACTIVE") return null;
 
   const rows = await database.select<UserRow[]>(
     `SELECT id,company_id,full_name,username,email,phone,phone_normalized,password_hash,password_salt,password_iterations,role,status
@@ -2112,7 +2113,7 @@ async function sessionForUser(companyId: string, userId: string): Promise<UserSe
     [companyId],
   );
   const company = companies[0];
-  if (!company || company.status !== "ACTIVE") return null;
+  if (!company) return null;
 
   const users = await database.select<UserRow[]>(
     `SELECT id,company_id,full_name,username,email,phone,phone_normalized,password_hash,password_salt,password_iterations,role,status
@@ -2346,6 +2347,8 @@ export async function updateCompanyUser(
   input: UpdateCompanyUserInput,
 ) {
   await requirePermission(companyId, actorUserId, "manage_users");
+  const { enforceCompanyActive } = await import("./companyAccess");
+  await enforceCompanyActive(companyId);
   validateEmployeeRole(input.role);
   const database = await db();
 
@@ -2388,6 +2391,8 @@ export async function setCompanyUserStatus(
   status: "ACTIVE" | "DISABLED",
 ) {
   await requirePermission(companyId, actorUserId, "manage_users");
+  const { enforceCompanyActive } = await import("./companyAccess");
+  await enforceCompanyActive(companyId);
   const database = await db();
   const rows = await database.select<Array<{ full_name: string; role: UserRole }>>(
     `SELECT full_name,role FROM users WHERE id=$1 AND company_id=$2 LIMIT 1`,
@@ -2420,6 +2425,8 @@ export async function resetCompanyUserPassword(
   newPassword: string,
 ) {
   await requirePermission(companyId, actorUserId, "manage_users");
+  const { enforceCompanyActive } = await import("./companyAccess");
+  await enforceCompanyActive(companyId);
   validateStrongPassword(newPassword);
   const database = await db();
   const rows = await database.select<Array<{ full_name: string; role: UserRole }>>(
@@ -2478,6 +2485,8 @@ export async function changeOwnPassword(
 
 export async function updateCompanyProfile(companyId: string, actorUserId: string, input: CompanyProfileInput) {
   await requirePermission(companyId, actorUserId, "manage_company");
+  const { enforceCompanyActive } = await import("./companyAccess");
+  await enforceCompanyActive(companyId);
   if (!input.name.trim()) throw new Error("Company name is required.");
   const database = await db();
   await database.execute(
@@ -2536,6 +2545,8 @@ export async function createParty(companyId: string, input: PartyInput, actorUse
 
 export async function updateParty(partyId: string, companyId: string, input: PartyInput, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "edit_parties");
+  const { enforceCompanyActive } = await import("./companyAccess");
+  await enforceCompanyActive(companyId);
   const { updateAccount } = await import("./CounterpartyDb");
   await updateAccount(partyId, companyId, input, actorUserId);
   if (actorUserId) {
@@ -2557,6 +2568,8 @@ export async function getPartyById(companyId: string, partyId: string) {
 
 export async function deleteParty(partyId: string, companyId: string, actorUserId = "") {
   await requirePermission(companyId, actorUserId, "edit_parties");
+  const { enforceCompanyActive } = await import("./companyAccess");
+  await enforceCompanyActive(companyId);
   const { deleteAccount } = await import("./CounterpartyDb");
   await deleteAccount(partyId, companyId);
   if (actorUserId) {

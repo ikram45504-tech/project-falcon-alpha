@@ -15,6 +15,7 @@ import {
 } from "../db";
 import AccountForm from "../AccountForm";
 import AccountFormModal from "../AccountFormModal";
+import { guardCompanyWrites } from "../companyStatus";
 
 function formatMoney(value: number) {
   return `Rs ${Math.round(Number(value) || 0).toLocaleString("en-PK")}`;
@@ -51,6 +52,7 @@ export default function PartiesScreen() {
   }, [searchParams, accountView]);
 
   function newParty(type: "PARTY" | "VENDOR" = "PARTY") {
+    if (!guardCompanyWrites(company?.status)) return;
     if (!can("edit_parties")) {
       setError("Your role does not allow creating Party/Vendor accounts.");
       return;
@@ -62,6 +64,7 @@ export default function PartiesScreen() {
   }
 
   function editParty(party: Party) {
+    if (!guardCompanyWrites(company?.status)) return;
     if (!can("edit_parties")) {
       setError("Your role has read-only access to Party/Vendor accounts.");
       return;
@@ -74,6 +77,7 @@ export default function PartiesScreen() {
 
   async function saveParty() {
     if (!company || !session) return;
+    if (!guardCompanyWrites(company.status)) return;
     if (!can("edit_parties")) return setError("Your role does not allow changing Party/Vendor accounts.");
     const normalized = normalizePartyInput(partyForm);
     if (!normalized.name) {
@@ -231,6 +235,7 @@ export default function PartiesScreen() {
                             <button
                               className="danger"
                               onClick={async () => {
+                                if (!guardCompanyWrites(company?.status)) return;
                                 if (
                                   window.confirm(
                                     "Are you sure you want to permanently delete this Party/Vendor? This is a temporary testing function.",

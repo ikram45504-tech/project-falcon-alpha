@@ -4,6 +4,7 @@ import { useAuth } from "../AuthContext";
 import { normalizeEntitlements } from "../companyEntitlements";
 import type { Permission } from "../permissions";
 import { PLAN_LOCKED_HINT } from "../planLocked";
+import { COMPANY_SUSPENDED_MESSAGE, companyAllowsWrites, notifyCompanySuspended } from "../companyStatus";
 import { workspaceAccountKind, workspaceLoginId } from "../workspaceHeader";
 
 export function MobileMenu({
@@ -23,6 +24,10 @@ export function MobileMenu({
 }) {
   const { company, session } = useAuth();
   const planFeatures = normalizeEntitlements(company?.entitlements).features;
+  const canWrite = companyAllowsWrites(company?.status);
+  const statementsOpen = planFeatures.statements && canWrite;
+  const pnlOpen = planFeatures.pnl && canWrite;
+  const lockedHint = canWrite ? PLAN_LOCKED_HINT : COMPANY_SUSPENDED_MESSAGE;
   const accountKind = workspaceAccountKind(session?.role);
   const loginId = workspaceLoginId(company?.company_code || session?.companyCode, session?.username);
   if (!open || typeof document === "undefined") return null;
@@ -70,22 +75,36 @@ export function MobileMenu({
             </NavLink>
           )}
           {can("view_statements") &&
-            (planFeatures.statements ? (
+            (statementsOpen ? (
               <NavLink to="/statements" onClick={onClose}>
                 Statements
               </NavLink>
             ) : (
-              <span className="plan-locked-nav" title={PLAN_LOCKED_HINT} aria-disabled="true">
+              <span
+                className="plan-locked-nav"
+                title={lockedHint}
+                aria-disabled="true"
+                onClick={() => {
+                  if (!canWrite) notifyCompanySuspended();
+                }}
+              >
                 Statements
               </span>
             ))}
           {can("view_statements") &&
-            (planFeatures.pnl ? (
+            (pnlOpen ? (
               <NavLink to="/pnl" onClick={onClose}>
                 PnL Portfolio
               </NavLink>
             ) : (
-              <span className="plan-locked-nav" title={PLAN_LOCKED_HINT} aria-disabled="true">
+              <span
+                className="plan-locked-nav"
+                title={lockedHint}
+                aria-disabled="true"
+                onClick={() => {
+                  if (!canWrite) notifyCompanySuspended();
+                }}
+              >
                 PnL Portfolio
               </span>
             ))}

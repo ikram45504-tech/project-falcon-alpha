@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { normalizeEntitlements } from "../companyEntitlements";
 import { shouldShowDashboardSkeleton } from "../dashboardView";
 import { PLAN_LOCKED_HINT } from "../planLocked";
+import { COMPANY_SUSPENDED_MESSAGE, companyAllowsWrites, notifyCompanySuspended } from "../companyStatus";
 // Helper to format currency
 const pkr = (val: number) =>
   new Intl.NumberFormat("en-PK", {
@@ -20,7 +21,8 @@ export default function DashboardScreen() {
   const { dashboardMetrics, dashboardRecent, dashboardLoading, refreshDashboard } = useWorkspace();
   const isPhone = usePhoneUi();
   const navigate = useNavigate();
-  const canOpenPnl = normalizeEntitlements(company?.entitlements).features.pnl;
+  const canOpenPnl = normalizeEntitlements(company?.entitlements).features.pnl && companyAllowsWrites(company?.status);
+  const pnlHint = companyAllowsWrites(company?.status) ? PLAN_LOCKED_HINT : COMPANY_SUSPENDED_MESSAGE;
   const metrics = dashboardMetrics;
   const recent = dashboardRecent;
   const showSkeleton = shouldShowDashboardSkeleton(Boolean(metrics), dashboardLoading);
@@ -458,11 +460,14 @@ export default function DashboardScreen() {
               {!isPhone ? (
                 <button
                   onClick={() => {
-                    if (!canOpenPnl) return;
+                    if (!canOpenPnl) {
+                      if (!companyAllowsWrites(company?.status)) notifyCompanySuspended();
+                      return;
+                    }
                     navigate("/pnl");
                   }}
                   disabled={!canOpenPnl}
-                  title={canOpenPnl ? undefined : PLAN_LOCKED_HINT}
+                  title={canOpenPnl ? undefined : pnlHint}
                   style={{
                     textAlign: "left",
                     padding: "12px 16px",
