@@ -16,7 +16,6 @@ import {
 import { inferPaymentKind, signedPaymentSettlement } from "./accountBalance";
 import type { PaymentTransactionKind } from "./PaymentV2Db";
 import type { CompanyEntitlements } from "./companyEntitlements";
-import { COMPANY_NAME } from "./brand";
 import { COMPANY_REVOKED_MESSAGE, companyAllowsWorkspace, isCompanyRevoked, loginBlockMessage } from "./companyStatus";
 
 const DB_PATH = "sqlite:travel-accounting.db";
