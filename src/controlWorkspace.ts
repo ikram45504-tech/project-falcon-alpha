@@ -38,7 +38,10 @@ export function parseControlWorkspace(raw: unknown): ControlWorkspaceSnapshot {
     mainTab,
     filter,
     planId: asPlanId(source.planId),
-    draft: source.draft && typeof source.draft === "object" ? normalizeEntitlements(source.draft) : null,
+    draft:
+      source.draft && typeof source.draft === "object"
+        ? normalizeEntitlements(source.draft, asPlanId(source.planId))
+        : null,
     createOpen: source.createOpen === true,
   };
 }

@@ -64,7 +64,8 @@ export const DEFAULT_COMPANY_ENTITLEMENTS: CompanyEntitlements = {
 
 /**
  * Named company plans for Master Control Panel.
- * Numeric limits are minimum floors — Master can raise them per company, not lower them.
+ * Free, Pro, and Enterprise are a fixed pack — ticks and limits match the plan.
+ * Custom is the only mixer Master can edit.
  */
 export type EntitlementPlan = {
   id: EntitlementPlanId;
@@ -180,7 +181,7 @@ const ENTERPRISE_ENTITLEMENTS: CompanyEntitlements = {
   },
 };
 
-/** Named presets — Free, Pro, and Enterprise are locked floors; Custom starts open. */
+/** Named presets — Free, Pro, and Enterprise are a fixed pack; Custom starts open. */
 export const ENTITLEMENT_PLANS: EntitlementPlan[] = [
   {
     id: "free",
@@ -242,6 +243,10 @@ export function entitlementsFromPlan(id: EntitlementPlanId): CompanyEntitlements
   return { ...cloneEntitlements(plan.entitlements), planId: id };
 }
 
+export function asEntitlementPlanId(value: unknown): EntitlementPlanId | "" {
+  return value === "free" || value === "pro" || value === "enterprise" || value === "custom" ? value : "";
+}
+
 export function isFloorLockedPlan(id: EntitlementPlanId | "" | undefined): id is "free" | "pro" | "enterprise" {
   return id === "free" || id === "pro" || id === "enterprise";
 }
@@ -264,7 +269,7 @@ export function allowsPaymentReceipts(entitlements: unknown) {
   return normalizeEntitlements(entitlements).features.payment_receipts;
 }
 
-/** Minimum numeric floors for a plan. Master may raise these, not lower them. */
+/** Plan pack numbers. Named plans stay on these values; Custom may differ. */
 export function getPlanLimitFloors(id: EntitlementPlanId | ""): CompanyEntitlements["limits"] | null {
   if (!id) return null;
   const plan = getEntitlementPlan(id);
@@ -274,20 +279,9 @@ export function getPlanLimitFloors(id: EntitlementPlanId | ""): CompanyEntitleme
 export function applyPlanFloors(draft: CompanyEntitlements, planId: EntitlementPlanId | ""): CompanyEntitlements {
   const plan = planId ? getEntitlementPlan(planId) : undefined;
   if (!plan) return cloneEntitlements(draft);
+  if (isFloorLockedPlan(planId)) return entitlementsFromPlan(planId);
   const next = cloneEntitlements(draft);
-  if (planId) next.planId = planId;
-  if (!isFloorLockedPlan(planId)) return next;
-  (Object.keys(plan.entitlements.segments) as SegmentKey[]).forEach((key) => {
-    if (plan.entitlements.segments[key]) next.segments[key] = true;
-  });
-  (Object.keys(plan.entitlements.features) as Array<keyof CompanyEntitlements["features"]>).forEach((key) => {
-    if (plan.entitlements.features[key]) next.features[key] = true;
-  });
-  (Object.keys(plan.entitlements.limits) as Array<keyof CompanyEntitlements["limits"]>).forEach((key) => {
-    const floor = plan.entitlements.limits[key];
-    const current = next.limits[key];
-    if (floor != null && current != null && current < floor) next.limits[key] = floor;
-  });
+  next.planId = planId;
   return next;
 }
 
@@ -335,13 +329,13 @@ function readLimit(
   return preset?.limits[key] ?? null;
 }
 
-export function normalizeEntitlements(raw: unknown): CompanyEntitlements {
+export function normalizeEntitlements(raw: unknown, planIdHint?: EntitlementPlanId | ""): CompanyEntitlements {
   const source = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const segmentsRaw = (source.segments || {}) as Record<string, unknown>;
   const featuresRaw = (source.features || {}) as Record<string, unknown>;
   const limitsRaw = (source.limits || {}) as Record<string, unknown>;
 
-  const planIdRaw = String(source.planId || "");
+  const planIdRaw = String(planIdHint || source.planId || "");
   const looksLikeLegacyFree =
     !planIdRaw &&
     featuresRaw.booking_adjustments === false &&
@@ -353,7 +347,7 @@ export function normalizeEntitlements(raw: unknown): CompanyEntitlements {
       : looksLikeLegacyFree
         ? "free"
         : undefined;
-  const preset = isFloorLockedPlan(planId) ? getEntitlementPlan(planId)?.entitlements : undefined;
+  if (isFloorLockedPlan(planId)) return entitlementsFromPlan(planId);
 
   return {
     planId,
@@ -368,30 +362,22 @@ export function normalizeEntitlements(raw: unknown): CompanyEntitlements {
     features: {
       booking_adjustments: asBoolean(featuresRaw.booking_adjustments, true),
       statements: asBoolean(featuresRaw.statements, true),
-      statement_print: asBoolean(featuresRaw.statement_print, preset ? preset.features.statement_print : true),
+      statement_print: asBoolean(featuresRaw.statement_print, true),
       pnl: asBoolean(featuresRaw.pnl, true),
       payment_receipts: asBoolean(featuresRaw.payment_receipts, true),
-      additional_booking_details: asBoolean(
-        featuresRaw.additional_booking_details,
-        preset ? preset.features.additional_booking_details : true,
-      ),
+      additional_booking_details: asBoolean(featuresRaw.additional_booking_details, true),
     },
     limits: {
-      bookings_per_party: readLimit(limitsRaw, "bookings_per_party", preset),
-      bookings_per_vendor: readLimit(limitsRaw, "bookings_per_vendor", preset),
-      payments_per_party: readLimit(limitsRaw, "payments_per_party", preset),
-      payments_per_vendor: readLimit(limitsRaw, "payments_per_vendor", preset),
+      bookings_per_party: readLimit(limitsRaw, "bookings_per_party", undefined),
+      bookings_per_vendor: readLimit(limitsRaw, "bookings_per_vendor", undefined),
+      payments_per_party: readLimit(limitsRaw, "payments_per_party", undefined),
+      payments_per_vendor: readLimit(limitsRaw, "payments_per_vendor", undefined),
       parties: asNullableNumber(limitsRaw.parties),
       vendors: asNullableNumber(limitsRaw.vendors),
-      staff_users:
-        planId === "free" &&
-        asNullableNumber(limitsRaw.staff_users) === 1 &&
-        !("additional_booking_details" in featuresRaw)
-          ? 0
-          : asNullableNumber(limitsRaw.staff_users),
-      staff_per_role: readLimit(limitsRaw, "staff_per_role", preset),
-      adjustment_revisions: readLimit(limitsRaw, "adjustment_revisions", preset),
-      corrections: readLimit(limitsRaw, "corrections", preset),
+      staff_users: asNullableNumber(limitsRaw.staff_users),
+      staff_per_role: readLimit(limitsRaw, "staff_per_role", undefined),
+      adjustment_revisions: readLimit(limitsRaw, "adjustment_revisions", undefined),
+      corrections: readLimit(limitsRaw, "corrections", undefined),
     },
   };
 }

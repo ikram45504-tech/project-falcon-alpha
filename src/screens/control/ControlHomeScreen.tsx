@@ -204,13 +204,12 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
   const selected = rows.find((row) => row.id === selectedId) || null;
   const showCreate = createOpen || Boolean(createdCreds);
   const activePlanId = planId || draft?.planId || "";
-  const selectedPlan = activePlanId ? ENTITLEMENT_PLANS.find((plan) => plan.id === activePlanId) : undefined;
   const floorPlan = isFloorLockedPlan(activePlanId) ? getEntitlementPlan(activePlanId as EntitlementPlanId) : undefined;
   const limitFloors = isFloorLockedPlan(activePlanId) ? getPlanLimitFloors(activePlanId) : null;
   const statusKey = String(selected?.status || "").toUpperCase();
 
   const openCompany = (row: MasterCompanyRow) => {
-    const next = normalizeEntitlements(row.entitlements);
+    const next = normalizeEntitlements(row.entitlements, row.plan_id || "");
     setSelectedId(row.id);
     setDraft(next);
     setPlanId(row.plan_id || next.planId || "");
@@ -382,7 +381,7 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
       const next = applyPlanFloors(draft, activePlanId);
       setDraft(next);
       await setCompanyEntitlementsForMaster(selected.id, next);
-      setMessage("Capacity saved.");
+      setMessage("Services, features, and limits saved.");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -772,7 +771,7 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
               </div>
             ) : !selected || !draft ? (
               <div className="master-empty-detail">
-                <p className="muted">Select a company to set plan, capacity, and trial. Or create one.</p>
+                <p className="muted">Select a company to set plan, services, and trial. Or create one.</p>
               </div>
             ) : (
               <>
@@ -798,8 +797,8 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
                 <section className="master-detail-section" aria-label="Plan tiers">
                   <h3 className="master-detail-section-title">Plan tier</h3>
                   <p className="muted" style={{ marginTop: 0 }}>
-                    Choose which plan this company uses. That fills Capacity below. Plan numbers are minimum floors —
-                    you can raise them, not lower them.
+                    Free, Pro, and Enterprise are fixed packs. Off items stay grey in Control Panel and in the agency
+                    account. For a Pro or Enterprise demo, assign Custom and tick what they may try.
                   </p>
                   <div className="master-plan-tiers" role="group" aria-label="Plan tiers">
                     {ENTITLEMENT_PLANS.map((plan) => (
@@ -810,81 +809,111 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
                         disabled={busyId === selected.id}
                         onClick={() => void assignPlan(plan.id)}
                       >
+                        {planId === plan.id ? <em className="master-plan-tier-mark">Selected</em> : null}
                         <strong>{plan.label}</strong>
-                        <span>{plan.description}</span>
+                        <span>{plan.commercialNotes || "—"}</span>
                       </button>
                     ))}
                   </div>
-                  {selectedPlan ? (
-                    <p className="master-plan-hint muted">
-                      Selected: {selectedPlan.label}
-                      {selectedPlan.details ? ` — ${selectedPlan.details}` : ""}
-                    </p>
-                  ) : (
-                    <p className="master-plan-hint muted">No tier selected in this session yet.</p>
-                  )}
                 </section>
 
-                <section className="master-detail-section master-entitlements-wrap" aria-label="Capacity">
-                  <form className="master-entitlements-form" onSubmit={(e) => void saveEntitlements(e)}>
-                    <h3 className="master-detail-section-title">Capacity</h3>
-                    <p className="muted" style={{ marginTop: 0 }}>
-                      Segments, features, and limits for this company. Locked plan ticks cannot be turned off. Limit
-                      numbers cannot go below the plan floor; blank means unlimited (an increase).
-                    </p>
-
-                    <h4 className="master-detail-subhead">Segments</h4>
-                    <div className="master-check-grid">
-                      {SEGMENTS.map((key) => (
-                        <label key={key} className="master-check">
-                          <input
-                            type="checkbox"
-                            checked={draft.segments[key]}
-                            disabled={Boolean(floorPlan?.entitlements.segments[key])}
-                            onChange={(e) =>
-                              setDraft({
-                                ...draft,
-                                segments: { ...draft.segments, [key]: e.target.checked },
-                              })
-                            }
-                          />
-                          <span className="master-check-label">{SEGMENT_LABELS[key]}</span>
-                          <span className="master-check-state" aria-hidden="true">
-                            {draft.segments[key] ? "On" : "Off"}
-                          </span>
-                        </label>
-                      ))}
+                <form className="master-entitlements-form" onSubmit={(e) => void saveEntitlements(e)}>
+                  <section className="master-detail-section master-entitlement-card" aria-label="Services and Features">
+                    <div className="master-entitlement-card-head">
+                      <h3 className="master-detail-section-title">Services &amp; Features</h3>
+                      <p className="master-entitlement-card-lead">
+                        {floorPlan
+                          ? "This pack is locked. Off items stay grey here and in the agency account. Assign Custom to change ticks."
+                          : "Tick what this company can use. Changes apply to the selected account after Save."}
+                      </p>
                     </div>
 
-                    <h4 className="master-detail-subhead">Features</h4>
-                    <div className="master-check-grid">
-                      {FEATURE_ROWS.map(([key, label]) => (
-                        <label key={key} className="master-check">
-                          <input
-                            type="checkbox"
-                            checked={draft.features[key]}
-                            disabled={Boolean(floorPlan?.entitlements.features[key])}
-                            onChange={(e) =>
-                              setDraft({
-                                ...draft,
-                                features: { ...draft.features, [key]: e.target.checked },
-                              })
-                            }
-                          />
-                          <span className="master-check-label">{label}</span>
-                          <span className="master-check-state" aria-hidden="true">
-                            {draft.features[key] ? "On" : "Off"}
+                    <div className="master-tick-panels">
+                      <section className="master-tick-panel" aria-labelledby="master-tick-segments-title">
+                        <header className="master-tick-panel-head">
+                          <h4 id="master-tick-segments-title" className="master-detail-subhead master-tick-panel-title">
+                            Segments
+                          </h4>
+                          <span className="master-tick-panel-meta">
+                            {SEGMENTS.filter((key) => draft.segments[key]).length} on
                           </span>
-                        </label>
-                      ))}
-                    </div>
+                        </header>
+                        <div className="master-check-grid">
+                          {SEGMENTS.map((key) => (
+                            <label
+                              key={key}
+                              className={`master-check${floorPlan ? " is-plan-locked" : ""}${
+                                draft.segments[key] ? "" : " is-plan-off"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={draft.segments[key]}
+                                disabled={Boolean(floorPlan)}
+                                onChange={(e) =>
+                                  setDraft({
+                                    ...draft,
+                                    segments: { ...draft.segments, [key]: e.target.checked },
+                                  })
+                                }
+                              />
+                              <span className="master-check-label">{SEGMENT_LABELS[key]}</span>
+                              <span className="master-check-state" aria-hidden="true">
+                                {draft.segments[key] ? "On" : "Off"}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </section>
 
-                    <h4 className="master-detail-subhead">Limits</h4>
-                    <p className="muted" style={{ marginTop: 0 }}>
-                      Leave blank for unlimited. Party / vendor / staff usage is live. Other caps show company totals as
-                      context only. Lowering a cap does not delete existing records — the agency must delete something
-                      before they can add more.
-                    </p>
+                      <section className="master-tick-panel" aria-labelledby="master-tick-features-title">
+                        <header className="master-tick-panel-head">
+                          <h4 id="master-tick-features-title" className="master-detail-subhead master-tick-panel-title">
+                            Features
+                          </h4>
+                          <span className="master-tick-panel-meta">
+                            {FEATURE_ROWS.filter(([key]) => draft.features[key]).length} on
+                          </span>
+                        </header>
+                        <div className="master-check-grid">
+                          {FEATURE_ROWS.map(([key, label]) => (
+                            <label
+                              key={key}
+                              className={`master-check${floorPlan ? " is-plan-locked" : ""}${
+                                draft.features[key] ? "" : " is-plan-off"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={draft.features[key]}
+                                disabled={Boolean(floorPlan)}
+                                onChange={(e) =>
+                                  setDraft({
+                                    ...draft,
+                                    features: { ...draft.features, [key]: e.target.checked },
+                                  })
+                                }
+                              />
+                              <span className="master-check-label">{label}</span>
+                              <span className="master-check-state" aria-hidden="true">
+                                {draft.features[key] ? "On" : "Off"}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+                  </section>
+
+                  <section className="master-detail-section master-entitlement-card" aria-label="Capacity and limits">
+                    <div className="master-entitlement-card-head">
+                      <h3 className="master-detail-section-title">Capacity &amp; Limits</h3>
+                      <p className="master-entitlement-card-lead">
+                        {floorPlan
+                          ? "Limits are fixed on this plan. Assign Custom to raise or lower caps. Existing records are not deleted."
+                          : "Leave blank for unlimited. Lowering a cap does not delete existing records."}
+                      </p>
+                    </div>
                     <div className="master-limit-grid">
                       {CAPACITY_LIMITS.map(({ key, label, usage: usageKind }) => {
                         const cap = draft.limits[key];
@@ -913,6 +942,7 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
                               type="number"
                               min={floor ?? 0}
                               placeholder="Unlimited"
+                              disabled={Boolean(floorPlan)}
                               value={draft.limits[key] ?? ""}
                               onChange={(e) => {
                                 const raw = e.target.value.trim();
@@ -939,11 +969,18 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
                       <MasterPlanRateBox planId={activePlanId} limits={draft.limits} />
                     ) : null}
 
-                    <button className="primary" type="submit" disabled={busyId === selected.id}>
-                      {busyId === selected.id ? "Saving..." : "Save capacity"}
-                    </button>
-                  </form>
-                </section>
+                    {floorPlan ? (
+                      <p className="muted" style={{ marginTop: 14 }}>
+                        Save is only needed on Custom. Assign Custom if this agency needs a mixed demo of Pro or
+                        Enterprise tools.
+                      </p>
+                    ) : (
+                      <button className="primary" type="submit" disabled={busyId === selected.id}>
+                        {busyId === selected.id ? "Saving..." : "Save changes"}
+                      </button>
+                    )}
+                  </section>
+                </form>
 
                 <section
                   className="master-detail-section master-health-card master-trial-card"

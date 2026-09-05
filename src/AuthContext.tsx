@@ -24,6 +24,14 @@ import {
 } from "./authSessionFlags";
 import { applyCompanyAccessExpiry } from "./companyAccess";
 import { companyAllowsWorkspace } from "./companyStatus";
+import { asEntitlementPlanId, normalizeEntitlements } from "./companyEntitlements";
+
+function companyWithPlanPack(row: Company, planIdHint?: unknown): Company {
+  return {
+    ...row,
+    entitlements: normalizeEntitlements(row.entitlements, asEntitlementPlanId(planIdHint)),
+  };
+}
 
 const USER_ROLES: UserRole[] = ["OWNER", "ADMIN", "ACCOUNTS", "DATA_ENTRY", "VIEW_ONLY"];
 
@@ -282,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: companyData, error: companyError } = await supabase
           .from("companies")
           .select(
-            "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, access_ends_at, created_at, updated_at",
+            "id, company_code, name, dts_license, logo_data, address, phone, whatsapp, email, base_currency, foreign_currency, status, entitlements, plan_id, access_ends_at, created_at, updated_at",
           )
           .eq("id", profile.companyId)
           .maybeSingle();
@@ -332,25 +340,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted || gen !== loadGen) return;
 
         const companyStatus = String((companyData as Company).status || "").toUpperCase();
+        const hydratedCompany = companyWithPlanPack(
+          companyData as Company,
+          (companyData as { plan_id?: unknown }).plan_id,
+        );
+
         if (!companyAllowsWorkspace(companyStatus)) {
           setBackgroundSyncCompanyId("");
           authGateRef.current = "none";
           setAuthGate("none");
           setPendingAuthEmail("");
           setSession(newSession);
-          setCompany(companyData as Company);
+          setCompany(hydratedCompany);
           setError("");
           setIsInitialized(true);
           return;
         }
 
-        await syncCloudSessionToLocal(companyData as Company, newSession);
+        await syncCloudSessionToLocal(hydratedCompany, newSession);
         setBackgroundSyncCompanyId(profile.companyId);
         authGateRef.current = "none";
         setAuthGate("none");
         setPendingAuthEmail("");
         setSession(newSession);
-        setCompany(companyData as Company);
+        setCompany(hydratedCompany);
         setError("");
         setIsInitialized(true);
       } catch (err) {
@@ -506,19 +519,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function pullCompanyEntitlements() {
       const { data, error: pullError } = await supabase
         .from("companies")
-        .select("entitlements, status, access_ends_at, updated_at")
+        .select("entitlements, status, access_ends_at, updated_at, plan_id")
         .eq("id", companyId)
         .maybeSingle();
       if (cancelled || pullError || !data) return;
       setCompany((prev) => {
         if (!prev || prev.id !== companyId) return prev;
-        return {
-          ...prev,
-          entitlements: (data as Company).entitlements,
-          status: (data as Company).status,
-          access_ends_at: (data as Company).access_ends_at,
-          updated_at: (data as Company).updated_at,
-        };
+        return companyWithPlanPack(
+          {
+            ...prev,
+            entitlements: (data as Company).entitlements,
+            status: (data as Company).status,
+            access_ends_at: (data as Company).access_ends_at,
+            updated_at: (data as Company).updated_at,
+          },
+          (data as { plan_id?: unknown }).plan_id,
+        );
       });
       if (!companyAllowsWorkspace((data as Company).status)) {
         setBackgroundSyncCompanyId("");

@@ -6,6 +6,7 @@ import {
   assertFeatureEnabled,
   assertSegmentEnabled,
   assertWithinLimit,
+  asEntitlementPlanId,
   normalizeEntitlements,
   type CompanyEntitlements,
 } from "./companyEntitlements";
@@ -21,13 +22,14 @@ async function loadCompanyAccess(companyId: string): Promise<{
   if (isOfflineOnlyBuild()) return null;
   const { data, error } = await supabase
     .from("companies")
-    .select("status, entitlements, access_ends_at")
+    .select("status, entitlements, access_ends_at, plan_id")
     .eq("id", companyId)
     .maybeSingle();
   if (error || !data) return null;
+  const planId = asEntitlementPlanId((data as { plan_id?: unknown }).plan_id);
   return {
     status: String(data.status || "").toUpperCase(),
-    entitlements: normalizeEntitlements(data.entitlements),
+    entitlements: normalizeEntitlements(data.entitlements, planId),
     access_ends_at: data.access_ends_at ? String(data.access_ends_at) : null,
   };
 }

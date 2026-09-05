@@ -71,20 +71,22 @@ describe("entitlement plans", () => {
     expect(plan?.commercialNotes).toMatch(/8,000/);
   });
 
-  it("lets Master raise locked-plan values but not go below the floor", () => {
+  it("snaps named plans to the pack and ignores gifted extras", () => {
     const raised = applyPlanFloors(
       {
         ...entitlementsFromPlan("free"),
         segments: { ...entitlementsFromPlan("free").segments, MISC: true },
+        features: { ...entitlementsFromPlan("free").features, pnl: true },
         limits: { ...entitlementsFromPlan("free").limits, parties: 80, bookings_per_party: 4 },
       },
       "free",
     );
-    expect(raised.segments.MISC).toBe(true);
+    expect(raised.segments.MISC).toBe(false);
     expect(raised.segments.PACKAGE).toBe(true);
-    expect(raised.limits.parties).toBe(80);
-    expect(raised.limits.bookings_per_party).toBe(10);
+    expect(raised.features.pnl).toBe(false);
     expect(raised.features.statements).toBe(true);
+    expect(raised.limits.parties).toBe(30);
+    expect(raised.limits.bookings_per_party).toBe(10);
 
     const enterpriseRaised = applyPlanFloors(
       {
@@ -94,7 +96,11 @@ describe("entitlement plans", () => {
       "enterprise",
     );
     expect(enterpriseRaised.limits.staff_users).toBe(12);
-    expect(enterpriseRaised.limits.parties).toBe(1200);
+    expect(enterpriseRaised.limits.parties).toBe(800);
+
+    expect(
+      normalizeEntitlements({ planId: "free", segments: { MISC: true }, features: { pnl: true } }).features.pnl,
+    ).toBe(false);
   });
 
   it("fills new Free floors on legacy Free JSON that has no planId", () => {

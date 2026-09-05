@@ -5,6 +5,7 @@ import {
   MasterCompanyRow,
   CompanyStatus,
   SegmentKey,
+  asEntitlementPlanId,
   normalizeEntitlements,
 } from "./companyEntitlements";
 
@@ -23,6 +24,7 @@ export async function listCompaniesForMaster(): Promise<MasterCompanyRow[]> {
   const rows = Array.isArray(data) ? data : [];
   return rows.map((row) => {
     const item = row as Record<string, unknown>;
+    const planId = asEntitlementPlanId(item.plan_id);
     return {
       id: String(item.id || ""),
       company_code: String(item.company_code || ""),
@@ -30,11 +32,8 @@ export async function listCompaniesForMaster(): Promise<MasterCompanyRow[]> {
       email: String(item.email || ""),
       phone: String(item.phone || ""),
       status: String(item.status || ""),
-      entitlements: normalizeEntitlements(item.entitlements),
-      plan_id:
-        item.plan_id === "free" || item.plan_id === "pro" || item.plan_id === "enterprise" || item.plan_id === "custom"
-          ? item.plan_id
-          : "",
+      entitlements: normalizeEntitlements(item.entitlements, planId),
+      plan_id: planId,
       access_ends_at: item.access_ends_at ? String(item.access_ends_at) : null,
       created_at: String(item.created_at || ""),
       updated_at: String(item.updated_at || ""),

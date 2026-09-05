@@ -860,11 +860,46 @@
   color: var(--cp-text);
 }
 
-.master-entitlements-wrap {
-  padding: 14px;
+.master-entitlements-wrap,
+.master-entitlement-card {
+  padding: 16px;
   border: 1px solid var(--cp-border);
-  border-radius: 12px;
-  background: var(--cp-bg-elevated);
+  border-radius: 16px;
+  background: var(--cp-card);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 20px rgba(2, 20, 28, 0.12);
+}
+
+.master-entitlement-card {
+  margin: 0 0 16px;
+}
+
+.master-entitlement-card-head {
+  margin: 0 0 16px;
+  padding: 4px 0 14px 14px;
+  border-bottom: 1px solid var(--cp-border);
+  border-left: 4px solid var(--cp-accent);
+}
+
+.master-entitlement-card .master-detail-section-title,
+.master-entitlements-form .master-entitlement-card .master-detail-section-title {
+  margin: 0 0 8px;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--cp-text);
+}
+
+.master-entitlement-card-lead {
+  margin: 0;
+  max-width: 46rem;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--cp-muted);
 }
 
 .master-back-row {
@@ -931,42 +966,88 @@
 
 .master-plan-tiers {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .master-plan-tier {
+  position: relative;
   display: grid;
-  gap: 6px;
+  align-content: start;
+  gap: 8px;
   text-align: left;
-  min-height: 88px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--cp-border);
-  background: var(--cp-bg-elevated);
+  min-height: 96px;
+  padding: 18px 14px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.03) 42%, transparent 100%),
+    linear-gradient(165deg, #0d6276 0%, #07404d 58%, #042f3a 100%);
   color: var(--cp-text);
   cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -12px 18px rgba(2, 16, 22, 0.22),
+    0 10px 18px rgba(2, 20, 28, 0.32),
+    0 3px 0 rgba(2, 24, 32, 0.55);
+  transform: translateY(0);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
 }
 
 .master-plan-tier strong {
-  font-size: 0.95rem;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
 }
 
 .master-plan-tier span {
   font-size: 12px;
   color: var(--cp-muted);
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
-.master-plan-tier:hover {
-  border-color: var(--cp-border-strong);
-  background: var(--cp-card-hover);
+.master-plan-tier-mark {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.22);
+  color: #ecfeff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.master-plan-tier:hover:not(:disabled) {
+  transform: translateY(-5px);
+  border-color: rgba(103, 232, 249, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    inset 0 -10px 16px rgba(2, 16, 22, 0.16),
+    0 18px 26px rgba(2, 20, 28, 0.38),
+    0 5px 0 rgba(2, 24, 32, 0.5);
 }
 
 .master-plan-tier.active {
-  border-color: var(--cp-border-strong);
-  background: var(--cp-accent-soft);
-  box-shadow: inset 0 0 0 1px var(--cp-border-strong);
+  border-color: #67e8f9;
+  background:
+    linear-gradient(180deg, rgba(103, 232, 249, 0.3) 0%, rgba(34, 211, 238, 0.08) 46%, transparent 100%),
+    linear-gradient(165deg, #1094b4 0%, #0a5363 58%, #06414d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 0 1px rgba(103, 232, 249, 0.4),
+    0 14px 24px rgba(8, 145, 178, 0.28),
+    0 4px 0 #0e7490;
+}
+
+.master-plan-tier:disabled {
+  cursor: default;
+  opacity: 0.7;
 }
 
 .master-coming-soon {
@@ -1023,6 +1104,67 @@
   color: var(--cp-text);
   letter-spacing: normal;
   text-transform: none;
+}
+
+.master-tick-panels {
+  display: grid;
+  gap: 14px;
+  margin: 4px 0 0;
+}
+
+@media (min-width: 980px) {
+  .master-tick-panels {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .master-tick-panel .master-check-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.master-tick-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1.5px solid var(--cp-border-strong);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 46%, transparent 100%),
+    var(--cp-surface-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 10px 22px rgba(2, 20, 28, 0.18);
+}
+
+.master-tick-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--cp-border);
+  background: var(--cp-accent-soft);
+}
+
+.master-entitlements-form .master-tick-panel-title,
+.master-tick-panel-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--cp-text);
+}
+
+.master-tick-panel-meta {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cp-muted);
 }
 
 .master-check-grid {
@@ -1194,6 +1336,36 @@
   opacity: 1;
 }
 
+.master-check.is-plan-locked {
+  cursor: default;
+}
+
+.master-check.is-plan-locked:hover {
+  box-shadow: none;
+}
+
+.master-check.is-plan-off {
+  opacity: 0.48;
+  background: var(--cp-surface-2);
+  border-color: var(--cp-border);
+  box-shadow: none;
+  cursor: default;
+}
+
+.master-check.is-plan-off:hover {
+  border-color: var(--cp-border);
+  box-shadow: none;
+}
+
+.master-check.is-plan-off:not(.is-plan-locked):hover {
+  opacity: 0.72;
+  border-color: var(--cp-tick-ring);
+}
+
+.master-check.is-plan-off .master-check-state {
+  color: var(--cp-muted);
+}
+
 .master-control-root[data-control-theme="dark"] .master-check:has(input:checked) .master-check-state {
   color: #5eead4;
 }
@@ -1226,6 +1398,11 @@
   background: var(--cp-input);
   color: var(--cp-text);
   padding: 8px 12px;
+}
+
+.master-limit-grid input:disabled {
+  opacity: 0.62;
+  cursor: default;
 }
 
 .master-usage-meta {
@@ -1473,8 +1650,20 @@
     gap: 12px;
   }
 
+  .master-control-root,
+  .master-control-page {
+    overflow-x: clip;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .master-control-page {
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+
   .master-control-shell {
-    padding: 12px 12px 28px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px))
+      calc(28px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
   }
 
   .master-control-topbar {
@@ -1486,6 +1675,18 @@
   .master-control-top-meta {
     justify-content: flex-start;
     margin-left: 0;
+    width: 100%;
+  }
+
+  .master-header-tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .master-header-tabs button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 8px;
   }
 
   .master-back-row {
@@ -1493,19 +1694,36 @@
   }
 
   .master-taskbar-tools {
-    align-items: end;
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .master-company-picker {
     flex: 1 1 100%;
     width: 100%;
     max-width: none;
+    min-width: 0;
   }
 
   .master-company-picker select {
     max-width: none;
   }
 
+  .master-taskbar-status {
+    width: 100%;
+  }
+
+  .master-status-toggle {
+    width: 100%;
+  }
+
+  .master-status-toggle button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 6px;
+  }
+
+  .master-tick-panels,
   .master-check-grid,
   .master-limit-grid,
   .master-rate-box-head {
@@ -1519,6 +1737,15 @@
   .master-bulk-actions button {
     flex: 1 1 calc(50% - 8px);
   }
+
+  .master-plan-tiers {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .master-plan-tier {
+    min-height: 88px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1528,6 +1755,10 @@
 
   .master-action-row button {
     flex: 1 1 100%;
+  }
+
+  .master-plan-tiers {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1555,6 +1786,7 @@
 .master-control-root[data-control-theme="ocean"] h1,
 .master-control-root[data-control-theme="ocean"] h2,
 .master-control-root[data-control-theme="ocean"] h3,
+.master-control-root[data-control-theme="ocean"] h4,
 .master-control-root[data-control-theme="ocean"] p,
 .master-control-root[data-control-theme="ocean"] small,
 .master-control-root[data-control-theme="ocean"] label,
@@ -1588,6 +1820,45 @@
 .master-control-root[data-control-theme="ocean"] .eyebrow,
 .master-control-page[data-control-theme="ocean"] .eyebrow {
   color: var(--cp-accent) !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-entitlements-wrap,
+.master-control-root[data-control-theme="ocean"] .master-entitlement-card {
+  background: #ffffff !important;
+  border-color: rgba(2, 132, 199, 0.2);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 8px 20px rgba(2, 132, 199, 0.08);
+}
+
+.master-control-root[data-control-theme="ocean"] .master-entitlement-card .master-detail-section-title {
+  color: var(--cp-text) !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-entitlement-card-lead {
+  color: var(--cp-muted) !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-tick-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 58%, #eef7ff 100%) !important;
+  border-color: rgba(2, 132, 199, 0.32);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 10px 22px rgba(2, 132, 199, 0.1);
+}
+
+.master-control-root[data-control-theme="ocean"] .master-tick-panel-head {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(2, 132, 199, 0.18);
+}
+
+.master-control-root[data-control-theme="ocean"] .master-tick-panel-title,
+.master-control-root[data-control-theme="ocean"] .master-tick-panel-meta {
+  color: var(--cp-text) !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-tick-panel-meta {
+  color: var(--cp-muted) !important;
 }
 
 .master-control-root[data-control-theme="ocean"] .master-check,
@@ -1625,6 +1896,15 @@
 
 .master-control-root[data-control-theme="ocean"] .master-check:has(input:checked) .master-check-state {
   color: #0284c7 !important;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-check.is-plan-off {
+  background: #eef4f9 !important;
+  border-color: rgba(2, 132, 199, 0.16);
+}
+
+.master-control-root[data-control-theme="ocean"] .master-check.is-plan-off .master-check-state {
+  color: var(--cp-muted) !important;
 }
 
 .master-control-root[data-control-theme="ocean"] .master-danger-zone .master-detail-section-title,
@@ -1687,12 +1967,43 @@
   color: var(--cp-text) !important;
 }
 
-.master-control-root[data-control-theme="ocean"] .master-plan-tier,
 .master-control-root[data-control-theme="ocean"] .master-status-toggle {
   background: #ffffff !important;
 }
 
-.master-control-root[data-control-theme="ocean"] .master-plan-tier.active,
+.master-control-root[data-control-theme="ocean"] .master-plan-tier {
+  background: linear-gradient(180deg, #ffffff 0%, #f3faff 48%, #e0f2fe 100%) !important;
+  border-color: rgba(2, 132, 199, 0.22);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 -10px 16px rgba(2, 132, 199, 0.06),
+    0 10px 18px rgba(2, 132, 199, 0.14),
+    0 3px 0 rgba(2, 132, 199, 0.18);
+}
+
+.master-control-root[data-control-theme="ocean"] .master-plan-tier:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 -8px 14px rgba(2, 132, 199, 0.05),
+    0 18px 26px rgba(2, 132, 199, 0.18),
+    0 5px 0 rgba(2, 132, 199, 0.2);
+}
+
+.master-control-root[data-control-theme="ocean"] .master-plan-tier.active {
+  background: linear-gradient(180deg, #ffffff 0%, #dbeafe 42%, #bae6fd 100%) !important;
+  border-color: #0284c7;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 0 0 1px rgba(2, 132, 199, 0.28),
+    0 14px 22px rgba(2, 132, 199, 0.2),
+    0 4px 0 #0284c7;
+}
+
+.master-control-root[data-control-theme="ocean"] .master-plan-tier-mark {
+  background: rgba(2, 132, 199, 0.14);
+  color: #0369a1;
+}
+
 .master-control-root[data-control-theme="ocean"] .master-status-toggle button.active {
   background: var(--cp-accent-soft) !important;
 }
