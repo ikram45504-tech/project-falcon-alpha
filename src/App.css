@@ -551,6 +551,21 @@ select:focus {
     inset 0 1px 2px rgba(255, 255, 255, 0.4);
   transform: translateY(-1px);
 }
+.workspace-nav .workspace-nav-locked {
+  border: 0;
+  background: transparent;
+  padding: 10px 14px;
+  color: #9aa8b8;
+  font-weight: 750;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: grayscale(0.75);
+  user-select: none;
+}
 .welcome,
 .content-card,
 .ledger-page {
@@ -3635,6 +3650,21 @@ html:has(.booking-direction-screen) .workspace {
   transform: translateY(-2px);
   border-color: #afc8de;
   box-shadow: 0 10px 28px rgba(15, 35, 58, 0.08);
+}
+.booking-service-tile.is-plan-off,
+.booking-service-tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+  filter: grayscale(0.7);
+  background: #f3f5f8;
+  box-shadow: none;
+  transform: none;
+}
+.booking-service-tile.is-plan-off:hover,
+.booking-service-tile:disabled:hover {
+  transform: none;
+  border-color: #dfe7ef;
+  box-shadow: none;
 }
 
 .booking-service-icon {

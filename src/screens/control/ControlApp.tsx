@@ -35,7 +35,8 @@ function ControlGate() {
       const showChecking = Boolean(options?.showChecking);
       const gen = ++applyGen;
 
-      if (showChecking) {
+      // Tab resume / token refresh must not unmount ControlHomeScreen or the desk resets.
+      if (showChecking && !allowedRef.current) {
         setChecking(true);
         setError("");
       }
@@ -117,7 +118,9 @@ function ControlGate() {
       }
 
       if (session?.user) {
-        void applySession(session, { showChecking: event === "SIGNED_IN" || event === "INITIAL_SESSION" });
+        void applySession(session, {
+          showChecking: (event === "SIGNED_IN" || event === "INITIAL_SESSION") && !allowedRef.current,
+        });
       }
     });
 

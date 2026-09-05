@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { readControlWorkspace, writeControlWorkspace } from "../../controlWorkspace";
 import {
   CompanyEntitlements,
   ENTITLEMENT_PLANS,
@@ -93,19 +94,20 @@ type Props = {
 };
 
 export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: Props) {
+  const restored = useMemo(() => readControlWorkspace(), []);
   const [rows, setRows] = useState<MasterCompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED">("ALL");
-  const [mainTab, setMainTab] = useState<"approved" | "pending">("approved");
+  const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED">(restored.filter);
+  const [mainTab, setMainTab] = useState<"approved" | "pending">(restored.mainTab);
   const [pendingSearch, setPendingSearch] = useState("");
-  const [planId, setPlanId] = useState<EntitlementPlanId | "">("");
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [draft, setDraft] = useState<CompanyEntitlements | null>(null);
+  const [planId, setPlanId] = useState<EntitlementPlanId | "">(restored.planId);
+  const [selectedId, setSelectedId] = useState<string>(restored.selectedId);
+  const [draft, setDraft] = useState<CompanyEntitlements | null>(restored.draft);
   const [usage, setUsage] = useState<MasterCompanyUsage | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(restored.createOpen);
   const [createdCreds, setCreatedCreds] = useState<CreatedCredentials | null>(null);
   const [busyId, setBusyId] = useState("");
   const [cacheBusy, setCacheBusy] = useState(false);
@@ -133,6 +135,23 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    writeControlWorkspace({
+      selectedId,
+      mainTab,
+      filter,
+      planId,
+      draft,
+      createOpen,
+    });
+  }, [selectedId, mainTab, filter, planId, draft, createOpen]);
+
+  useEffect(() => {
+    if (!selectedId || draft || createOpen) return;
+    const row = rows.find((item) => item.id === selectedId);
+    if (row) openCompany(row);
+  }, [rows, selectedId, draft, createOpen]);
 
   const pendingCount = useMemo(
     () => rows.filter((row) => String(row.status).toUpperCase() === "PENDING_APPROVAL").length,
@@ -731,6 +750,10 @@ export default function ControlHomeScreen({ theme, onThemeChange, onSignOut }: P
                   onCancel={closeDetail}
                 />
               </>
+            ) : selectedId && (!selected || !draft) ? (
+              <div className="master-empty-detail">
+                <p className="muted">{loading ? "Loading company…" : "Restoring the company you were editing…"}</p>
+              </div>
             ) : !selected || !draft ? (
               <div className="master-empty-detail">
                 <p className="muted">Select a company to set plan, capacity, and trial. Or create one.</p>

@@ -44,24 +44,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState("");
   const dashboardHasDataRef = useRef(false);
 
+  const companyId = company?.id ?? "";
+
   const loadParties = useCallback(
     async (search = "") => {
-      if (!company) return;
+      if (!companyId) return;
       try {
-        setParties(await getParties(company.id, search));
+        setParties(await getParties(companyId, search));
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
     },
-    [company],
+    [companyId],
   );
 
   const loadFinancialTotals = useCallback(async () => {
-    if (!company) return;
+    if (!companyId) return;
     try {
       const [bookingRows, paymentRows] = await Promise.all([
-        getPartyBookingTotals(company.id),
-        getPartyPaymentTotals(company.id),
+        getPartyBookingTotals(companyId),
+        getPartyPaymentTotals(companyId),
       ]);
 
       const bookingNext: Record<string, AccountBookingTotals> = {};
@@ -82,7 +84,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [company]);
+  }, [companyId]);
 
   const searchParties = useCallback(
     async (value: string) => {
@@ -91,8 +93,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     },
     [loadParties],
   );
-
-  const companyId = company?.id ?? "";
 
   const refreshDashboard = useCallback(async () => {
     if (!companyId) return;

@@ -447,6 +447,15 @@ html.phone-ui {
   color: #fff;
 }
 
+.th-phone-drawer .plan-locked-nav {
+  display: block;
+  padding: 14px 12px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.38);
+  font-weight: 700;
+  cursor: not-allowed;
+}
+
 .th-phone-drawer-footer {
   margin-top: auto;
   padding-top: 16px;

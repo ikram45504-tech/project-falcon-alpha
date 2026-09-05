@@ -10,6 +10,7 @@ import type { BookingTransactionType, Party } from "./db";
 import type { BookingServiceName } from "./BookingLifecycle";
 import { useAuth } from "./AuthContext";
 import { normalizeEntitlements } from "./companyEntitlements";
+import { PLAN_LOCKED_HINT } from "./planLocked";
 import "./BookingFinalization.css";
 import "./PaymentsV2.css";
 
@@ -235,14 +236,10 @@ export default function BookingsModule({
             return (
               <button
                 type="button"
-                className={`booking-service-tile service-${item.key.toLowerCase()}`}
+                className={`booking-service-tile service-${item.key.toLowerCase()}${enabled ? "" : " is-plan-off"}`}
                 key={item.key}
                 disabled={!enabled}
-                title={
-                  enabled
-                    ? item.subtitle
-                    : `${item.title} is not included on this plan. Upgrade options will be offered here later.`
-                }
+                title={enabled ? item.subtitle : `${item.title} — ${PLAN_LOCKED_HINT}`}
                 onClick={() => {
                   if (!enabled) return;
                   chooseService(item.key);

@@ -495,6 +495,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logout();
   };
 
+  useEffect(() => {
+    if (isOfflineOnlyBuild() || isControlPanelPath()) return;
+    const companyId = session?.companyId;
+    if (!companyId) return;
+
+    let cancelled = false;
+
+    async function pullCompanyEntitlements() {
+      const { data, error: pullError } = await supabase
+        .from("companies")
+        .select("entitlements, status, access_ends_at, updated_at")
+        .eq("id", companyId)
+        .maybeSingle();
+      if (cancelled || pullError || !data) return;
+      setCompany((prev) => {
+        if (!prev || prev.id !== companyId) return prev;
+        return {
+          ...prev,
+          entitlements: (data as Company).entitlements,
+          status: (data as Company).status,
+          access_ends_at: (data as Company).access_ends_at,
+          updated_at: (data as Company).updated_at,
+        };
+      });
+    }
+
+    void pullCompanyEntitlements();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void pullCompanyEntitlements();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = window.setInterval(() => void pullCompanyEntitlements(), 20000);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(timer);
+    };
+  }, [session?.companyId]);
+
   const refreshAuth = async () => {
     await refreshAuthRef.current();
   };

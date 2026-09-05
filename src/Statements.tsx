@@ -23,6 +23,7 @@ import { getChronologicalLedger, sliceLedgerRowsForPeriod, type LedgerRow } from
 import { getPaymentV2MetaForPayments, type PaymentV2Meta } from "./PaymentV2Db";
 import { downloadExcel } from "./exportUtils";
 import { normalizeEntitlements } from "./companyEntitlements";
+import { PLAN_LOCKED_HINT } from "./planLocked";
 
 type PeriodType = "FULL_LEDGER" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM";
 
@@ -607,11 +608,7 @@ export default function StatementsModule({ company, parties, initialPartyId = ""
             type="button"
             className={previewMode === "print" ? "active" : ""}
             disabled={!canPrintView}
-            title={
-              canPrintView
-                ? "Print view"
-                : "Print view is not included on Free Tier. Upgrade plans will be offered here later."
-            }
+            title={canPrintView ? "Print view" : PLAN_LOCKED_HINT}
             onClick={() => {
               if (!canPrintView) {
                 setMessage("Print view needs a higher plan. Upgrade options will be designed next.");

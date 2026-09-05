@@ -5,6 +5,7 @@ import { usePhoneUi } from "../phoneUi";
 import { useNavigate } from "react-router-dom";
 import { normalizeEntitlements } from "../companyEntitlements";
 import { shouldShowDashboardSkeleton } from "../dashboardView";
+import { PLAN_LOCKED_HINT } from "../planLocked";
 // Helper to format currency
 const pkr = (val: number) =>
   new Intl.NumberFormat("en-PK", {
@@ -454,18 +455,24 @@ export default function DashboardScreen() {
               >
                 📔 Master Ledger
               </button>
-              {!isPhone && canOpenPnl ? (
+              {!isPhone ? (
                 <button
-                  onClick={() => navigate("/pnl")}
+                  onClick={() => {
+                    if (!canOpenPnl) return;
+                    navigate("/pnl");
+                  }}
+                  disabled={!canOpenPnl}
+                  title={canOpenPnl ? undefined : PLAN_LOCKED_HINT}
                   style={{
                     textAlign: "left",
                     padding: "12px 16px",
                     background: "var(--bg-app)",
                     border: "1px solid var(--border-light)",
                     borderRadius: "8px",
-                    cursor: "pointer",
+                    cursor: canOpenPnl ? "pointer" : "not-allowed",
                     fontWeight: 600,
                     color: "var(--text-main)",
+                    opacity: canOpenPnl ? 1 : 0.45,
                   }}
                 >
                   📊 PnL & Portfolio

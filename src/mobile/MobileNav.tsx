@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { normalizeEntitlements } from "../companyEntitlements";
 import type { Permission } from "../permissions";
+import { PLAN_LOCKED_HINT } from "../planLocked";
 import { workspaceAccountKind, workspaceLoginId } from "../workspaceHeader";
 
 export function MobileMenu({
@@ -68,16 +69,26 @@ export function MobileMenu({
               Payments
             </NavLink>
           )}
-          {can("view_statements") && planFeatures.statements && (
-            <NavLink to="/statements" onClick={onClose}>
-              Statements
-            </NavLink>
-          )}
-          {can("view_statements") && planFeatures.pnl && (
-            <NavLink to="/pnl" onClick={onClose}>
-              PnL Portfolio
-            </NavLink>
-          )}
+          {can("view_statements") &&
+            (planFeatures.statements ? (
+              <NavLink to="/statements" onClick={onClose}>
+                Statements
+              </NavLink>
+            ) : (
+              <span className="plan-locked-nav" title={PLAN_LOCKED_HINT} aria-disabled="true">
+                Statements
+              </span>
+            ))}
+          {can("view_statements") &&
+            (planFeatures.pnl ? (
+              <NavLink to="/pnl" onClick={onClose}>
+                PnL Portfolio
+              </NavLink>
+            ) : (
+              <span className="plan-locked-nav" title={PLAN_LOCKED_HINT} aria-disabled="true">
+                PnL Portfolio
+              </span>
+            ))}
           <NavLink to="/settings" onClick={onClose}>
             Settings
           </NavLink>

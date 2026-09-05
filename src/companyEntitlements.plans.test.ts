@@ -192,4 +192,25 @@ describe("entitlement plans", () => {
     expect(custom.limits.bookings_per_party).toBeNull();
     expect(custom.limits.parties).toBe(50);
   });
+
+  it("keeps a fully closed Custom plan off, including capacity 0", () => {
+    const closed = entitlementsFromPlan("custom");
+    (Object.keys(closed.segments) as Array<keyof typeof closed.segments>).forEach((key) => {
+      closed.segments[key] = false;
+    });
+    (Object.keys(closed.features) as Array<keyof typeof closed.features>).forEach((key) => {
+      closed.features[key] = false;
+    });
+    (Object.keys(closed.limits) as Array<keyof typeof closed.limits>).forEach((key) => {
+      closed.limits[key] = 0;
+    });
+
+    const saved = applyPlanFloors(closed, "custom");
+    const normalized = normalizeEntitlements(saved);
+    expect(Object.values(normalized.segments).every((on) => on === false)).toBe(true);
+    expect(Object.values(normalized.features).every((on) => on === false)).toBe(true);
+    expect(normalized.limits.parties).toBe(0);
+    expect(normalized.limits.staff_users).toBe(0);
+    expect(() => assertWithinLimit(normalized, "parties", 0, "Parties")).toThrow(CapacityLimitError);
+  });
 });

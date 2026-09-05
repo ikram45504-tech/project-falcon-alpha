@@ -1,5 +1,6 @@
 import { useAuth } from "./AuthContext";
 import { normalizeEntitlements } from "./companyEntitlements";
+import { PLAN_LOCKED_HINT } from "./planLocked";
 import "./BookingLifecycleActions.css";
 
 type Props = {
@@ -46,11 +47,7 @@ export default function BookingLifecycleActions({
           type="button"
           className="adjustment"
           disabled={!adjustEnabled || busy}
-          title={
-            planAllowsAdjust
-              ? undefined
-              : "Booking adjustments are not included on Free Tier. Upgrade plans will be offered here later."
-          }
+          title={planAllowsAdjust ? undefined : PLAN_LOCKED_HINT}
           onClick={onAdjustment}
         >
           {compact ? "Adjust" : "Booking Adjustment"}
