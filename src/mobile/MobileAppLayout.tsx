@@ -2,10 +2,12 @@ import { MobileMenu, MobileTabBar } from "./MobileNav";
 import { WorkspaceRoutes } from "../layout/WorkspaceRoutes";
 import type { WorkspaceLayoutState } from "../layout/useWorkspaceLayoutState";
 import AccessExpiryBanner from "../AccessExpiryBanner";
+import { workspacePlanChip } from "../workspaceHeader";
 
 /** Mobile PWA shell — isolated from desktop so changes here do not affect desktop/Tauri. */
 export function MobileAppLayout({ state }: { state: WorkspaceLayoutState }) {
   const { company, logout, initials, can, mobileNavOpen, setMobileNavOpen, setBookingReset, setPaymentReset } = state;
+  const planChip = workspacePlanChip(company?.entitlements);
 
   return (
     <main className="workspace mobile-workspace">
@@ -23,6 +25,7 @@ export function MobileAppLayout({ state }: { state: WorkspaceLayoutState }) {
             <h1>{company?.name || "Travel Hisab"}</h1>
           </div>
         </div>
+        {planChip ? <span className="header-plan-chip mobile-header-plan-chip">{planChip}</span> : null}
       </header>
 
       <MobileMenu

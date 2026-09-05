@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { normalizeEntitlements } from "../companyEntitlements";
 import type { Permission } from "../permissions";
+import { workspaceAccountKind, workspaceLoginId } from "../workspaceHeader";
 
 export function MobileMenu({
   open,
@@ -19,8 +20,10 @@ export function MobileMenu({
   onBookingRetap?: () => void;
   onPaymentRetap?: () => void;
 }) {
-  const { company } = useAuth();
+  const { company, session } = useAuth();
   const planFeatures = normalizeEntitlements(company?.entitlements).features;
+  const accountKind = workspaceAccountKind(session?.role);
+  const loginId = workspaceLoginId(company?.company_code || session?.companyCode, session?.username);
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
@@ -84,6 +87,10 @@ export function MobileMenu({
         </div>
 
         <div className="th-phone-drawer-footer">
+          <div className="th-phone-account">
+            <b>{accountKind}</b>
+            <small>{loginId}</small>
+          </div>
           <button type="button" className="th-phone-signout" onClick={onSignOut}>
             Sign Out
           </button>

@@ -72,6 +72,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
     paymentReset,
     loadParties,
     loadFinancialTotals,
+    refreshDashboard,
   } = state;
   const planFeatures = normalizeEntitlements(company?.entitlements).features;
 
@@ -89,7 +90,10 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
               company={company}
               companyId={company.id}
               parties={parties}
-              onChanged={loadFinancialTotals}
+              onChanged={() => {
+                void loadFinancialTotals();
+                void refreshDashboard();
+              }}
               setStatementPartyId={setStatementPartyId}
             />
           ) : null
@@ -110,6 +114,7 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
               onChanged={async () => {
                 await loadParties();
                 await loadFinancialTotals();
+                await refreshDashboard();
               }}
             />
           ) : (
@@ -130,7 +135,10 @@ export function WorkspaceRoutes({ state }: { state: WorkspaceLayoutState }) {
               preparedByName={session?.fullName}
               canEdit={can("edit_payments")}
               onOpenLedger={(party) => navigate(`/parties/ledger/${party.id}`)}
-              onChanged={loadFinancialTotals}
+              onChanged={() => {
+                void loadFinancialTotals();
+                void refreshDashboard();
+              }}
             />
           ) : (
             <Navigate to="/" />

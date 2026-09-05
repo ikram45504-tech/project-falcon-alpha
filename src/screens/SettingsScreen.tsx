@@ -173,6 +173,9 @@ export default function SettingsScreen() {
             >
               🔄 Check for Updates
             </button>
+            <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.45 }}>
+              Daily sync is automatic. Use this only if a booking from the web app is missing on this desktop.
+            </p>
             <button
               onClick={async () => {
                 try {
@@ -198,7 +201,7 @@ export default function SettingsScreen() {
                 gap: "8px",
               }}
             >
-              Sync
+              Full Sync
             </button>
           </div>
         )}

@@ -217,6 +217,13 @@ html.phone-ui {
     line-height: 1.25;
   }
 
+  .mobile-header-plan-chip {
+    flex-shrink: 0;
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
   .identity {
     min-width: 0;
     flex: 1;
@@ -443,6 +450,29 @@ html.phone-ui {
 .th-phone-drawer-footer {
   margin-top: auto;
   padding-top: 16px;
+}
+
+.th-phone-account {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.th-phone-account b {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.th-phone-account small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .th-phone-signout {

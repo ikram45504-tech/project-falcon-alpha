@@ -1,5 +1,6 @@
 ﻿import Database from "@tauri-apps/plugin-sql";
 import { isCloudSyncEnabled } from "./appMode";
+import { BACKGROUND_SYNC, pullSyncCursor } from "./syncPolicy";
 import { supabase } from "./supabaseClient";
 import { createPasswordRecord, verifyPassword } from "./security";
 import { hasPermission, Permission, UserRole } from "./permissions";
@@ -3143,9 +3144,9 @@ export async function startBackgroundSync(companyId = "") {
     void runSyncPass("interval").catch((e) => console.error("Interval sync failed:", e));
   };
 
-  // First pass soon after login, then every 5 seconds.
-  window.setTimeout(tick, 1500);
-  window.setInterval(tick, 5000);
+  // First pass soon after login, then on the background interval.
+  window.setTimeout(tick, BACKGROUND_SYNC.firstDelayMs);
+  window.setInterval(tick, BACKGROUND_SYNC.intervalMs);
 
   window.addEventListener("focus", () => {
     void runSyncPass("focus").catch((e) => console.error("Focus sync failed:", e));
@@ -3186,18 +3187,7 @@ export async function executePullSync(options?: { companyId?: string; fullResync
     `SELECT value FROM sync_metadata WHERE key = 'last_pull_sync'`,
   );
 
-  // Apply a 24-hour skew window to catch updates and clock differences
-  let lastSync = metaRows[0]?.value || "2000-01-01T00:00:00.000Z";
-  if (!options?.fullResync) {
-    const lastSyncDate = new Date(lastSync);
-    if (lastSyncDate.getFullYear() > 2000) {
-      lastSyncDate.setHours(lastSyncDate.getHours() - 24);
-      lastSync = lastSyncDate.toISOString();
-    }
-  } else {
-    // Manual Sync & Refresh: re-pull everything for this company.
-    lastSync = "2000-01-01T00:00:00.000Z";
-  }
+  const lastSync = pullSyncCursor(metaRows[0]?.value, Boolean(options?.fullResync));
 
   const ROOT_TABLES = [
     "parties",

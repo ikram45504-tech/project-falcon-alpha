@@ -64,24 +64,26 @@ export async function getDashboardMetrics(companyId: string): Promise<DashboardM
       "transport_bookings",
       "misc_bookings",
     ];
+    const batches = await Promise.all(
+      tables.map((t) =>
+        supabase
+          .from(t)
+          .select("transaction_type, total_pkr")
+          .eq("company_id", companyId)
+          .eq("status", "ACTIVE")
+          .like("transaction_date", `${currentMonthStr}%`),
+      ),
+    );
     let sales = 0;
     let purchases = 0;
     let bookings = 0;
 
-    for (const t of tables) {
-      const { data } = await supabase
-        .from(t)
-        .select("transaction_type, total_pkr")
-        .eq("company_id", companyId)
-        .eq("status", "ACTIVE")
-        .like("transaction_date", `${currentMonthStr}%`);
-
-      if (data) {
-        bookings += data.length;
-        for (const row of data) {
-          if (row.transaction_type === "SALE") sales += row.total_pkr;
-          if (row.transaction_type === "PURCHASE") purchases += row.total_pkr;
-        }
+    for (const { data } of batches) {
+      if (!data) continue;
+      bookings += data.length;
+      for (const row of data) {
+        if (row.transaction_type === "SALE") sales += row.total_pkr;
+        if (row.transaction_type === "PURCHASE") purchases += row.total_pkr;
       }
     }
     return {
@@ -134,29 +136,33 @@ export async function getRecentActivity(companyId: string, limit: number = 5): P
     ];
     const allActivities: RecentActivity[] = [];
 
-    for (const t of tables) {
-      const { data } = await supabase
-        .from(t.name)
-        .select("id, transaction_date, transaction_type, ub_number, total_pkr, status, created_at")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false })
-        .limit(limit);
+    const batches = await Promise.all(
+      tables.map((t) =>
+        supabase
+          .from(t.name)
+          .select("id, transaction_date, transaction_type, ub_number, total_pkr, status, created_at")
+          .eq("company_id", companyId)
+          .order("created_at", { ascending: false })
+          .limit(limit),
+      ),
+    );
 
-      if (data) {
-        for (const row of data) {
-          allActivities.push({
-            id: row.id,
-            date: row.transaction_date,
-            type: `${t.type} ${row.transaction_type}`,
-            description: `UB: ${row.ub_number}`,
-            amount: row.total_pkr,
-            status: row.status,
-            // @ts-expect-error - created_at exists on row but is not typed
-            created_at: row.created_at,
-          });
-        }
+    batches.forEach(({ data }, index) => {
+      const t = tables[index];
+      if (!t || !data) return;
+      for (const row of data) {
+        allActivities.push({
+          id: row.id,
+          date: row.transaction_date,
+          type: `${t.type} ${row.transaction_type}`,
+          description: `UB: ${row.ub_number}`,
+          amount: row.total_pkr,
+          status: row.status,
+          // @ts-expect-error - created_at exists on row but is not typed
+          created_at: row.created_at,
+        });
       }
-    }
+    });
 
     // Sort all combined by created_at desc, then limit
     // @ts-expect-error - sort mutates array and created_at exists
@@ -185,4 +191,12 @@ export async function getRecentActivity(companyId: string, limit: number = 5): P
   );
 
   return activities;
+}
+
+export async function loadDashboardData(companyId: string, activityLimit = 6) {
+  const [metrics, recent] = await Promise.all([
+    getDashboardMetrics(companyId),
+    getRecentActivity(companyId, activityLimit),
+  ]);
+  return { metrics, recent };
 }

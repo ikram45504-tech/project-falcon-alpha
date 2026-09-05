@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "../AuthContext";
 import { useWorkspace } from "../WorkspaceContext";
-import { useIsDesktop } from "../useIsDesktop";
-import { getDashboardMetrics, getRecentActivity, DashboardMetrics, RecentActivity } from "../DashboardDb";
 import { usePhoneUi } from "../phoneUi";
 import { useNavigate } from "react-router-dom";
 import { normalizeEntitlements } from "../companyEntitlements";
+import { shouldShowDashboardSkeleton } from "../dashboardView";
 // Helper to format currency
 const pkr = (val: number) =>
   new Intl.NumberFormat("en-PK", {
@@ -17,54 +16,30 @@ const pkr = (val: number) =>
 
 export default function DashboardScreen() {
   const { company } = useAuth();
-  const { loadParties, loadFinancialTotals } = useWorkspace();
-  const isDesktop = useIsDesktop();
+  const { dashboardMetrics, dashboardRecent, dashboardLoading, refreshDashboard } = useWorkspace();
   const isPhone = usePhoneUi();
   const navigate = useNavigate();
   const canOpenPnl = normalizeEntitlements(company?.entitlements).features.pnl;
+  const metrics = dashboardMetrics;
+  const recent = dashboardRecent;
+  const showSkeleton = shouldShowDashboardSkeleton(Boolean(metrics), dashboardLoading);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshNote, setRefreshNote] = useState("");
 
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [recent, setRecent] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncNote, setSyncNote] = useState("");
-
-  const fetchData = async () => {
-    if (!company) return;
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setRefreshNote("");
     try {
-      setLoading(true);
-      const [m, r] = await Promise.all([getDashboardMetrics(company.id), getRecentActivity(company.id, 6)]);
-      setMetrics(m);
-      setRecent(r);
-    } catch (err) {
-      console.error("Dashboard Load Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [company]);
-
-  const handleSync = async () => {
-    if (isSyncing || !company) return;
-    setIsSyncing(true);
-    setSyncNote("");
-    try {
-      if (isDesktop) {
-        const { runManualSyncAndRefresh } = await import("../db");
-        await runManualSyncAndRefresh(company.id);
-      }
-      await Promise.all([fetchData(), loadParties(), loadFinancialTotals()]);
+      await refreshDashboard();
       const stamp = new Date().toLocaleTimeString();
-      setSyncNote(`Synced at ${stamp}`);
-      window.setTimeout(() => setSyncNote(""), 4000);
-    } catch (err: any) {
-      console.error("Sync failed:", err);
-      alert("Sync failed: " + (err.message || err));
+      setRefreshNote(`Updated ${stamp}`);
+      window.setTimeout(() => setRefreshNote(""), 4000);
+    } catch (err: unknown) {
+      console.error("Dashboard refresh failed:", err);
+      alert("Refresh failed: " + (err instanceof Error ? err.message : String(err)));
     } finally {
-      setIsSyncing(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -81,13 +56,13 @@ export default function DashboardScreen() {
           </p>
         </div>
         <div className="dash-page-actions">
-          {syncNote ? (
-            <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>{syncNote}</span>
+          {refreshNote ? (
+            <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>{refreshNote}</span>
           ) : null}
           <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            title="Optional manual sync. Automatic sync already runs in the background."
+            onClick={() => void handleRefresh()}
+            disabled={isRefreshing}
+            title="Reload these numbers. Cloud and desktop stay in sync in the background."
             style={{
               padding: "10px 20px",
               borderRadius: "8px",
@@ -95,15 +70,15 @@ export default function DashboardScreen() {
               background: "var(--bg-card)",
               color: "var(--brand-secondary)",
               fontWeight: 600,
-              cursor: isSyncing ? "wait" : "pointer",
+              cursor: isRefreshing ? "wait" : "pointer",
               boxShadow: "var(--shadow-sm)",
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              opacity: isSyncing ? 0.7 : 1,
+              opacity: isRefreshing ? 0.7 : 1,
             }}
           >
-            {isSyncing ? "Syncing..." : "Sync"}
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </button>
           <button
             onClick={() => navigate("/payments")}
@@ -164,7 +139,7 @@ export default function DashboardScreen() {
           >
             Monthly Sales
           </span>
-          {loading ? (
+          {showSkeleton ? (
             <div
               style={{
                 height: "40px",
@@ -206,7 +181,7 @@ export default function DashboardScreen() {
           >
             Monthly Purchases
           </span>
-          {loading ? (
+          {showSkeleton ? (
             <div
               style={{
                 height: "40px",
@@ -261,7 +236,7 @@ export default function DashboardScreen() {
           >
             Net Profit
           </span>
-          {loading ? (
+          {showSkeleton ? (
             <div
               style={{
                 height: "40px",
@@ -309,7 +284,7 @@ export default function DashboardScreen() {
           >
             Active Bookings
           </span>
-          {loading ? (
+          {showSkeleton ? (
             <div
               style={{
                 height: "40px",
@@ -354,7 +329,7 @@ export default function DashboardScreen() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
-            {loading ? (
+            {showSkeleton ? (
               <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>Loading feed...</div>
             ) : !metrics ? (
               <div style={{ padding: "40px", textAlign: "center" }}>

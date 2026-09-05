@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Party, getParties } from "./db";
 import { getPartyBookingTotals } from "./BookingAccounting";
 import { getPartyPaymentTotals } from "./db";
 import { useAuth } from "./AuthContext";
+import { loadDashboardData, type DashboardMetrics, type RecentActivity } from "./DashboardDb";
 
 type AccountBookingTotals = { sale_total: number; purchase_total: number };
 
@@ -17,9 +18,13 @@ type WorkspaceContextType = {
   partyAccounts: Party[];
   vendorAccounts: Party[];
   unassignedAccounts: Party[];
+  dashboardMetrics: DashboardMetrics | null;
+  dashboardRecent: RecentActivity[];
+  dashboardLoading: boolean;
   searchParties: (value: string) => Promise<void>;
   loadParties: (search?: string) => Promise<void>;
   loadFinancialTotals: () => Promise<void>;
+  refreshDashboard: () => Promise<void>;
   error: string;
   setError: (msg: string) => void;
 };
@@ -33,7 +38,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [partySearch, setPartySearch] = useState("");
   const [partyBookingTotals, setPartyBookingTotals] = useState<Record<string, AccountBookingTotals>>({});
   const [partyPaymentTotals, setPartyPaymentTotals] = useState<Record<string, number>>({});
+  const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics | null>(null);
+  const [dashboardRecent, setDashboardRecent] = useState<RecentActivity[]>([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const [error, setError] = useState("");
+  const dashboardHasDataRef = useRef(false);
 
   const loadParties = useCallback(
     async (search = "") => {
@@ -83,11 +92,36 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [loadParties],
   );
 
+  const companyId = company?.id ?? "";
+
+  const refreshDashboard = useCallback(async () => {
+    if (!companyId) return;
+    if (!dashboardHasDataRef.current) setDashboardLoading(true);
+    try {
+      const { metrics, recent } = await loadDashboardData(companyId, 6);
+      dashboardHasDataRef.current = true;
+      setDashboardMetrics(metrics);
+      setDashboardRecent(recent);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, [companyId]);
+
   useEffect(() => {
-    if (!company) return;
+    dashboardHasDataRef.current = false;
+    setDashboardMetrics(null);
+    setDashboardRecent([]);
+    setDashboardLoading(Boolean(companyId));
+  }, [companyId]);
+
+  useEffect(() => {
+    if (!companyId) return;
     void loadParties();
     void loadFinancialTotals();
-  }, [company, loadParties, loadFinancialTotals]);
+    void refreshDashboard();
+  }, [companyId, loadParties, loadFinancialTotals, refreshDashboard]);
 
   // Auto-refresh UI after background cloud sync (no Sync button required).
   useEffect(() => {
@@ -98,11 +132,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       if (detail?.companyId && detail.companyId !== company.id) return;
       void loadParties(partySearch);
       void loadFinancialTotals();
+      void refreshDashboard();
     };
 
     window.addEventListener("travel-accounting:sync-complete", onSyncComplete);
     return () => window.removeEventListener("travel-accounting:sync-complete", onSyncComplete);
-  }, [company, loadParties, loadFinancialTotals, partySearch]);
+  }, [company, loadParties, loadFinancialTotals, partySearch, refreshDashboard]);
 
   const partyAccounts = parties.filter((item) => item.account_type === "PARTY");
   const vendorAccounts = parties.filter((item) => item.account_type === "VENDOR");
@@ -131,9 +166,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         partyAccounts,
         vendorAccounts,
         unassignedAccounts,
+        dashboardMetrics,
+        dashboardRecent,
+        dashboardLoading,
         searchParties,
         loadParties,
         loadFinancialTotals,
+        refreshDashboard,
         error,
         setError,
       }}

@@ -1,13 +1,16 @@
-import { ROLE_LABELS } from "../permissions";
 import { DesktopNav } from "./DesktopNav";
 import { WorkspaceRoutes } from "../layout/WorkspaceRoutes";
 import type { WorkspaceLayoutState } from "../layout/useWorkspaceLayoutState";
 import AccessExpiryBanner from "../AccessExpiryBanner";
+import { workspaceAccountKind, workspaceLoginId, workspacePlanChip } from "../workspaceHeader";
 
 /** Desktop shell — Tauri app and desktop browser/PWA. Unchanged from the original layout. */
 export function DesktopAppLayout({ state }: { state: WorkspaceLayoutState }) {
   const { session, company, logout, initials, can, mobileNavOpen, setMobileNavOpen, setBookingReset, setPaymentReset } =
     state;
+  const planChip = workspacePlanChip(company?.entitlements);
+  const accountKind = workspaceAccountKind(session?.role);
+  const loginId = workspaceLoginId(company?.company_code || session?.companyCode, session?.username);
 
   return (
     <main className="workspace">
@@ -21,12 +24,11 @@ export function DesktopAppLayout({ state }: { state: WorkspaceLayoutState }) {
         </div>
 
         <div className="header-actions">
+          {planChip ? <span className="header-plan-chip">{planChip}</span> : null}
           <div className="minimal-user-row">
             <div className="minimal-user-text">
-              <b>{session?.username || session?.fullName}</b>
-              <small>
-                {session ? ROLE_LABELS[session.role] : ""} · {company?.company_code}
-              </small>
+              <b>{accountKind}</b>
+              <small>{loginId}</small>
             </div>
             <button className="minimal-signout-btn" onClick={logout} title="Sign Out">
               <svg

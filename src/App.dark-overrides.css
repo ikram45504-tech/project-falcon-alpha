@@ -76,6 +76,11 @@
 :root[data-theme="midnight"] .header-logo {
   background: rgba(30, 41, 59, 0.4) !important;
 }
+:root[data-theme="midnight"] .header-plan-chip {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+  color: #fff !important;
+}
 :root[data-theme="midnight"] .minimal-user-row {
   background: rgba(30, 41, 59, 0.4) !important;
   border-color: rgba(56, 189, 248, 0.15) !important;
@@ -2185,6 +2190,11 @@
 }
 :root[data-theme="ocean"] .header-logo {
   background: rgba(255, 255, 255, 0.4) !important;
+}
+:root[data-theme="ocean"] .header-plan-chip {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(2, 132, 199, 0.2) !important;
+  color: #fff !important;
 }
 :root[data-theme="ocean"] .minimal-user-row {
   background: rgba(255, 255, 255, 0.4) !important;

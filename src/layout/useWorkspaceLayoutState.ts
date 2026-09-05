@@ -7,7 +7,7 @@ import { isOfflineOnlyBuild, productNameForBuild } from "../appMode";
 
 export function useWorkspaceLayoutState() {
   const { session, company, logout } = useAuth();
-  const { parties, loadFinancialTotals, loadParties } = useWorkspace();
+  const { parties, loadFinancialTotals, loadParties, refreshDashboard } = useWorkspace();
   const location = useLocation();
 
   const [statementPartyId, setStatementPartyId] = useState("");
@@ -112,6 +112,7 @@ export function useWorkspaceLayoutState() {
     parties,
     loadFinancialTotals,
     loadParties,
+    refreshDashboard,
     location,
     statementPartyId,
     setStatementPartyId,
